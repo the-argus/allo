@@ -66,35 +66,12 @@ class memory_info_provider_t
 
 class allocator_t : public virtual memory_info_provider_t
 {
+  public:
     /// Request an allocation for some number of bytes with some alignment, and
     /// providing the typehash. If a non-typed allocator, 0 will be supplied as
     /// the hash.
-    allocation_result_t alloc(size_t bytes, size_t alignment, size_t typehash);
-
-  public:
-    template <typename T, uint8_t alignment = alignof(T)>
-    inline zl::res<T &, AllocationStatusCode> create_undefined()
-    {
-        auto res = alloc(sizeof(T), alignment, 0);
-        if (!res.okay())
-            return res.err();
-        auto mem = res.release();
-        assert(sizeof(T) == mem.size());
-        return *reinterpret_cast<T *>(mem.data());
-    }
-
-    template <typename T, uint8_t alignment = alignof(T)>
-    inline zl::res<zl::slice<T>, AllocationStatusCode>
-    alloc_undefined(size_t number)
-    {
-        alloc(sizeof(T) * number, alignment, 0);
-    }
-
-    template <typename T, typename... Args>
-    inline zl::res<T &, AllocationStatusCode> create(Args &&...args);
-
-    template <typename T, typename... Args>
-    inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(Args &&...args);
+    allocation_result_t alloc_bytes(size_t bytes, size_t alignment,
+                                    size_t typehash);
 };
 
 class stack_reallocator_t : public virtual memory_info_provider_t
