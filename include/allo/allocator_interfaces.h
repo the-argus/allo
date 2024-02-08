@@ -70,13 +70,14 @@ class allocator_t : public virtual memory_info_provider_t
     /// Request an allocation for some number of bytes with some alignment, and
     /// providing the typehash. If a non-typed allocator, 0 can be supplied as
     /// the hash.
-    allocation_result_t alloc_bytes(size_t bytes, size_t alignment,
-                                    size_t typehash);
+    [[nodiscard]] allocation_result_t
+    alloc_bytes(size_t bytes, size_t alignment, size_t typehash);
 };
 
 class stack_reallocator_t : public virtual memory_info_provider_t
 {
-    allocation_result_t realloc_bytes(zl::slice<uint8_t> mem, size_t new_size);
+    [[nodiscard]] allocation_result_t realloc_bytes(zl::slice<uint8_t> mem,
+                                                    size_t new_size);
 };
 
 class reallocator_t : public virtual stack_reallocator_t
