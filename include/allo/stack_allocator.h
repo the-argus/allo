@@ -1,4 +1,5 @@
 #pragma once
+#include "allo/allocator_interfaces.h"
 #include "ziglike/slice.h"
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifndef ALLO_USE_RTTI
@@ -18,7 +19,10 @@ namespace allo {
 /// A very simple allocator which takes in a fixed buffer of memory and
 /// allocates randomly sized items within that buffer. They can only be freed in
 /// the opposite order that they were allocated.
-class stack_allocator_t
+class stack_allocator_t : public allocator_t,
+                          public stack_reallocator_t,
+                          public stack_freer_t,
+                          private detail::dynamic_allocator_base_t
 {
   public:
     // cannot be default constructed or copied
