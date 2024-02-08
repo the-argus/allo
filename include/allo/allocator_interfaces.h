@@ -64,7 +64,7 @@ class memory_info_provider_t
     [[nodiscard]] const allocator_properties_t &properties() const;
 };
 
-class allocator_t : public virtual memory_info_provider_t
+class allocator_t : public memory_info_provider_t
 {
   public:
     /// Request an allocation for some number of bytes with some alignment, and
@@ -74,13 +74,13 @@ class allocator_t : public virtual memory_info_provider_t
     alloc_bytes(size_t bytes, size_t alignment, size_t typehash);
 };
 
-class stack_reallocator_t : public virtual memory_info_provider_t
+class stack_reallocator_t : public memory_info_provider_t
 {
     [[nodiscard]] allocation_result_t
     realloc_bytes(zl::slice<uint8_t> mem, size_t new_size, size_t typehash);
 };
 
-class reallocator_t : public virtual stack_reallocator_t
+class reallocator_t : public stack_reallocator_t
 {};
 
 class stack_freer_t
@@ -88,7 +88,7 @@ class stack_freer_t
     allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
 };
 
-class freer_t : public virtual stack_freer_t
+class freer_t : public stack_freer_t
 {};
 
 namespace detail {
