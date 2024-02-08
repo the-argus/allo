@@ -5,27 +5,29 @@ const zcc = @import("compile_commands");
 const release_flags = &[_][]const u8{
     "-DNDEBUG",
     "-std=c++17",
-    "-DALLO_LOGGING",
     "-DALLO_ALLOC_RESULT_CHECKED",
-    "-DALLO_STACK_ALLOCATOR_USE_CTTI",
 };
 
 const debug_flags = &[_][]const u8{
     "-g",
     "-std=c++17",
-    "-DALLO_LOGGING",
     "-DALLO_ALLOC_RESULT_CHECKED",
-    "-DALLO_STACK_ALLOCATOR_USE_CTTI",
 };
 
 const testing_flags = &[_][]const u8{
-    "-DALLO_NOEXCEPT=",
     "-DALLO_HEADER_TESTING",
+    "-DALLO_NOEXCEPT=", // allow exceptions for testing
+    "-DALLO_HEADER_ONLY",
+
+    // use ctti (default behavior)
+    // "-DALLO_USE_RTTI",
+    // "-DALLO_DISABLE_TYPEINFO",
+
     "-I./tests/",
     "-I./include/",
 
     // ziglike options
-    "-DZIGLIKE_HEADER_TESTING",
+    // "-DZIGLIKE_HEADER_TESTING",
     // "-DZIGLIKE_USE_FMT",
     "-DFMT_HEADER_ONLY",
 };
