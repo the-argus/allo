@@ -1,8 +1,8 @@
 #pragma once
 
-#include "detail/cstring.hpp"
-#include "detail/name_filters.hpp"
-#include "detail/pretty_function.hpp"
+#include "detail/cstring.h"
+#include "detail/name_filters.h"
+#include "detail/pretty_function.h"
 #include <cstdint>
 #include <type_traits>
 

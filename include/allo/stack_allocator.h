@@ -2,7 +2,7 @@
 #include "ziglike/slice.h"
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifndef ALLO_USE_RTTI
-#include "ctti/typename.hpp"
+#include "ctti/typename.h"
 #endif
 #else
 #error "ALLO_DISABLE_TYPEINFO not fully implemented"

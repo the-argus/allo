@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cstring.hpp"
+#include "cstring.h"
 
 namespace allo::ctti::detail {
 

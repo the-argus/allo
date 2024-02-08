@@ -1,7 +1,7 @@
 #pragma once
 
-#include "algorithm.hpp"
-#include "hash.hpp"
+#include "algorithm.h"
+#include "hash.h"
 #include <cstddef>
 
 // compile time string type

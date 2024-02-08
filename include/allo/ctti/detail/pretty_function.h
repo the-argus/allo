@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cstring.hpp"
+#include "cstring.h"
 
 // clang-format off
 #if defined(__clang__)
