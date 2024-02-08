@@ -106,13 +106,13 @@ ALLO_FUNC void stack_allocator_t::zero() ALLO_NOEXCEPT
     std::memset(m_memory.data(), 0, m_memory.size());
 }
 
-stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) ALLO_NOEXCEPT
+stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
     : m_memory(other.m_memory)
 {
 }
 
 stack_allocator_t &
-stack_allocator_t::operator=(stack_allocator_t &&other) ALLO_NOEXCEPT
+stack_allocator_t::operator=(stack_allocator_t &&other) noexcept
 {
     if (&other == this) [[unlikely]]
         return *this;
