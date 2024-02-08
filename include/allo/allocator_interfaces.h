@@ -8,10 +8,9 @@
 
 namespace allo::interfaces {
 
-
 using allocation_type_t = uint16_t;
 
-enum class status_code_e : uint8_t
+enum class AllocationStatusCode : uint8_t
 {
     Okay,
     ResultReleased,
@@ -19,20 +18,21 @@ enum class status_code_e : uint8_t
     OOM,
 };
 
-using allocation_status_t = lib::status_t<status_code_e>;
+using allocation_status_t = zl::status<AllocationStatusCode>;
 
 /// May either be a successfull allocation, or a status code failure. Check by
 /// calling okay(), and if okay, call release() to get the allocated memory.
-using allocation_result_t = lib::result_t<lib::slice_t<uint8_t>, status_code_e>;
+using allocation_result_t = zl::res<zl::slice<uint8_t>, AllocationStatusCode>;
 
-using random_free_function = allocation_status_t (*)(
-    AllocationType type, void *block, size_t size_in_bytes) TESTING_NOEXCEPT;
-using random_alloc_function =
-    allocation_result_t (*)(AllocationType type, size_t member_size,
-                            size_t num_members) TESTING_NOEXCEPT;
+using random_free_function = allocation_status_t (*)(allocation_type_t type,
+                                                     void *block,
+                                                     size_t size_in_bytes);
+using random_alloc_function = allocation_result_t (*)(allocation_type_t type,
+                                                      size_t member_size,
+                                                      size_t num_members);
 using random_realloc_function = allocation_result_t (*)(
-    AllocationType type, void *existing_block, size_t size_in_bytes,
-    size_t requested_size_in_bytes) TESTING_NOEXCEPT;
+    allocation_type_t type, void *existing_block, size_t size_in_bytes,
+    size_t requested_size_in_bytes);
 
 /// A set of functions with no context object, just global functions to call to
 /// get access to random blocks of memory.
