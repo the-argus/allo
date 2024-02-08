@@ -31,17 +31,24 @@ struct allocator_requirements_t
     // the default (null) means unbounded / only bounded by hardware,
     // so you will require an allocator like malloc.
     zl::opt<size_t> maximum_bytes;
+    // the largest single contiguous allocation you plan on making. null means
+    // unbounded, so you require an allocator like malloc which can map virtual
+    // memory.
+    zl::opt<size_t> maximum_contiguous_bytes;
     // the largest alignment you will require from the allocator.
     uint8_t maximum_alignment = 8;
 };
-
+namespace detail {
 class memory_info_provider_t;
+}
 
 struct allocator_properties_t
 {
   private:
     // zero maximum bytes means theoretically limitless maximum bytes
     size_t m_maximum_bytes;
+    // zero means theoretically limitless contiguous allocation is possible
+    size_t m_maximum_contiguous_bytes;
     uint8_t m_maximum_alignment;
 
   public:
@@ -50,14 +57,32 @@ struct allocator_properties_t
     [[nodiscard]] inline constexpr bool
     meets(const allocator_requirements_t &requirements) const
     {
-        if (!requirements.maximum_bytes.has_value())
-            return m_maximum_bytes == 0;
+        if (!requirements.maximum_bytes.has_value()) {
+            if (m_maximum_bytes != 0) {
+                return false;
+            }
+        } else {
+            if (requirements.maximum_bytes.value() > m_maximum_bytes) {
+                return false;
+            }
+        }
 
-        return (requirements.maximum_bytes.value() <= m_maximum_bytes ||
-                m_maximum_bytes == 0) &&
-               m_maximum_alignment >= requirements.maximum_alignment;
+        if (!requirements.maximum_contiguous_bytes.has_value()) {
+            if (m_maximum_contiguous_bytes != 0) {
+                return false;
+            }
+        } else {
+            if (requirements.maximum_contiguous_bytes.value() >
+                m_maximum_contiguous_bytes) {
+                return false;
+            }
+        }
+
+        return m_maximum_alignment >= requirements.maximum_alignment;
     }
 };
+
+namespace detail {
 
 class memory_info_provider_t
 {
@@ -91,25 +116,98 @@ class stack_freer_t
 class freer_t : public stack_freer_t
 {};
 
-namespace detail {
-
 enum class AllocatorType : uint8_t
 {
     HeapAllocator,
     CAllocator,
     BlockAllocator,
-    ThreadsafeAllocator,
     SegmentedArrayBlockAllocator,
     StackAllocator,
     ScratchAllocator,
-    ArenaAllocator,
+    // allocator created by arena. arena isnt actually an allocator, its more
+    // like an allocator-allocator
+    RegionAllocator,
+    MAX_ALLOCATOR_TYPE
 };
 
+// which interfaces each allocator has
+constexpr uint8_t interface_bits[uint8_t(AllocatorType::MAX_ALLOCATOR_TYPE)] = {
+    0b11111, // heap
+    0b11111, // c allocator
+    0b11111, // block allocator
+    0b11111, // segmented array block allocator
+    0b10011, // stack
+    0b10111, // scratch
+    0b11111, // region allocator
+};
+
+// clang-format off
+constexpr uint8_t mask_alloc =          0b10000;
+constexpr uint8_t mask_realloc =        0b01000;
+constexpr uint8_t mask_free =           0b00100;
+constexpr uint8_t mask_stack_realloc =  0b00010;
+constexpr uint8_t mask_stack_free =     0b00001;
+// clang-format on
+
+inline constexpr bool has_alloc(AllocatorType type)
+{
+    if (uint8_t(type) >= uint8_t(AllocatorType::MAX_ALLOCATOR_TYPE))
+        return false;
+    return (interface_bits[uint8_t(type)] & mask_alloc) > 0;
+}
+
+inline constexpr bool has_realloc(AllocatorType type)
+{
+    if (uint8_t(type) >= uint8_t(AllocatorType::MAX_ALLOCATOR_TYPE))
+        return false;
+    return (interface_bits[uint8_t(type)] & mask_realloc) > 0;
+}
+
+inline constexpr bool has_free(AllocatorType type)
+{
+    if (uint8_t(type) >= uint8_t(AllocatorType::MAX_ALLOCATOR_TYPE))
+        return false;
+    return (interface_bits[uint8_t(type)] & mask_free) > 0;
+}
+
+inline constexpr bool has_stack_realloc(AllocatorType type)
+{
+    if (uint8_t(type) >= uint8_t(AllocatorType::MAX_ALLOCATOR_TYPE))
+        return false;
+    return (interface_bits[uint8_t(type)] & mask_stack_realloc) > 0;
+}
+
+inline constexpr bool has_stack_free(AllocatorType type)
+{
+    if (uint8_t(type) >= uint8_t(AllocatorType::MAX_ALLOCATOR_TYPE))
+        return false;
+    return (interface_bits[uint8_t(type)] & mask_stack_free) > 0;
+}
+
+// all allocators inherit from this
 class dynamic_allocator_base_t
 {
   protected:
     AllocatorType type;
 };
+
+class i_stack_free;                         // 0b00001 1
+class i_stack_realloc;                      // 0b00010 2
+class i_stack_realloc_i_stack_free;         // 0b00011 3
+class i_free;                               // 0b00101 5
+class i_free_i_stack_realloc;               // 0b00111 7
+class i_realloc;                            // 0b01010 10
+class i_realloc_i_stack_free;               // 0b01011 11
+class i_realloc_i_free;                     // 0b01111 15
+class i_alloc;                              // 0b10000 16
+class i_alloc_i_stack_free;                 // 0b10001 17
+class i_alloc_i_stack_realloc;              // 0b10010 18
+class i_alloc_i_stack_realloc_i_stack_free; // 0b10011 19
+class i_alloc_i_free;                       // 0b10101 21
+class i_alloc_i_stack_realloc_i_free;       // 0b10111 23
+class i_alloc_i_realloc;                    // 0b11010 26
+class i_alloc_i_realloc_i_stack_free;       // 0b11011 27
+class i_alloc_i_realloc_i_free;             // 0b11111 31
 
 } // namespace detail
 } // namespace allo
