@@ -1,6 +1,12 @@
 #pragma once
 #include "allo/allocator_interfaces.h"
 
+#ifndef ALLO_DISABLE_TYPEINFO
+#ifndef ALLO_USE_RTTI
+#include "ctti/typename.h"
+#endif
+#endif
+
 namespace allo {
 /// Allocate memory for one "T". The contents of this memory is undefined.
 template <typename T, uint8_t alignment = alignof(T)>
@@ -11,7 +17,17 @@ alloc_one(allocator_t &allocator) noexcept
         alignment >= alignof(T),
         "Alignment less than the type being allocated is probably not what "
         "you wanted. Use alloc_bytes if you have to.");
-    auto res = allocator.alloc_bytes(sizeof(T), alignment, 0);
+    size_t typehash =
+#ifndef ALLO_DISABLE_TYPEINFO
+#ifdef ALLO_USE_RTTI
+        typeid(T).hash_code();
+#else
+        ctti::nameof<T>().hash();
+#endif
+#else
+        0;
+#endif
+    auto res = allocator.alloc_bytes(sizeof(T), alignment, typehash);
     if (!res.okay())
         return res.err();
     const auto &mem = res.release_ref();
@@ -29,7 +45,17 @@ inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(allocator_t &allocator,
         alignment >= alignof(T),
         "Alignment less than the type being allocated is probably not what "
         "you wanted. Use alloc_bytes if you have to.");
-    auto res = allocator.alloc_bytes(sizeof(T) * number, alignment, 0);
+    size_t typehash =
+#ifndef ALLO_DISABLE_TYPEINFO
+#ifdef ALLO_USE_RTTI
+        typeid(T).hash_code();
+#else
+        ctti::nameof<T>().hash();
+#endif
+#else
+        0;
+#endif
+    auto res = allocator.alloc_bytes(sizeof(T) * number, alignment, typehash);
     if (!res.okay())
         return res.err();
     const auto &mem = res.release_ref();

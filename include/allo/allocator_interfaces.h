@@ -68,7 +68,7 @@ class allocator_t : public virtual memory_info_provider_t
 {
   public:
     /// Request an allocation for some number of bytes with some alignment, and
-    /// providing the typehash. If a non-typed allocator, 0 will be supplied as
+    /// providing the typehash. If a non-typed allocator, 0 can be supplied as
     /// the hash.
     allocation_result_t alloc_bytes(size_t bytes, size_t alignment,
                                     size_t typehash);
@@ -76,7 +76,7 @@ class allocator_t : public virtual memory_info_provider_t
 
 class stack_reallocator_t : public virtual memory_info_provider_t
 {
-    allocation_result_t realloc(zl::slice<uint8_t> mem, size_t new_size);
+    allocation_result_t realloc_bytes(zl::slice<uint8_t> mem, size_t new_size);
 };
 
 class reallocator_t : public virtual stack_reallocator_t
@@ -84,7 +84,7 @@ class reallocator_t : public virtual stack_reallocator_t
 
 class stack_freer_t
 {
-    allocation_status_t free(zl::slice<uint8_t> mem);
+    allocation_status_t free_bytes(zl::slice<uint8_t> mem);
 };
 
 class freer_t : public virtual stack_freer_t
