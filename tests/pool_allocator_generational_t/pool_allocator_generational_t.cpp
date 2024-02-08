@@ -1,7 +1,7 @@
-#include "test_header.hpp"
+#include "test_header.h"
 // test header must be first
-#include "allo/pool_allocator_generational.hpp"
-#include "pool_allocator_iterable_tests.hpp"
+#include "allo/pool_allocator.h"
+#include "pool_allocator_iterable_tests.h"
 
 using namespace allo;
 // wrapper around generational pool allocator to make its template arguments

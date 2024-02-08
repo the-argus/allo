@@ -1,5 +1,5 @@
 #pragma once
-#include "testing/abort.hpp"
+#include "allo/detail/abort.h"
 /// Header to be included in tests and tests only. Must be included first in the
 /// file
 #ifndef TESTING

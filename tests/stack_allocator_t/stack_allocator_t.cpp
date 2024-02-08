@@ -1,4 +1,4 @@
-#include "allo/stack_allocator.hpp"
+#include "allo/stack_allocator.h"
 #include "test_header.hpp"
 #include <array>
 #include <optional>

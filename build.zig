@@ -19,12 +19,15 @@ const debug_flags = &[_][]const u8{
 };
 
 const testing_flags = &[_][]const u8{
-    "-DFMT_EXCEPTIONS=1",
-    "-DTESTING",
-    "-DTESTING_NOEXCEPT=",
-    "-DTESTING_THELIB_OPT_T_NO_NOTHROW",
-    "-DTESTING_THELIB_RESULT_T_NO_NOTHROW",
-    "-DTESTING_ALLO_STACK_ALLOCATOR_T_NO_NOTHROW",
+    "-DALLO_NOEXCEPT=",
+    "-DALLO_HEADER_TESTING",
+    "-I./tests/",
+    "-I./include/",
+
+    // ziglike options
+    "-DZIGLIKE_HEADER_TESTING",
+    // "-DZIGLIKE_USE_FMT",
+    "-DFMT_HEADER_ONLY",
 };
 
 const non_testing_flags = &[_][]const u8{
@@ -34,93 +37,62 @@ const non_testing_flags = &[_][]const u8{
     "-fno-rtti",
 };
 
-const cpp_sources = &[_][]const u8{
-    "src/random_allocation_registry.cpp",
-    "src/stack_allocator.cpp",
-};
-
-const public_include_dirs = &[_][]const u8{
-    "include/",
-};
-
-const private_include_dirs = &[_][]const u8{
-    "src/include/",
-    "include/allo/",
-};
-
 const test_source_files = &[_][]const u8{
     "stack_allocator_t/stack_allocator_t.cpp",
     "pool_allocator_generational_t/pool_allocator_generational_t.cpp",
 };
 
+var ziglike: ?*std.Build.Dependency = null;
+
 pub fn build(b: *std.Build) !void {
     // options
     const target = b.standardTargetOptions(.{});
-    const mode = b.standardOptimizeOption(.{});
+    const optimize = b.standardOptimizeOption(.{});
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
     defer flags.deinit();
-    try flags.appendSlice(if (mode == .Debug) debug_flags else release_flags);
+    try flags.appendSlice(if (optimize == .Debug) debug_flags else release_flags);
+    try flags.appendSlice(testing_flags);
 
-    var targets = std.ArrayList(*std.Build.Step.Compile).init(b.allocator);
-    defer targets.deinit();
     var tests = std.ArrayList(*std.Build.Step.Compile).init(b.allocator);
     defer tests.deinit();
 
-    var lib: *std.Build.CompileStep =
-        b.addStaticLibrary(.{
-        .name = "allo",
-        .optimize = mode,
-        .target = target,
+    // actual public installation step
+    b.installDirectory(.{
+        .source_dir = .{ .path = "include/allo/" },
+        .install_dir = .header,
+        .install_subdir = "allo/",
     });
-    try targets.append(lib);
-    b.installArtifact(lib);
 
-    lib.linkLibCpp();
-
-    for (private_include_dirs) |include_dir| {
-        try flags.append(b.fmt("-I{s}", .{include_dir}));
+    {
+        ziglike = b.dependency("ziglike", .{ .target = target, .optimize = optimize });
+        const ziglike_include_path = b.pathJoin(&.{ ziglike.?.builder.install_path, "include" });
+        try flags.append(b.fmt("-I{s}", .{ziglike_include_path}));
     }
 
-    var tests_lib = b.addSharedLibrary(.{
-        .name = "main",
-        .target = target,
-        .optimize = mode,
-    });
-    tests_lib.linkLibCpp();
-
     const flags_owned = flags.toOwnedSlice() catch @panic("OOM");
-    const all_sources_owned = cpp_sources;
-    lib.addCSourceFiles(all_sources_owned, flags_owned);
-    tests_lib.addCSourceFiles(all_sources_owned, flags_owned);
-    // set up tests (executables which dont link artefacts built from
-    // all_sources_owned but they do need flags, so we do it in this
-    // scope so we can have flags_owned)
+
     for (test_source_files) |source_file| {
         var test_exe = b.addExecutable(.{
             .name = std.fs.path.stem(source_file),
-            .optimize = mode,
+            .optimize = optimize,
             .target = target,
         });
         test_exe.addCSourceFile(.{
             .file = .{ .path = b.pathJoin(&.{ "tests", source_file }) },
             .flags = flags_owned,
         });
-        test_exe.addIncludePath(.{ .path = "tests/" });
         test_exe.linkLibCpp();
-        test_exe.linkLibCpp(tests_lib);
+        test_exe.step.dependOn(ziglike.?.builder.getInstallStep());
         try tests.append(test_exe);
     }
 
-    // make step that runs all of the tests
-    // TODO: add some custom step that just checks to see if we're in testing mode or not
     const run_tests_step = b.step("run_tests", "Compile and run all the tests");
     const install_tests_step = b.step("install_tests", "Install all the tests but don't run them");
     for (tests.items) |test_exe| {
         const test_install = b.addInstallArtifact(test_exe, .{});
         install_tests_step.dependOn(&test_install.step);
 
-        test_exe.linkLibrary(tests_lib);
         const test_run = b.addRunArtifact(test_exe);
         if (b.args) |args| {
             test_run.addArgs(args);
@@ -128,7 +100,5 @@ pub fn build(b: *std.Build) !void {
         run_tests_step.dependOn(&test_run.step);
     }
 
-    targets.appendSlice(tests.toOwnedSlice() catch @panic("OOM")) catch @panic("OOM");
-
-    zcc.createStep(b, "cdb", try targets.toOwnedSlice());
+    zcc.createStep(b, "cdb", try tests.toOwnedSlice());
 }

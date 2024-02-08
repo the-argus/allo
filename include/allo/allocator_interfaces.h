@@ -1,40 +1,15 @@
 #pragma once
-#include "thelib/result.hpp"
-#include "thelib/slice.hpp"
-#include "thelib/status.hpp"
+#include "ziglike/res.h"
+#include "ziglike/slice.h"
+#include "ziglike/status.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 
 namespace allo::interfaces {
 
-enum class AllocationType
-{
-    /// Unknown should never be used
-    Unknown,
 
-    /// Should be used for debugging allocations only, should never happen
-    /// in release builds
-    Debug,
-
-
-    /// ECS memory
-    Component,
-    Texture,
-    String,
-    // randomly allocated single object that only really needs to exist once,
-    // usually for the duration of the program
-    Singleton,
-    StackAllocator,
-
-    /// Just for crosswire
-    Bullets,
-    Physics,
-    Turret,
-
-    /// maximum enum value, also should never be used
-    Max,
-};
+using allocation_type_t = uint16_t;
 
 enum class status_code_e : uint8_t
 {

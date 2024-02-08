@@ -1,5 +1,5 @@
 #pragma once
-#include "thelib/slice.hpp"
+#include "ziglike/slice.h"
 #ifdef ALLO_STACK_ALLOCATOR_USE_CTTI
 #include "ctti/typename.hpp"
 #endif
@@ -8,8 +8,9 @@
 #ifndef NDEBUG
 #include <thread>
 #endif
-#ifdef ALLO_LOGGING
-#include "natural_log/natural_log.hpp"
+
+#ifndef ZIGLIKE_NOEXCEPT
+#define ZIGLIKE_NOEXCEPT noexcept
 #endif
 
 namespace allo {
@@ -29,11 +30,11 @@ class stack_allocator_t
 
     // can be explicitly constructed from a buffer of existing memory.
     // it will modify this memory, but not free it on destruction.
-    explicit stack_allocator_t(lib::slice_t<uint8_t> memory) TESTING_NOEXCEPT;
+    explicit stack_allocator_t(zl::slice<uint8_t> memory) ALLO_NOEXCEPT;
 
     // can be moved
-    stack_allocator_t(stack_allocator_t &&) TESTING_NOEXCEPT;
-    stack_allocator_t &operator=(stack_allocator_t &&) TESTING_NOEXCEPT;
+    stack_allocator_t(stack_allocator_t &&) ALLO_NOEXCEPT;
+    stack_allocator_t &operator=(stack_allocator_t &&) ALLO_NOEXCEPT;
 
     // no need to do anything upon destruction since this is non-owning
     ~stack_allocator_t() = default;
@@ -41,7 +42,7 @@ class stack_allocator_t
     /// Get a pointer to a newly allocated and constructed object.
     /// Returns nullptr on OOM.
     template <typename T>
-    [[nodiscard]] inline T *alloc(auto &&...args) TESTING_NOEXCEPT
+    [[nodiscard]] inline T *alloc(auto &&...args) ALLO_NOEXCEPT
     {
         static_assert(alignof(T) <= alignof(previous_state_t),
                       "Alignment of type passed in to stack_allocator_t::alloc "
@@ -73,9 +74,6 @@ class stack_allocator_t
 #endif
             return spot;
         } else {
-#ifdef ALLO_LOGGING
-            LN_WARN("Got OOM from stack_allocator_t allocation attempt.");
-#endif
             return nullptr;
         }
     }
@@ -83,7 +81,7 @@ class stack_allocator_t
     /// Free a pointer allocated with this allocator. It is undefined behavior
     /// for the pointer to be a different type than the one it was allocated as.
     template <typename T>
-    [[nodiscard]] inline bool free(T *item) TESTING_NOEXCEPT
+    [[nodiscard]] inline bool free(T *item) ALLO_NOEXCEPT
     {
 #ifndef TESTING_ALLO_STACK_ALLOCATOR_T_NO_NOTHROW
         static_assert(std::is_nothrow_destructible_v<T>,
@@ -116,7 +114,7 @@ class stack_allocator_t
     }
 
     /// Zero all the memory in this stack allocator's buffer
-    void zero() TESTING_NOEXCEPT;
+    void zero() ALLO_NOEXCEPT;
 
     friend class stack_allocator_dynamic_t;
 
@@ -128,14 +126,14 @@ class stack_allocator_t
         size_t type_hashcode;
     };
 
-    void *inner_alloc(size_t align, size_t typesize) TESTING_NOEXCEPT;
-    void *raw_alloc(size_t align, size_t typesize) TESTING_NOEXCEPT;
+    void *inner_alloc(size_t align, size_t typesize) ALLO_NOEXCEPT;
+    void *raw_alloc(size_t align, size_t typesize) ALLO_NOEXCEPT;
     // inner_free returns a pointer to the space that was just freed, or nullptr
     // on failure
     void *inner_free(size_t align, size_t typesize,
-                     void *item) TESTING_NOEXCEPT;
+                     void *item) ALLO_NOEXCEPT;
 
-    lib::slice_t<uint8_t> m_memory;
+    zl::slice<uint8_t> m_memory;
     size_t m_first_available = 0;
     size_t m_last_type = 0;
 #ifndef NDEBUG

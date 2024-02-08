@@ -1,5 +1,5 @@
 #pragma once
-#include "allo/allocator_interfaces.hpp"
+#include "allo/allocator_interfaces.h"
 #include "thelib/result.hpp"
 #include "thelib/slice.hpp"
 #include <array>
