@@ -5,13 +5,11 @@ const zcc = @import("compile_commands");
 const release_flags = &[_][]const u8{
     "-DNDEBUG",
     "-std=c++17",
-    "-DALLO_ALLOC_RESULT_CHECKED",
 };
 
 const debug_flags = &[_][]const u8{
     "-g",
     "-std=c++17",
-    "-DALLO_ALLOC_RESULT_CHECKED",
 };
 
 const testing_flags = &[_][]const u8{
@@ -22,6 +20,9 @@ const testing_flags = &[_][]const u8{
     // use ctti (default behavior)
     // "-DALLO_USE_RTTI",
     // "-DALLO_DISABLE_TYPEINFO",
+    "-fno-rtti",
+    // exceptions needed in testing mode
+    // "-fno-exceptions",
 
     "-I./tests/",
     "-I./include/",
@@ -32,16 +33,8 @@ const testing_flags = &[_][]const u8{
     "-DFMT_HEADER_ONLY",
 };
 
-const non_testing_flags = &[_][]const u8{
-    "-DTESTING_NOEXCEPT=noexcept",
-    "-DFMT_EXCEPTIONS=0",
-    "-fno-exceptions",
-    "-fno-rtti",
-};
-
 const test_source_files = &[_][]const u8{
     "stack_allocator_t/stack_allocator_t.cpp",
-    "pool_allocator_generational_t/pool_allocator_generational_t.cpp",
 };
 
 var ziglike: ?*std.Build.Dependency = null;

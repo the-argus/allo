@@ -1,5 +1,5 @@
 #include "allo/stack_allocator.h"
-#include "test_header.hpp"
+#include "test_header.h"
 #include <array>
 #include <optional>
 #include <set>
@@ -35,7 +35,7 @@ TEST_SUITE("stack_allocator_t")
         SUBCASE("initialize with subslice of memory")
         {
             std::array<uint8_t, 512> mem{0};
-            lib::slice_t<uint8_t> subslice(mem, 100, mem.size() - 200);
+            zl::slice<uint8_t> subslice(mem, 100, mem.size() - 200);
             for (auto byte : subslice) {
                 // array should be 0 initialized
                 REQUIRE(byte == 0);
@@ -52,8 +52,8 @@ TEST_SUITE("stack_allocator_t")
             // require that the correct elements of mem were zeroed
             size_t index = 0;
             for (auto byte : mem) {
-                bool in_subslice = &mem[index] >= subslice.begin() &&
-                                   &mem[index] < subslice.end();
+                bool in_subslice = &mem[index] >= subslice.begin().ptr() &&
+                                   &mem[index] < subslice.end().ptr();
                 REQUIRE(byte == ((in_subslice) ? 0 : 1));
                 ++index;
             }
