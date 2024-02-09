@@ -128,6 +128,10 @@ class reallocator_t : public stack_reallocator_t
 class stack_freer_t : public allocator_interface_t
 {
     allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
+    /// Returns Okay if the free of the given memory would succeed, otherwise
+    /// returns the error that would be returned if you tried to free.
+    [[nodiscard]] allocation_status_t free_status(zl::slice<uint8_t> mem,
+                                                  size_t typehash) const;
 };
 
 class freer_t : public stack_freer_t
