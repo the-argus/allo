@@ -10,9 +10,9 @@ namespace allo {
 /// A very simple allocator which takes in a fixed buffer of memory and
 /// allocates randomly sized items within that buffer. They can only be freed in
 /// the opposite order that they were allocated.
-class stack_allocator_t : public allocator_t,
-                          public stack_reallocator_t,
-                          public stack_freer_t,
+class stack_allocator_t : public detail::allocator_t,
+                          public detail::stack_freer_t,
+                          public detail::stack_reallocator_t,
                           private detail::dynamic_allocator_base_t
 {
   public:
@@ -35,9 +35,19 @@ class stack_allocator_t : public allocator_t,
     /// Zero all the memory in this stack allocator's buffer
     void zero() ALLO_NOEXCEPT;
 
-    friend class stack_allocator_dynamic_t;
+    [[nodiscard]] allocation_result_t
+    alloc_bytes(size_t bytes, size_t alignment, size_t typehash);
+
+    [[nodiscard]] allocation_result_t
+    realloc_bytes(zl::slice<uint8_t> mem, size_t new_size, size_t typehash);
+
+    allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
 
   private:
+    /// Allocate stuff with no typing
+    void *raw_alloc(size_t align, size_t typesize) ALLO_NOEXCEPT;
+    /// Free something
+    void *inner_free(size_t align, size_t typesize, void *item) ALLO_NOEXCEPT;
     /// the information placed underneath every allocation in the stack
     struct previous_state_t
     {
@@ -45,21 +55,9 @@ class stack_allocator_t : public allocator_t,
         size_t type_hashcode;
     };
 
-    void *inner_alloc(size_t align, size_t typesize) ALLO_NOEXCEPT;
-    void *raw_alloc(size_t align, size_t typesize) ALLO_NOEXCEPT;
-    // inner_free returns a pointer to the space that was just freed, or nullptr
-    // on failure
-    void *inner_free(size_t align, size_t typesize, void *item) ALLO_NOEXCEPT;
-
     zl::slice<uint8_t> m_memory;
     size_t m_first_available = 0;
     size_t m_last_type = 0;
-
-    // so that the impls for these interfaces can call back to our inner alloc
-    // etc
-    friend class allocator_t;
-    friend class stack_reallocator_t;
-    friend class stack_freer_t;
 };
 } // namespace allo
 

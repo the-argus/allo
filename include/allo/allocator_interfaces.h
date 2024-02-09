@@ -17,6 +17,11 @@ enum class AllocationStatusCode : uint8_t
     ResultReleased,
     AlreadyFreed,
     OOM,
+    // private memory inside allocator (bookkeeping data) has been overwritten
+    // or it unexpected values
+    Corruption,
+    // invalid item trying to be freed, usually
+    InvalidArgument,
 };
 
 using allocation_status_t = zl::status<AllocationStatusCode>;

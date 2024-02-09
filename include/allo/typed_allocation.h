@@ -9,9 +9,10 @@
 
 namespace allo {
 /// Allocate memory for one "T". The contents of this memory is undefined.
-template <typename T, uint8_t alignment = alignof(T)>
+template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
 inline zl::res<T &, AllocationStatusCode>
-alloc_one(allocator_t &allocator) noexcept
+alloc_one(std::enable_if_t<std::is_base_of_v<detail::allocator_t, Allocator>,
+                           Allocator> &allocator) noexcept
 {
     static_assert(
         alignment >= alignof(T),
@@ -37,9 +38,11 @@ alloc_one(allocator_t &allocator) noexcept
 
 /// Allocate memory for a contiguous buffer of a number of items of type T.
 /// The contents of this memory is undefined.
-template <typename T, uint8_t alignment = alignof(T)>
-inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(allocator_t &allocator,
-                                                         size_t number) noexcept
+template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
+inline zl::res<zl::slice<T>, AllocationStatusCode>
+alloc(std::enable_if_t<std::is_base_of_v<detail::allocator_t, Allocator>,
+                       Allocator> &allocator,
+      size_t number) noexcept
 {
     static_assert(
         alignment >= alignof(T),
@@ -68,9 +71,11 @@ inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(allocator_t &allocator,
 ///
 /// If a constructor throws an exception, the function will exit but the memory
 /// will not be freed, and leak.
-template <typename T, typename... Args>
-inline zl::res<T &, AllocationStatusCode> construct_one(allocator_t &allocator,
-                                                        Args &&...args)
+template <typename T, typename Allocator, typename... Args>
+inline zl::res<T &, AllocationStatusCode> construct_one(
+    std::enable_if_t<std::is_base_of_v<detail::allocator_t, Allocator>,
+                     Allocator> &allocator,
+    Args &&...args)
 {
     static_assert(std::is_constructible_v<T, Args...>,
                   "Type is not constructible with those arguments.");
@@ -87,9 +92,11 @@ inline zl::res<T &, AllocationStatusCode> construct_one(allocator_t &allocator,
 ///
 /// If a constructor throws an exception, the function will exit but the memory
 /// will not be freed, and leak.
-template <typename T, typename... Args>
-inline zl::res<zl::slice<T>, AllocationStatusCode>
-construct_many(allocator_t &allocator, size_t number, Args &&...args)
+template <typename T, typename Allocator, typename... Args>
+inline zl::res<zl::slice<T>, AllocationStatusCode> construct_many(
+    std::enable_if_t<std::is_base_of_v<detail::allocator_t, Allocator>,
+                     Allocator> &allocator,
+    size_t number, Args &&...args)
 {
     static_assert(std::is_constructible_v<T, Args...>,
                   "Type is not constructible with those arguments.");

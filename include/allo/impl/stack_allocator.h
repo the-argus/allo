@@ -6,6 +6,7 @@
 #endif
 
 #include "allo/stack_allocator.h"
+#include "ziglike/defer.h"
 #include <cstring>
 #include <memory>
 
@@ -19,27 +20,42 @@
 
 namespace allo {
 
-ALLO_FUNC void *stack_allocator_t::inner_alloc(size_t align,
-                                               size_t typesize) ALLO_NOEXCEPT
+[[nodiscard]] allocation_result_t
+realloc_bytes(zl::slice<uint8_t> mem, size_t new_size, size_t typehash);
+
+allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
+
+[[nodiscard]] ALLO_FUNC allocation_result_t
+stack_allocator_t::alloc_bytes(size_t bytes, size_t alignment, size_t typehash)
 {
     size_t original_available = m_first_available;
+
     auto *bookkeeping = static_cast<previous_state_t *>(
         raw_alloc(alignof(previous_state_t), sizeof(previous_state_t)));
+
     if (!bookkeeping) [[unlikely]] {
-        return nullptr;
+        return AllocationStatusCode::OOM;
     }
+
+    zl::defer free_bookkeeping([this, original_available]() {
+        m_first_available = original_available;
+    });
+
     *bookkeeping = {
         .memory_available = original_available,
         .type_hashcode = m_last_type,
     };
 
-    void *actual = raw_alloc(align, typesize);
+    void *actual = raw_alloc(alignment, bytes);
     // if second alloc fails, undo the first one
     if (!actual) [[unlikely]] {
-        m_first_available = original_available;
-        return nullptr;
+        return AllocationStatusCode::OOM;
     }
-    return actual;
+    free_bookkeeping.cancel();
+
+    m_last_type = typehash;
+
+    return zl::raw_slice(*static_cast<uint8_t *>(actual), bytes);
 }
 
 ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
@@ -60,9 +76,10 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
     return nullptr;
 }
 
-ALLO_FUNC void *stack_allocator_t::inner_free(size_t align, size_t typesize,
-                                              void *item) ALLO_NOEXCEPT
+ALLO_FUNC allocation_status_t
+stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
 {
+    void *item = mem.data();
     // retrieve the bookeeping data from behind the given allocation
     void *bookkeeping_aligned = item;
     size_t size =
@@ -70,7 +87,7 @@ ALLO_FUNC void *stack_allocator_t::inner_free(size_t align, size_t typesize,
 
     if (!std::align(alignof(previous_state_t), sizeof(previous_state_t),
                     bookkeeping_aligned, size)) [[unlikely]] {
-        return nullptr;
+        return AllocationStatusCode::OOM;
     }
 
     // this should be the location of where you could next put a bookkeeping
@@ -92,13 +109,24 @@ ALLO_FUNC void *stack_allocator_t::inner_free(size_t align, size_t typesize,
         !(reinterpret_cast<uint8_t *>(maybe_bookkeeping) >= m_memory.data() &&
           reinterpret_cast<uint8_t *>(maybe_bookkeeping) <
               m_memory.data() + m_memory.size())) {
-        return nullptr;
+        return AllocationStatusCode::Corruption;
     }
 
     // found bookkeeping item! now we can read the memory amount
     m_first_available = bookkeeping->memory_available;
     m_last_type = bookkeeping->type_hashcode;
-    return item;
+    return AllocationStatusCode::Okay;
+}
+
+allocation_result_t stack_allocator_t::realloc_bytes(zl::slice<uint8_t> mem,
+                                                     size_t new_size,
+                                                     size_t typehash)
+{
+    if (typehash != m_last_type)
+        return AllocationStatusCode::InvalidArgument;
+
+    // always err
+    return AllocationStatusCode::OOM;
 }
 
 ALLO_FUNC void stack_allocator_t::zero() ALLO_NOEXCEPT

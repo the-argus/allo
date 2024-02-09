@@ -1,4 +1,5 @@
 #include "allo/stack_allocator.h"
+#include "allo/typed_allocation.h"
 #include "test_header.h"
 #include <array>
 #include <optional>
@@ -67,10 +68,12 @@ TEST_SUITE("stack_allocator_t")
             std::array<uint8_t, 512> mem;
             stack_allocator_t ally(mem);
 
-            auto *my_ints = ally.alloc<std::array<int, 100>>();
-            REQUIRE(my_ints);
+            auto maybe_my_ints = allo::alloc_one<std::array<int, 100>, decltype(ally)>(ally);
+            REQUIRE(maybe_my_ints.okay());
 
-            auto *original_int_location = my_ints;
+            auto my_ints = maybe_my_ints.release();
+
+            auto *original_int_location = my_ints.data();
             REQUIRE(ally.free(my_ints));
 
             auto *my_new_ints = ally.alloc<std::array<int, 100>>();
