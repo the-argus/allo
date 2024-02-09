@@ -93,8 +93,8 @@ TEST_SUITE("stack_allocator_t")
 
             auto arr_res =
                 allo::alloc_one<std::array<uint8_t, 496>, decltype(ally)>(ally);
+            REQUIRE(arr_res.okay());
             auto arr = arr_res.release();
-            REQUIRE(arr);
             REQUIRE(allo::free_one<decltype(arr), decltype(ally)>(ally, arr)
                         .okay());
             REQUIRE(
