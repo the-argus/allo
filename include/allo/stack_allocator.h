@@ -16,6 +16,9 @@ class stack_allocator_t : public detail::allocator_t,
                           private detail::dynamic_allocator_base_t
 {
   public:
+    static constexpr detail::AllocatorType enum_value =
+        detail::AllocatorType::StackAllocator;
+
     // cannot be default constructed or copied
     stack_allocator_t() = delete;
     stack_allocator_t(const stack_allocator_t &) = delete;
@@ -43,6 +46,8 @@ class stack_allocator_t : public detail::allocator_t,
 
     allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
 
+    [[nodiscard]] const allocator_properties_t &properties() const;
+
   private:
     /// Allocate stuff with no typing
     void *raw_alloc(size_t align, size_t typesize) ALLO_NOEXCEPT;
@@ -58,6 +63,7 @@ class stack_allocator_t : public detail::allocator_t,
     zl::slice<uint8_t> m_memory;
     size_t m_first_available = 0;
     size_t m_last_type = 0;
+    allocator_properties_t m_properties;
 };
 } // namespace allo
 

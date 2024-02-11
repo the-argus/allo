@@ -1,3 +1,4 @@
+#pragma once
 #ifndef ALLO_HEADER_ONLY
 #ifndef ALLO_OVERRIDE_IMPL_INCLUSION_GUARD
 #error \
@@ -19,11 +20,6 @@
 #endif
 
 namespace allo {
-
-[[nodiscard]] allocation_result_t
-realloc_bytes(zl::slice<uint8_t> mem, size_t new_size, size_t typehash);
-
-allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
 
 [[nodiscard]] ALLO_FUNC allocation_result_t
 stack_allocator_t::alloc_bytes(size_t bytes, size_t alignment, size_t typehash)
@@ -106,9 +102,9 @@ stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
     // try to detect invalid or corrupted memory. happens when you free a type
     // other than the last one to be allocated
     if (bookkeeping->memory_available >= m_memory.size() ||
-        !(reinterpret_cast<uint8_t *>(maybe_bookkeeping) >= m_memory.data() &&
-          reinterpret_cast<uint8_t *>(maybe_bookkeeping) <
-              m_memory.data() + m_memory.size())) {
+        reinterpret_cast<uint8_t *>(maybe_bookkeeping) < m_memory.data() ||
+        reinterpret_cast<uint8_t *>(maybe_bookkeeping) >=
+            m_memory.data() + m_memory.size()) {
         return AllocationStatusCode::Corruption;
     }
 
@@ -135,8 +131,11 @@ ALLO_FUNC void stack_allocator_t::zero() ALLO_NOEXCEPT
 }
 
 stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
-    : m_memory(other.m_memory)
+    : m_memory(other.m_memory),
+      m_properties(
+          make_properties(other.m_memory.size(), other.m_memory.size(), 8))
 {
+    type = detail::AllocatorType::StackAllocator;
 }
 
 stack_allocator_t &
@@ -151,7 +150,9 @@ stack_allocator_t::operator=(stack_allocator_t &&other) noexcept
 
 // mark all memory as available
 stack_allocator_t::stack_allocator_t(zl::slice<uint8_t> memory) ALLO_NOEXCEPT
-    : m_memory(memory)
+    : m_memory(memory),
+      m_properties(make_properties(memory.size(), memory.size(), 8))
 {
+    type = detail::AllocatorType::StackAllocator;
 }
 } // namespace allo

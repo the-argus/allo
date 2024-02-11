@@ -49,15 +49,8 @@ class memory_info_provider_t;
 
 struct allocator_properties_t
 {
-  private:
-    // zero maximum bytes means theoretically limitless maximum bytes
-    size_t m_maximum_bytes;
-    // zero means theoretically limitless contiguous allocation is possible
-    size_t m_maximum_contiguous_bytes;
-    uint8_t m_maximum_alignment;
-
   public:
-    friend class memory_info_provider_t;
+    friend class detail::memory_info_provider_t;
     /// Check if the allocator properties meet some given requirements
     [[nodiscard]] inline constexpr bool
     meets(const allocator_requirements_t &requirements) const
@@ -85,6 +78,22 @@ struct allocator_properties_t
 
         return m_maximum_alignment >= requirements.maximum_alignment;
     }
+
+  private:
+    // zero maximum bytes means theoretically limitless maximum bytes
+    size_t m_maximum_bytes;
+    // zero means theoretically limitless contiguous allocation is possible
+    size_t m_maximum_contiguous_bytes;
+    uint8_t m_maximum_alignment;
+
+    inline constexpr allocator_properties_t(size_t max_bytes,
+                                            size_t max_contiguous_bytes,
+                                            uint8_t max_alignment)
+        : m_maximum_bytes(max_bytes),
+          m_maximum_contiguous_bytes(max_contiguous_bytes),
+          m_maximum_alignment(max_alignment)
+    {
+    }
 };
 
 class heap_allocator_t;
@@ -99,7 +108,17 @@ namespace detail {
 
 class memory_info_provider_t
 {
+  public:
     [[nodiscard]] const allocator_properties_t &properties() const;
+
+  protected:
+    [[nodiscard]] static inline constexpr allocator_properties_t
+    make_properties(size_t max_bytes, size_t max_contiguous_bytes,
+                    uint8_t max_alignment)
+    {
+        return allocator_properties_t{max_bytes, max_contiguous_bytes,
+                                      max_alignment};
+    }
 };
 
 class allocator_interface_t
@@ -118,6 +137,7 @@ class allocator_t : public memory_info_provider_t, public allocator_interface_t
 class stack_reallocator_t : public memory_info_provider_t,
                             public allocator_interface_t
 {
+  public:
     [[nodiscard]] allocation_result_t
     realloc_bytes(zl::slice<uint8_t> mem, size_t new_size, size_t typehash);
 };
@@ -127,6 +147,7 @@ class reallocator_t : public stack_reallocator_t
 
 class stack_freer_t : public allocator_interface_t
 {
+  public:
     allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
     /// Returns Okay if the free of the given memory would succeed, otherwise
     /// returns the error that would be returned if you tried to free.
@@ -149,41 +170,6 @@ enum class AllocatorType : uint8_t
     // like an allocator-allocator
     RegionAllocator,
     MAX_ALLOCATOR_TYPE
-};
-
-// clang-format off
-class heap_allocator_enum_val_t { static constexpr AllocatorType allocator_type = AllocatorType::HeapAllocator; };
-class c_allocator_enum_val_t { static constexpr AllocatorType allocator_type = AllocatorType::CAllocator; };
-class block_allocator_enum_val_t { static constexpr AllocatorType allocator_type = AllocatorType::BlockAllocator; };
-class segmented_array_block_allocator_enum_val_t { static constexpr AllocatorType allocator_type = AllocatorType::SegmentedArrayBlockAllocator; };
-class stack_allocator_enum_val_t { static constexpr AllocatorType allocator_type = AllocatorType::StackAllocator; };
-class scratch_allocator_enum_val_t { static constexpr AllocatorType allocator_type = AllocatorType::ScratchAllocator; };
-class region_allocator_enum_val_t { static constexpr AllocatorType allocator_type = AllocatorType::RegionAllocator; };
-// clang-format on
-
-template <typename Allocator> struct enum_value_for_type
-{
-    static constexpr AllocatorType value = std::conditional_t<
-        std::is_same_v<Allocator, heap_allocator_t>, heap_allocator_enum_val_t,
-        std::conditional_t<
-            std::is_same_v<Allocator, c_allocator_t>, c_allocator_enum_val_t,
-            std::conditional_t<
-                std::is_same_v<Allocator, block_allocator_t>,
-                block_allocator_enum_val_t,
-                std::conditional_t<
-                    std::is_same_v<Allocator,
-                                   segmented_array_block_allocator_t>,
-                    segmented_array_block_allocator_enum_val_t,
-                    std::conditional_t<
-                        std::is_same_v<Allocator, stack_allocator_t>,
-                        stack_allocator_enum_val_t,
-                        std::conditional_t<
-                            std::is_same_v<Allocator, scratch_allocator_t>,
-                            scratch_allocator_enum_val_t,
-                            std::conditional_t<
-                                std::is_same_v<Allocator, region_allocator_t>,
-                                region_allocator_enum_val_t,
-                                std::false_type>>>>>>>::allocator_type;
 };
 
 // which interfaces each allocator has
@@ -243,7 +229,7 @@ inline constexpr bool has_stack_free(AllocatorType type)
 // all allocators inherit from this
 class dynamic_allocator_base_t
 {
-  protected:
+  public:
     AllocatorType type;
 };
 
@@ -384,8 +370,7 @@ upcast(std::enable_if_t<
        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator> &&
            std::is_base_of_v<detail::allocator_interface_t, Interface> &&
            ((Interface::interfaces &
-             detail::interface_bits[uint8_t(
-                 detail::enum_value_for_type<Allocator>::value)]) ==
+             detail::interface_bits[uint8_t(Allocator::enum_value)]) ==
             Interface::interfaces),
        Allocator> &allocator) noexcept
 {
@@ -393,3 +378,6 @@ upcast(std::enable_if_t<
 }
 
 } // namespace allo
+#ifdef ALLO_HEADER_ONLY
+#include "allo/impl/allocator_interfaces.h"
+#endif

@@ -79,7 +79,7 @@ inline zl::res<T &, AllocationStatusCode> construct_one(
 {
     static_assert(std::is_constructible_v<T, Args...>,
                   "Type is not constructible with those arguments.");
-    auto mem = alloc_one<T>(allocator);
+    auto mem = alloc_one<T, Allocator>(allocator);
     if (!mem.okay())
         return mem.err();
     auto &item = mem.release();
@@ -100,7 +100,7 @@ inline zl::res<zl::slice<T>, AllocationStatusCode> construct_many(
 {
     static_assert(std::is_constructible_v<T, Args...>,
                   "Type is not constructible with those arguments.");
-    auto mem = alloc<T>(allocator, number);
+    auto mem = alloc<T, Allocator>(allocator, number);
     if (!mem.okay())
         return mem.err();
     const auto &slice = mem.release_ref();
