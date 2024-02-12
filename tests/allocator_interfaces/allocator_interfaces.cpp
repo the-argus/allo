@@ -5,7 +5,30 @@
 #include "allo/typed_freeing.h"
 #include "test_header.h"
 
+#include "allo/ctti/typename.h"
+
 using namespace allo;
+
+// clang-format off
+static_assert(std::is_same_v<allocator_with<IStackFree>, detail::i_stack_free>);
+static_assert(std::is_same_v<allocator_with<IStackRealloc>, detail::i_stack_realloc>);
+static_assert(std::is_same_v<allocator_with<IStackRealloc, IStackFree>, detail::i_stack_realloc_i_stack_free>);
+static_assert(std::is_same_v<allocator_with<IFree>, detail::i_free>);
+static_assert(std::is_same_v<allocator_with<IStackRealloc, IFree>, detail::i_stack_realloc_i_free>);
+static_assert(std::is_same_v<allocator_with<IRealloc>, detail::i_realloc>);
+static_assert(std::is_same_v<allocator_with<IRealloc, IStackFree>, detail::i_realloc_i_stack_free>);
+static_assert(std::is_same_v<allocator_with<IRealloc, IFree>, detail::i_realloc_i_free>);
+
+static_assert(std::is_same_v<allocator_with<IAlloc>, detail::i_alloc>);
+static_assert(std::is_same_v<allocator_with<IAlloc, IStackFree>, detail::i_alloc_i_stack_free>);
+static_assert(std::is_same_v<allocator_with<IAlloc, IStackRealloc>, detail::i_alloc_i_stack_realloc>);
+static_assert(std::is_same_v<allocator_with<IAlloc, IStackRealloc, IStackFree>, detail::i_alloc_i_stack_realloc_i_stack_free>);
+static_assert(std::is_same_v<allocator_with<IAlloc, IFree>, detail::i_alloc_i_free>);
+static_assert(std::is_same_v<allocator_with<IAlloc, IStackRealloc, IFree>, detail::i_alloc_i_stack_realloc_i_free>);
+static_assert(std::is_same_v<allocator_with<IAlloc, IRealloc>, detail::i_alloc_i_realloc>);
+static_assert(std::is_same_v<allocator_with<IAlloc, IRealloc, IStackFree>, detail::i_alloc_i_realloc_i_stack_free>);
+static_assert(std::is_same_v<allocator_with<IAlloc, IRealloc, IFree>, detail::i_alloc_i_realloc_i_free>);
+// clang-format on
 
 TEST_SUITE("allocator interfaces")
 {

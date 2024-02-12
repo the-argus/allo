@@ -276,7 +276,7 @@ class i_free : public freer_t
     static constexpr uint8_t interfaces = 0b00101;
 };
 
-class is_stack_realloc_i_free : public stack_reallocator_t, public freer_t
+class i_stack_realloc_i_free : public stack_reallocator_t, public freer_t
 {
   public:
     static constexpr uint8_t interfaces = 0b00111;
@@ -362,6 +362,68 @@ class i_alloc_i_realloc_i_free : public allocator_t,
     static constexpr uint8_t interfaces = 0b11111;
 };
 
+template <uint8_t bits, typename Interface>
+inline constexpr bool matches = Interface::interfaces == bits;
+
+template <uint8_t bits, typename Interfaces, typename alternative>
+using matches_or =
+    std::conditional_t<matches<bits, Interfaces>, Interfaces, alternative>;
+
+template <uint8_t bits> class interface_error
+{
+    static_assert(bits < 0, "Failed to find matching interface for bits, this "
+                            "is a programmer error in allo");
+};
+
+template <uint8_t bits>
+using type_with_bits = matches_or<
+    bits, i_alloc_i_realloc_i_free,
+    matches_or<
+        bits, i_alloc_i_realloc_i_stack_free,
+        matches_or<
+            bits, i_alloc_i_realloc,
+            matches_or<
+                bits, i_alloc_i_stack_realloc_i_free,
+                matches_or<
+                    bits, i_alloc_i_free,
+                    matches_or<
+                        bits, i_alloc_i_stack_realloc_i_stack_free,
+                        matches_or<
+                            bits, i_alloc_i_stack_realloc,
+                            matches_or<
+                                bits, i_alloc_i_stack_free,
+                                matches_or<
+                                    bits, i_alloc,
+                                    matches_or<
+                                        bits, i_realloc_i_free,
+                                        matches_or<
+                                            bits, i_realloc_i_stack_free,
+                                            matches_or<
+                                                bits, i_realloc,
+                                                matches_or<
+                                                    bits,
+                                                    i_stack_realloc_i_free,
+                                                    matches_or<
+                                                        bits, i_free,
+                                                        matches_or<
+                                                            bits,
+                                                            i_stack_realloc_i_stack_free,
+                                                            matches_or<
+                                                                bits,
+                                                                i_stack_realloc,
+                                                                matches_or<
+                                                                    bits,
+                                                                    i_stack_free,
+                                                                    interface_error<
+                                                                        bits>>>>>>>>>>>>>>>>>>;
+
+template <typename... Ts> inline constexpr uint8_t get_bits_for_types()
+{
+    uint8_t bits = 0;
+    ((bits |= Ts::interfaces), ...);
+    return bits;
+}
+
 } // namespace detail
 
 template <typename Allocator, typename Interface>
@@ -376,6 +438,16 @@ upcast(std::enable_if_t<
 {
     return *reinterpret_cast<Interface *>(&allocator);
 }
+
+using IAlloc = detail::i_alloc;
+using IStackRealloc = detail::i_stack_realloc;
+using IStackFree = detail::i_stack_free;
+using IRealloc = detail::i_realloc;
+using IFree = detail::i_free;
+
+template <typename... Interfaces>
+using allocator_with =
+    detail::type_with_bits<detail::get_bits_for_types<Interfaces...>()>;
 
 } // namespace allo
 #ifdef ALLO_HEADER_ONLY
