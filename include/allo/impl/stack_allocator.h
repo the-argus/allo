@@ -72,6 +72,12 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
     return nullptr;
 }
 
+[[nodiscard]] allocation_status_t
+stack_allocator_t::free_status(zl::slice<uint8_t> mem, size_t typehash) const
+{
+    return AllocationStatusCode::InvalidArgument;
+}
+
 ALLO_FUNC allocation_status_t
 stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
 {

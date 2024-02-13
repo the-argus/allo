@@ -119,7 +119,8 @@ memory_info_provider_t::properties() const
 {
     // the only thing that should inherit from this interface should also
     // inherit dynamic allocator base
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
+    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(
+        reinterpret_cast<const uint8_t *>(this) - 1);
     auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
     return return_from<get_properties_generic>(mutable_self);
 }
@@ -128,7 +129,8 @@ ALLO_FUNC allocation_result_t allocator_t::alloc_bytes(size_t bytes,
                                                        size_t alignment,
                                                        size_t typehash)
 {
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
+    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(
+        reinterpret_cast<const uint8_t *>(this) - 1);
     auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
     return return_from<alloc_bytes_generic>(mutable_self, bytes, alignment,
                                             typehash);
@@ -137,7 +139,8 @@ ALLO_FUNC allocation_result_t allocator_t::alloc_bytes(size_t bytes,
 ALLO_FUNC allocation_result_t stack_reallocator_t::realloc_bytes(
     zl::slice<uint8_t> mem, size_t new_size, size_t typehash)
 {
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
+    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(
+        reinterpret_cast<const uint8_t *>(this) - 1);
     auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
     return return_from<realloc_bytes_generic>(mutable_self, mem, new_size,
                                               typehash);
@@ -146,7 +149,8 @@ ALLO_FUNC allocation_result_t stack_reallocator_t::realloc_bytes(
 ALLO_FUNC allocation_status_t stack_freer_t::free_bytes(zl::slice<uint8_t> mem,
                                                         size_t typehash)
 {
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
+    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(
+        reinterpret_cast<const uint8_t *>(this) - 1);
     auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
     return return_from<free_bytes_generic>(mutable_self, mem, typehash);
 }
@@ -154,7 +158,8 @@ ALLO_FUNC allocation_status_t stack_freer_t::free_bytes(zl::slice<uint8_t> mem,
 ALLO_FUNC allocation_status_t stack_freer_t::free_status(zl::slice<uint8_t> mem,
                                                          size_t typehash) const
 {
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
+    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(
+        reinterpret_cast<const uint8_t *>(this) - 1);
     auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
     return return_from<free_status_generic>(mutable_self, mem, typehash);
 }

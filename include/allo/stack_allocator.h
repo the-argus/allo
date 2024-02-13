@@ -10,10 +10,10 @@ namespace allo {
 /// A very simple allocator which takes in a fixed buffer of memory and
 /// allocates randomly sized items within that buffer. They can only be freed in
 /// the opposite order that they were allocated.
-class stack_allocator_t : public detail::allocator_t,
+class stack_allocator_t : private detail::dynamic_allocator_base_t,
+                          public detail::allocator_t,
                           public detail::stack_freer_t,
-                          public detail::stack_reallocator_t,
-                          private detail::dynamic_allocator_base_t
+                          public detail::stack_reallocator_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =
@@ -45,6 +45,9 @@ class stack_allocator_t : public detail::allocator_t,
     realloc_bytes(zl::slice<uint8_t> mem, size_t new_size, size_t typehash);
 
     allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
+
+    [[nodiscard]] allocation_status_t free_status(zl::slice<uint8_t> mem,
+                                                  size_t typehash) const;
 
     [[nodiscard]] const allocator_properties_t &properties() const;
 
