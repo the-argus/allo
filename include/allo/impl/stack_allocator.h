@@ -75,6 +75,14 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
 ALLO_FUNC allocation_status_t
 stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
 {
+    if (m_last_type != typehash)
+        return AllocationStatusCode::InvalidArgument;
+
+    if (mem.data() < m_memory.data() ||
+        mem.data() + mem.size() > m_memory.data() + m_memory.size()) {
+        return AllocationStatusCode::InvalidArgument;
+    }
+
     void *item = mem.data();
     // retrieve the bookeeping data from behind the given allocation
     void *bookkeeping_aligned = item;
@@ -101,11 +109,15 @@ stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
 
     // try to detect invalid or corrupted memory. happens when you free a type
     // other than the last one to be allocated
-    if (bookkeeping->memory_available >= m_memory.size() ||
-        reinterpret_cast<uint8_t *>(maybe_bookkeeping) < m_memory.data() ||
-        reinterpret_cast<uint8_t *>(maybe_bookkeeping) >=
-            m_memory.data() + m_memory.size()) {
-        return AllocationStatusCode::Corruption;
+    {
+        const bool too_big = bookkeeping->memory_available >= m_memory.size();
+        const bool before_begin =
+            reinterpret_cast<uint8_t *>(maybe_bookkeeping) < m_memory.data();
+        const bool after_end = reinterpret_cast<uint8_t *>(maybe_bookkeeping) >=
+                               m_memory.data() + m_memory.size();
+        if (too_big || before_begin || after_end) {
+            return AllocationStatusCode::Corruption;
+        }
     }
 
     // found bookkeeping item! now we can read the memory amount
