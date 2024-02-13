@@ -337,13 +337,13 @@ class i_alloc_i_stack_realloc_i_free : public allocator_t,
                                        public freer_t
 {
   public:
-    static constexpr uint8_t interfaces = 0b10101;
+    static constexpr uint8_t interfaces = 0b10111;
 };
 
 class i_alloc_i_realloc : public allocator_t, public reallocator_t
 {
   public:
-    static constexpr uint8_t interfaces = 0b10111;
+    static constexpr uint8_t interfaces = 0b11010;
 };
 
 class i_alloc_i_realloc_i_stack_free : public allocator_t,
@@ -351,7 +351,7 @@ class i_alloc_i_realloc_i_stack_free : public allocator_t,
                                        public stack_freer_t
 {
   public:
-    static constexpr uint8_t interfaces = 0b10111;
+    static constexpr uint8_t interfaces = 0b11011;
 };
 
 class i_alloc_i_realloc_i_free : public allocator_t,
@@ -369,10 +369,10 @@ template <uint8_t bits, typename Interfaces, typename alternative>
 using matches_or =
     std::conditional_t<matches<bits, Interfaces>, Interfaces, alternative>;
 
-template <uint8_t bits> class interface_error
+template <uint8_t bits> class invalid_interfaces
 {
-    static_assert(bits < 0, "Failed to find matching interface for bits, this "
-                            "is a programmer error in allo");
+    static_assert(bits < 0,
+                  "The provided allocator interfaces are not compatible.");
 };
 
 template <uint8_t bits>
@@ -414,7 +414,7 @@ using type_with_bits = matches_or<
                                                                 matches_or<
                                                                     bits,
                                                                     i_stack_free,
-                                                                    interface_error<
+                                                                    invalid_interfaces<
                                                                         bits>>>>>>>>>>>>>>>>>>;
 
 template <typename... Ts> inline constexpr uint8_t get_bits_for_types()
