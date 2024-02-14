@@ -75,11 +75,12 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
 [[nodiscard]] allocation_status_t
 stack_allocator_t::free_status(zl::slice<uint8_t> mem, size_t typehash) const
 {
-    return AllocationStatusCode::InvalidArgument;
+    return free_common(mem, typehash).err();
 }
 
-ALLO_FUNC allocation_status_t
-stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
+zl::res<stack_allocator_t::previous_state_t &, AllocationStatusCode>
+stack_allocator_t::free_common(zl::slice<uint8_t> mem,
+                               size_t typehash) const noexcept
 {
     if (m_last_type != typehash)
         return AllocationStatusCode::InvalidArgument;
@@ -126,9 +127,19 @@ stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
         }
     }
 
-    // found bookkeeping item! now we can read the memory amount
-    m_first_available = bookkeeping->memory_available;
-    m_last_type = bookkeeping->type_hashcode;
+    return *bookkeeping;
+}
+
+ALLO_FUNC allocation_status_t
+stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
+{
+    auto mbookkeeping = free_common(mem, typehash);
+    if (!mbookkeeping.okay())
+        return mbookkeeping.err();
+    // actually modify the container
+    auto &bookkeeping = mbookkeeping.release();
+    m_first_available = bookkeeping.memory_available;
+    m_last_type = bookkeeping.type_hashcode;
     return AllocationStatusCode::Okay;
 }
 

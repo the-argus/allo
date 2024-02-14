@@ -54,14 +54,16 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
   private:
     /// Allocate stuff with no typing
     void *raw_alloc(size_t align, size_t typesize) ALLO_NOEXCEPT;
-    /// Free something
-    void *inner_free(size_t align, size_t typesize, void *item) ALLO_NOEXCEPT;
     /// the information placed underneath every allocation in the stack
     struct previous_state_t
     {
         size_t memory_available;
         size_t type_hashcode;
     };
+
+    /// Common logic shared between freeing functions
+    [[nodiscard]] zl::res<previous_state_t &, AllocationStatusCode>
+    free_common(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
 
     zl::slice<uint8_t> m_memory;
     size_t m_first_available = 0;
