@@ -73,7 +73,7 @@ TEST_SUITE("stack_allocator_t")
                 allo::alloc_one<std::array<int, 100>, decltype(ally)>(ally);
             REQUIRE(maybe_my_ints.okay());
 
-            std::array<int, 100>& my_ints = maybe_my_ints.release();
+            std::array<int, 100> &my_ints = maybe_my_ints.release();
 
             int *original_int_location = my_ints.data();
             auto free_status =
@@ -95,8 +95,9 @@ TEST_SUITE("stack_allocator_t")
             auto arr_res =
                 allo::alloc_one<std::array<uint8_t, 496>, decltype(ally)>(ally);
             REQUIRE(arr_res.okay());
-            auto& arr = arr_res.release();
-            REQUIRE(allo::free_one<std::array<uint8_t, 496>, decltype(ally)>(ally, arr)
+            auto &arr = arr_res.release();
+            REQUIRE(allo::free_one<std::array<uint8_t, 496>, decltype(ally)>(
+                        ally, arr)
                         .okay());
             REQUIRE(
                 !allo::alloc_one<std::array<uint8_t, 512>, decltype(ally)>(ally)
