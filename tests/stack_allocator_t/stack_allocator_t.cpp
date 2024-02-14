@@ -69,20 +69,16 @@ TEST_SUITE("stack_allocator_t")
             std::array<uint8_t, 512> mem;
             stack_allocator_t ally(mem);
 
-            auto maybe_my_ints =
-                allo::alloc_one<std::array<int, 100>, decltype(ally)>(ally);
+            auto maybe_my_ints = allo::alloc_one<std::array<int, 100>>(ally);
             REQUIRE(maybe_my_ints.okay());
 
             std::array<int, 100> &my_ints = maybe_my_ints.release();
 
             int *original_int_location = my_ints.data();
-            auto free_status =
-                allo::free_one<std::array<int, 100>, decltype(ally)>(ally,
-                                                                     my_ints);
+            auto free_status = allo::free_one(ally, my_ints);
             REQUIRE(free_status.okay());
 
-            auto my_new_ints =
-                allo::alloc_one<std::array<int, 100>, decltype(ally)>(ally);
+            auto my_new_ints = allo::alloc_one<std::array<int, 100>>(ally);
             REQUIRE(my_new_ints.okay());
             REQUIRE((my_new_ints.release().data() == original_int_location));
         }
@@ -92,16 +88,11 @@ TEST_SUITE("stack_allocator_t")
             std::array<uint8_t, 512> mem;
             stack_allocator_t ally(mem);
 
-            auto arr_res =
-                allo::alloc_one<std::array<uint8_t, 496>, decltype(ally)>(ally);
+            auto arr_res = allo::alloc_one<std::array<uint8_t, 496>>(ally);
             REQUIRE(arr_res.okay());
             auto &arr = arr_res.release();
-            REQUIRE(allo::free_one<std::array<uint8_t, 496>, decltype(ally)>(
-                        ally, arr)
-                        .okay());
-            REQUIRE(
-                !allo::alloc_one<std::array<uint8_t, 512>, decltype(ally)>(ally)
-                     .okay());
+            REQUIRE(allo::free_one(ally, arr).okay());
+            REQUIRE(!allo::alloc_one<std::array<uint8_t, 512>>(ally).okay());
         }
 
         SUBCASE("Cant free a different type than the last one")
@@ -109,9 +100,9 @@ TEST_SUITE("stack_allocator_t")
             std::array<uint8_t, 512> mem;
             stack_allocator_t ally(mem);
 
-            auto guy_res = allo::alloc_one<int, decltype(ally)>(ally);
+            auto guy_res = allo::alloc_one<int>(ally);
             size_t fake;
-            REQUIRE(!allo::free_one<size_t, decltype(ally)>(ally, fake).okay());
+            REQUIRE(!allo::free_one(ally, fake).okay());
         }
 
         SUBCASE("allocating a bunch of different types and then freeing them "
@@ -120,41 +111,30 @@ TEST_SUITE("stack_allocator_t")
             std::array<uint8_t, 512> mem;
             stack_allocator_t ally(mem);
 
-            auto set_res =
-                allo::construct_one<std::set<const char *>, decltype(ally)>(
-                    ally);
+            auto set_res = allo::construct_one<std::set<const char *>>(ally);
             REQUIRE(set_res.okay());
-            auto set = set_res.release();
-            auto vec_res =
-                allo::construct_one<std::vector<int>, decltype(ally)>(ally);
+            auto &set = set_res.release();
+            auto vec_res = allo::construct_one<std::vector<int>>(ally);
             REQUIRE(vec_res.okay());
-            auto vec = vec_res.release();
+            auto &vec = vec_res.release();
             vec.push_back(10);
             vec.push_back(20);
             set.insert("hello");
             set.insert("nope");
-            auto opt_res =
-                allo::construct_one<std::optional<size_t>, decltype(ally)>(
-                    ally);
+            auto opt_res = allo::construct_one<std::optional<size_t>>(ally);
             REQUIRE(opt_res.okay());
-            auto opt = opt_res.release();
+            auto &opt = opt_res.release();
             opt.emplace(10);
 
             // can't do it in the wrong order
-            REQUIRE(!allo::destroy_one<decltype(vec), decltype(ally)>(ally, vec)
-                         .okay());
-            REQUIRE(!allo::destroy_one<decltype(set), decltype(ally)>(ally, set)
-                         .okay());
+            REQUIRE(!allo::destroy_one(ally, vec).okay());
+            REQUIRE(!allo::destroy_one(ally, set).okay());
 
-            REQUIRE(allo::destroy_one<decltype(opt), decltype(ally)>(ally, opt)
-                        .okay());
+            REQUIRE(allo::destroy_one(ally, opt).okay());
             // still cant do it in the wrong order...
-            REQUIRE(!allo::destroy_one<decltype(set), decltype(ally)>(ally, set)
-                         .okay());
-            REQUIRE(allo::destroy_one<decltype(vec), decltype(ally)>(ally, vec)
-                        .okay());
-            REQUIRE(allo::destroy_one<decltype(set), decltype(ally)>(ally, set)
-                        .okay());
+            REQUIRE(!allo::destroy_one(ally, set).okay());
+            REQUIRE(allo::destroy_one(ally, vec).okay());
+            REQUIRE(allo::destroy_one(ally, set).okay());
         }
     }
 }

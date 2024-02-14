@@ -9,11 +9,11 @@
 
 namespace allo {
 template <typename T, typename Freer>
-allocation_status_t
-free_one(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer>,
-                          Freer> &allocator,
-         T &item) noexcept
+allocation_status_t free_one(Freer &allocator, T &item) noexcept
 {
+    static_assert(std::is_base_of_v<detail::stack_freer_t, Freer>,
+                  "Can't use the given type to perform a free");
+    static_assert(!std::is_reference_v<T>, "Can't free a reference type");
     const size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifdef ALLO_USE_RTTI
@@ -31,11 +31,11 @@ free_one(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer>,
 }
 
 template <typename T, typename Freer>
-allocation_status_t
-free(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer>, Freer>
-         &allocator,
-     const zl::slice<T> items) noexcept
+allocation_status_t free(Freer &allocator, const zl::slice<T> items) noexcept
 {
+    static_assert(std::is_base_of_v<detail::stack_freer_t, Freer>,
+                  "Can't use the given type to perform a free");
+    static_assert(!std::is_reference_v<T>, "Can't free a reference type");
     const size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifdef ALLO_USE_RTTI
@@ -53,11 +53,11 @@ free(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer>, Freer>
 }
 
 template <typename T, typename Freer>
-allocation_status_t
-destroy_one(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer>,
-                             Freer> &allocator,
-            T &item) noexcept
+allocation_status_t destroy_one(Freer &allocator, T &item) noexcept
 {
+    static_assert(std::is_base_of_v<detail::stack_freer_t, Freer>,
+                  "Can't use the given type to perform a free");
+    static_assert(!std::is_reference_v<T>, "Can't free a reference type");
     const size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifdef ALLO_USE_RTTI
@@ -85,7 +85,8 @@ destroy_one(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer>,
 
 template <typename T, typename Freer>
 allocation_status_t
-destroy_many(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer>,
+destroy_many(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer> &&
+                                  !std::is_reference_v<T>,
                               Freer> &allocator,
              const zl::slice<T> items) noexcept
 {
