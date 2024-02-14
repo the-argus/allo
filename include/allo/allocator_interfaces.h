@@ -424,7 +424,7 @@ template <typename... Ts> inline constexpr uint8_t get_bits_for_types()
     return bits;
 }
 
-template <uint8_t index> inline constexpr uint8_t bits_for_index() noexcept
+template <uint8_t index> inline constexpr uint8_t get_bits_for_index() noexcept
 {
     static_assert(index < sizeof(detail::interface_bits));
     return detail::interface_bits[index];
@@ -435,7 +435,6 @@ constexpr bool can_upcast_to =
     (Interface::interfaces &
      get_bits_for_index<uint8_t(Allocator::enum_value)>()) ==
     Interface::interfaces;
-
 } // namespace detail
 
 template <typename Interface, typename Allocator>
@@ -463,6 +462,20 @@ template <typename... Interfaces>
 using allocator_with =
     detail::type_with_bits<detail::get_bits_for_types<Interfaces...>()>;
 
+
+template <typename Interface> class ExRef
+{
+    Interface &m_ref;
+    inline constexpr ExRef(Interface &allocator) noexcept : m_ref(allocator) {}
+
+  public:
+    inline constexpr Interface &operator->() noexcept { return m_ref; }
+
+    static inline zl::opt<ExRef> make(Interface &allocator) noexcept
+    {
+        return {};
+    }
+};
 } // namespace allo
 #ifdef ALLO_HEADER_ONLY
 #include "allo/impl/allocator_interfaces.h"
