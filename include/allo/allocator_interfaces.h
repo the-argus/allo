@@ -424,6 +424,18 @@ template <typename... Ts> inline constexpr uint8_t get_bits_for_types()
     return bits;
 }
 
+template <uint8_t index> inline constexpr uint8_t bits_for_index() noexcept
+{
+    static_assert(index < sizeof(detail::interface_bits));
+    return detail::interface_bits[index];
+}
+
+template <typename Interface, typename Allocator>
+constexpr bool can_upcast_to =
+    (Interface::interfaces &
+     get_bits_for_index<uint8_t(Allocator::enum_value)>()) ==
+    Interface::interfaces;
+
 } // namespace detail
 
 template <typename Interface, typename Allocator>
@@ -435,9 +447,7 @@ inline constexpr Interface &upcast(Allocator &allocator) noexcept
     static_assert(
         std::is_base_of_v<detail::allocator_interface_t, Interface>,
         "Type passed in for the interface is not an allocator interface");
-    static_assert((Interface::interfaces &
-                   detail::interface_bits[uint8_t(Allocator::enum_value)]) ==
-                      Interface::interfaces,
+    static_assert(detail::can_upcast_to<Interface, Allocator>,
                   "The given allocator type does not implement the required "
                   "interfaces to perform this upcast");
     return *reinterpret_cast<Interface *>(&allocator);
