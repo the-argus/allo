@@ -12,7 +12,7 @@ class segmented_array_block_allocator_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =
-        detail::AllocatorType::BlockAllocator;
+        detail::AllocatorType::SegmentedArrayBlockAllocator;
 
     /// Create a heap allocator which will allocate into a given buffer of
     /// memory

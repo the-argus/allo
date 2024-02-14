@@ -17,7 +17,7 @@ class scratch_allocator_t : public detail::allocator_t,
 {
   public:
     static constexpr detail::AllocatorType enum_value =
-        detail::AllocatorType::StackAllocator;
+        detail::AllocatorType::ScratchAllocator;
 
     // can be explicitly constructed from a buffer of existing memory.
     // it will modify this memory, but not free it on destruction.
