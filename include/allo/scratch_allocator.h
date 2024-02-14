@@ -24,7 +24,7 @@ class scratch_allocator_t : public detail::allocator_t,
     inline explicit scratch_allocator_t(zl::slice<uint8_t> memory) noexcept
         : m_memory(memory)
     {
-        type = detail::AllocatorType::ScratchAllocator;
+        type = enum_value;
     }
 
     // no need to do anything upon destruction since this is non-owning
