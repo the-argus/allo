@@ -484,19 +484,39 @@ constexpr bool can_upcast_to =
     Interface::interfaces;
 } // namespace detail
 
-template <typename Interface, typename Allocator>
-inline constexpr Interface &upcast(Allocator &allocator) noexcept
+template <typename Interface, typename InterfaceOrAllocator>
+inline constexpr Interface &upcast(InterfaceOrAllocator &allocator) noexcept
 {
-    static_assert(
-        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>,
-        "Type passed in for the allocator is not a dynamic allocator");
-    static_assert(
-        std::is_base_of_v<detail::allocator_interface_t, Interface>,
-        "Type passed in for the interface is not an allocator interface");
-    static_assert(detail::can_upcast_to<Interface, Allocator>,
-                  "The given allocator type does not implement the required "
-                  "interfaces to perform this upcast");
-    return *reinterpret_cast<Interface *>(&allocator);
+    constexpr bool is_valid_interface =
+        std::is_base_of_v<InterfaceOrAllocator, detail::allocator_interface_t>;
+    constexpr bool is_valid_allocator =
+        std::is_base_of_v<InterfaceOrAllocator,
+                          detail::dynamic_allocator_base_t>;
+    static_assert(!(is_valid_interface && is_valid_allocator),
+                  "Thing trying to be upcasted is both a valid interface and "
+                  "allocator. Is this "
+                  "a custom allocator with incorrect inheritance?");
+    static_assert(is_valid_interface || is_valid_allocator,
+                  "Invalid type trying to be upcasted: neither allocator "
+                  "interface nor allocator.");
+
+    static_assert(std::is_base_of_v<detail::allocator_interface_t, Interface>,
+                  "Type trying to be upcasted to (the interface) is not an "
+                  "allocator interface");
+
+    if constexpr (is_valid_allocator) {
+        static_assert(
+            detail::can_upcast_to<Interface, InterfaceOrAllocator>,
+            "The given allocator type does not implement the required "
+            "interfaces to perform this upcast");
+        return *reinterpret_cast<Interface *>(&allocator);
+    } else {
+        static_assert((InterfaceOrAllocator::interfaces &
+                       Interface::interfaces) == Interface::interfaces,
+                      "The type being upcasted does not implement all the "
+                      "necessary interfaces to be cast to the target type.");
+        return *reinterpret_cast<Interface *>(&allocator);
+    }
 }
 
 using IAlloc = detail::i_alloc;
