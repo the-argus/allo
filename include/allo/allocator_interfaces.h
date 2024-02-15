@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <type_traits>
 
 namespace allo {
 
@@ -87,7 +88,6 @@ class segmented_array_block_allocator_t;
 class block_allocator_t;
 class scratch_allocator_t;
 class region_allocator_t;
-class threadsafe_allocator_t;
 
 namespace detail {
 
@@ -105,6 +105,9 @@ class memory_info_provider_t
 };
 
 class allocator_interface_t
+{};
+
+class threadsafe_allocator_base_t
 {};
 
 class allocator_t : public memory_info_provider_t, public allocator_interface_t
@@ -505,6 +508,84 @@ using IFree = detail::i_free;
 template <typename... Interfaces>
 using allocator_with =
     detail::type_with_bits<detail::get_bits_for_types<Interfaces...>()>;
+
+template <typename InterfaceOrAllocator> class threadsafe_t
+{
+    static constexpr bool is_valid_interface =
+        std::is_base_of_v<InterfaceOrAllocator,
+                          detail::allocator_interface_t> &&
+        detail::interface_has_alloc<InterfaceOrAllocator>() &&
+        detail::interface_has_stack_free<InterfaceOrAllocator>() &&
+        detail::interface_has_stack_realloc<InterfaceOrAllocator>();
+    static constexpr bool is_valid_allocator =
+        std::is_base_of_v<InterfaceOrAllocator,
+                          detail::dynamic_allocator_base_t> &&
+        detail::can_upcast_to<allocator_with<IAlloc, IStackFree, IStackRealloc>,
+                              InterfaceOrAllocator>;
+    static_assert(
+        !(is_valid_interface && is_valid_allocator),
+        "ParentAllocator type is both a valid interface and allocator. Is this "
+        "a custom allocator with incorrect inheritance?");
+    static_assert(is_valid_interface || is_valid_allocator,
+                  "Invalid type provided for parent allocator");
+
+    static constexpr bool has_free()
+    {
+        if constexpr (is_valid_interface) {
+            return detail::interface_has_free<InterfaceOrAllocator>();
+        } else {
+            return detail::has_free(InterfaceOrAllocator::enum_value);
+        }
+    }
+
+    static constexpr bool has_realloc()
+    {
+        if constexpr (is_valid_interface) {
+            return detail::interface_has_realloc<InterfaceOrAllocator>();
+        } else {
+            return detail::has_realloc(InterfaceOrAllocator::enum_value);
+        }
+    }
+
+    static constexpr bool has_alloc()
+    {
+        if constexpr (is_valid_interface) {
+            return detail::interface_has_alloc<InterfaceOrAllocator>();
+        } else {
+            return detail::has_alloc(InterfaceOrAllocator::enum_value);
+        }
+    }
+
+    template <typename ThisType = InterfaceOrAllocator>
+    [[nodiscard]] allocation_result_t alloc_bytes(
+        std::enable_if<has_alloc() &&
+                           std::is_same_v<InterfaceOrAllocator, ThisType>,
+                       size_t>
+            bytes,
+        size_t alignment, size_t typehash);
+
+    template <typename ThisType = InterfaceOrAllocator>
+    [[nodiscard]] allocation_result_t realloc_bytes(
+        std::enable_if<has_realloc() &&
+                           std::is_same_v<InterfaceOrAllocator, ThisType>,
+                       zl::slice<uint8_t>>
+            mem,
+        size_t new_size, size_t typehash);
+
+    allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
+
+    [[nodiscard]] inline constexpr const allocator_properties_t &
+    properties() const
+    {
+    }
+
+    allocation_status_t
+    register_destruction_callback(destruction_callback_t callback,
+                                  void *user_data) noexcept;
+
+  private:
+    InterfaceOrAllocator &m_parent;
+};
 } // namespace allo
 #ifdef ALLO_HEADER_ONLY
 #include "allo/impl/allocator_interfaces.h"
