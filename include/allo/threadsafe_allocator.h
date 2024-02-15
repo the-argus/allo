@@ -4,22 +4,19 @@
 
 namespace allo {
 
-class region_allocator_t : public detail::allocator_t,
-                           public detail::freer_t,
-                           public detail::reallocator_t,
-                           public detail::destruction_callback_provider_t,
-                           private detail::dynamic_allocator_base_t
+class threadsafe_allocator_t : public detail::allocator_t,
+                               public detail::freer_t,
+                               public detail::reallocator_t,
+                               public detail::destruction_callback_provider_t,
+                               private detail::dynamic_allocator_base_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =
-        detail::AllocatorType::RegionAllocator;
+        detail::AllocatorType::ThreadsafeAllocator;
 
-    /// Create a heap allocator which will allocate into a given buffer of
-    /// memory
-    /// TODO: make "maximum contiguous bytes" account for bookkeeping
-    /// information which may take up space in the buffer
-    inline explicit region_allocator_t(
-        const zl::slice<uint8_t> &memory) noexcept
+    template <typename Allocator>
+    inline threadsafe_allocator_t(Allocator &parent,
+                                  const zl::slice<uint8_t> &memory) noexcept
         : m_mem(memory),
           m_properties(make_properties(memory.size(), max_alignment))
     {
@@ -44,6 +41,12 @@ class region_allocator_t : public detail::allocator_t,
     register_destruction_callback(destruction_callback_t callback,
                                   void *user_data) noexcept;
 
+    template <typename ChildAllocator>
+    zl::res<ChildAllocator, AllocationStatusCode> branch_shared() noexcept;
+
+    template <typename ChildAllocator>
+    zl::res<ChildAllocator, AllocationStatusCode> branch() noexcept;
+
   private:
     static constexpr size_t max_alignment = 32;
     zl::slice<uint8_t> m_mem;
@@ -52,5 +55,5 @@ class region_allocator_t : public detail::allocator_t,
 } // namespace allo
 
 #ifdef ALLO_HEADER_ONLY
-#include "allo/impl/region_allocator.h"
+#include "allo/impl/threadsafe_allocator.h"
 #endif

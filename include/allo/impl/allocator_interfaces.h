@@ -114,6 +114,15 @@ template <typename T, typename... Args> struct free_status_generic
     }
 };
 
+template <typename T, typename... Args>
+struct register_destruction_callback_generic
+{
+    inline allocation_status_t operator()(T *item, Args &&...args)
+    {
+        return item->register_destruction_callback(std::forward<Args>(args)...);
+    }
+};
+
 ALLO_FUNC const allocator_properties_t &
 memory_info_provider_t::properties() const
 {
@@ -157,5 +166,15 @@ ALLO_FUNC allocation_status_t stack_freer_t::free_status(zl::slice<uint8_t> mem,
     const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
     auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
     return return_from<free_status_generic>(mutable_self, mem, typehash);
+}
+
+allocation_status_t
+destruction_callback_provider_t::register_destruction_callback(
+    destruction_callback_t callback, void *user_data) noexcept
+{
+    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
+    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
+    return return_from<register_destruction_callback_generic>(
+        mutable_self, callback, user_data);
 }
 } // namespace allo::detail

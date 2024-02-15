@@ -41,4 +41,10 @@ heap_allocator_t::free_bytes(zl::slice<uint8_t> /*mem*/, size_t /*typehash*/)
 {
     return AllocationStatusCode::InvalidArgument;
 }
+
+ALLO_FUNC allocation_status_t heap_allocator_t::register_destruction_callback(
+    destruction_callback_t callback, void *user_data) noexcept
+{
+    return AllocationStatusCode::InvalidArgument;
+}
 } // namespace allo

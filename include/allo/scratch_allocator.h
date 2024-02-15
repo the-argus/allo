@@ -13,6 +13,7 @@ namespace allo {
 class scratch_allocator_t : public detail::allocator_t,
                             public detail::freer_t,
                             public detail::stack_reallocator_t,
+                            public detail::destruction_callback_provider_t,
                             private detail::dynamic_allocator_base_t
 {
   public:
@@ -44,6 +45,10 @@ class scratch_allocator_t : public detail::allocator_t,
     }
 
     [[nodiscard]] const allocator_properties_t &properties() const;
+
+    allocation_status_t
+    register_destruction_callback(destruction_callback_t callback,
+                                  void *user_data) noexcept;
 
   private:
     zl::slice<uint8_t> m_memory;

@@ -43,8 +43,13 @@ ALLO_FUNC allocation_status_t c_allocator_t::free_bytes(zl::slice<uint8_t> mem,
 ALLO_FUNC const allocator_properties_t &c_allocator_t::properties() const
 {
     static constexpr allocator_properties_t c_allocator_properties =
-        make_properties(0, 0, 32);
+        make_properties(0, 32);
 
     return c_allocator_properties;
+}
+ALLO_FUNC allocation_status_t c_allocator_t::register_destruction_callback(
+    destruction_callback_t callback, void *user_data) noexcept
+{
+    return AllocationStatusCode::InvalidArgument;
 }
 }; // namespace allo

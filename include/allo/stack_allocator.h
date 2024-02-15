@@ -13,6 +13,7 @@ namespace allo {
 class stack_allocator_t : private detail::dynamic_allocator_base_t,
                           public detail::allocator_t,
                           public detail::stack_freer_t,
+                          public detail::destruction_callback_provider_t,
                           public detail::stack_reallocator_t
 {
   public:
@@ -50,6 +51,10 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
                                                   size_t typehash) const;
 
     [[nodiscard]] const allocator_properties_t &properties() const;
+
+    allocation_status_t
+    register_destruction_callback(destruction_callback_t callback,
+                                  void *user_data) noexcept;
 
   private:
     /// Allocate stuff with no typing

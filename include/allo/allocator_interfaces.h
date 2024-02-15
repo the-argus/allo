@@ -32,10 +32,6 @@ using allocation_result_t = zl::res<zl::slice<uint8_t>, AllocationStatusCode>;
 
 struct allocator_requirements_t
 {
-    // the upper bound of possible memory usage that you forsee.
-    // the default (null) means unbounded / only bounded by hardware,
-    // so you will require an allocator like malloc.
-    zl::opt<size_t> maximum_bytes;
     // the largest single contiguous allocation you plan on making. null means
     // unbounded, so you require an allocator like malloc which can map virtual
     // memory.
@@ -55,16 +51,6 @@ struct allocator_properties_t
     [[nodiscard]] inline constexpr bool
     meets(const allocator_requirements_t &requirements) const
     {
-        if (!requirements.maximum_bytes.has_value()) {
-            if (m_maximum_bytes != 0) {
-                return false;
-            }
-        } else {
-            if (requirements.maximum_bytes.value() > m_maximum_bytes) {
-                return false;
-            }
-        }
-
         if (!requirements.maximum_contiguous_bytes.has_value()) {
             if (m_maximum_contiguous_bytes != 0) {
                 return false;
@@ -80,21 +66,19 @@ struct allocator_properties_t
     }
 
   private:
-    // zero maximum bytes means theoretically limitless maximum bytes
-    size_t m_maximum_bytes;
     // zero means theoretically limitless contiguous allocation is possible
     size_t m_maximum_contiguous_bytes;
     uint8_t m_maximum_alignment;
 
-    inline constexpr allocator_properties_t(size_t max_bytes,
-                                            size_t max_contiguous_bytes,
+    inline constexpr allocator_properties_t(size_t max_contiguous_bytes,
                                             uint8_t max_alignment)
-        : m_maximum_bytes(max_bytes),
-          m_maximum_contiguous_bytes(max_contiguous_bytes),
+        : m_maximum_contiguous_bytes(max_contiguous_bytes),
           m_maximum_alignment(max_alignment)
     {
     }
 };
+
+using destruction_callback_t = void (*)(void *user_data);
 
 class heap_allocator_t;
 class c_allocator_t;
@@ -103,6 +87,7 @@ class segmented_array_block_allocator_t;
 class block_allocator_t;
 class scratch_allocator_t;
 class region_allocator_t;
+class threadsafe_allocator_t;
 
 namespace detail {
 
@@ -113,11 +98,9 @@ class memory_info_provider_t
 
   protected:
     [[nodiscard]] static inline constexpr allocator_properties_t
-    make_properties(size_t max_bytes, size_t max_contiguous_bytes,
-                    uint8_t max_alignment)
+    make_properties(size_t max_contiguous_bytes, uint8_t max_alignment)
     {
-        return allocator_properties_t{max_bytes, max_contiguous_bytes,
-                                      max_alignment};
+        return allocator_properties_t{max_contiguous_bytes, max_alignment};
     }
 };
 
@@ -158,6 +141,14 @@ class stack_freer_t : public allocator_interface_t
 class freer_t : public stack_freer_t
 {};
 
+class destruction_callback_provider_t
+{
+  public:
+    allocation_status_t
+    register_destruction_callback(destruction_callback_t callback,
+                                  void *user_data) noexcept;
+};
+
 enum class AllocatorType : uint8_t
 {
     HeapAllocator,
@@ -169,6 +160,7 @@ enum class AllocatorType : uint8_t
     // allocator created by arena. arena isnt actually an allocator, its more
     // like an allocator-allocator
     RegionAllocator,
+    ThreadsafeAllocator,
     MAX_ALLOCATOR_TYPE
 };
 
@@ -181,6 +173,7 @@ constexpr uint8_t interface_bits[uint8_t(AllocatorType::MAX_ALLOCATOR_TYPE)] = {
     0b10011, // stack
     0b10111, // scratch
     0b11111, // region allocator
+    0b11111, // threadsafe allocator
 };
 
 // clang-format off
@@ -226,6 +219,32 @@ inline constexpr bool has_stack_free(AllocatorType type)
     return (interface_bits[uint8_t(type)] & mask_stack_free) > 0;
 }
 
+template <typename Interface> inline constexpr bool interface_has_alloc()
+{
+    return (Interface::interfaces & mask_alloc) > 0;
+}
+
+template <typename Interface> inline constexpr bool interface_has_realloc()
+{
+    return (Interface::interfaces & mask_realloc) > 0;
+}
+
+template <typename Interface> inline constexpr bool interface_has_free()
+{
+    return (Interface::interfaces & mask_free) > 0;
+}
+
+template <typename Interface>
+inline constexpr bool interface_has_stack_realloc()
+{
+    return (Interface::interfaces & mask_stack_realloc) > 0;
+}
+
+template <typename Interface> inline constexpr bool interface_has_stack_free()
+{
+    return (Interface::interfaces & mask_stack_free) > 0;
+}
+
 // all allocators inherit from this
 class dynamic_allocator_base_t
 {
@@ -257,14 +276,16 @@ class i_stack_free : public stack_freer_t
     static constexpr uint8_t interfaces = 0b00001;
 };
 
-class i_stack_realloc : public stack_reallocator_t
+class i_stack_realloc : public stack_reallocator_t,
+                        public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b00010;
 };
 
 class i_stack_realloc_i_stack_free : public stack_reallocator_t,
-                                     public stack_freer_t
+                                     public stack_freer_t,
+                                     public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b00011;
@@ -276,57 +297,71 @@ class i_free : public freer_t
     static constexpr uint8_t interfaces = 0b00101;
 };
 
-class i_stack_realloc_i_free : public stack_reallocator_t, public freer_t
+class i_stack_realloc_i_free : public stack_reallocator_t,
+                               public freer_t,
+                               public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b00111;
 };
 
-class i_realloc : public reallocator_t
+class i_realloc : public reallocator_t, public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b01010;
 };
 
-class i_realloc_i_stack_free : public reallocator_t, public stack_freer_t
+class i_realloc_i_stack_free : public reallocator_t,
+                               public stack_freer_t,
+                               public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b01011;
 };
 
-class i_realloc_i_free : public reallocator_t, public freer_t
+class i_realloc_i_free : public reallocator_t,
+                         public freer_t,
+                         public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b01111;
 };
 
-class i_alloc : public allocator_t
+class i_alloc : public allocator_t, public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b10000;
 };
 
-class i_alloc_i_stack_free : public allocator_t, public stack_freer_t
+class i_alloc_i_stack_free : public allocator_t,
+                             public stack_freer_t,
+                             public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b10001;
 };
 
-class i_alloc_i_stack_realloc : public allocator_t, public stack_reallocator_t
+class i_alloc_i_stack_realloc : public allocator_t,
+                                public stack_reallocator_t,
+                                public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b10010;
 };
 
-class i_alloc_i_stack_realloc_i_stack_free : public allocator_t,
-                                             public stack_reallocator_t,
-                                             public stack_freer_t
+class i_alloc_i_stack_realloc_i_stack_free
+    : public allocator_t,
+      public stack_reallocator_t,
+      public stack_freer_t,
+      public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b10011;
 };
 
-class i_alloc_i_free : public allocator_t, public freer_t
+class i_alloc_i_free : public allocator_t,
+                       public freer_t,
+                       public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b10101;
@@ -334,13 +369,16 @@ class i_alloc_i_free : public allocator_t, public freer_t
 
 class i_alloc_i_stack_realloc_i_free : public allocator_t,
                                        public stack_reallocator_t,
-                                       public freer_t
+                                       public freer_t,
+                                       public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b10111;
 };
 
-class i_alloc_i_realloc : public allocator_t, public reallocator_t
+class i_alloc_i_realloc : public allocator_t,
+                          public reallocator_t,
+                          public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b11010;
@@ -348,7 +386,8 @@ class i_alloc_i_realloc : public allocator_t, public reallocator_t
 
 class i_alloc_i_realloc_i_stack_free : public allocator_t,
                                        public reallocator_t,
-                                       public stack_freer_t
+                                       public stack_freer_t,
+                                       public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b11011;
@@ -356,7 +395,8 @@ class i_alloc_i_realloc_i_stack_free : public allocator_t,
 
 class i_alloc_i_realloc_i_free : public allocator_t,
                                  public reallocator_t,
-                                 public freer_t
+                                 public freer_t,
+                                 public destruction_callback_provider_t
 {
   public:
     static constexpr uint8_t interfaces = 0b11111;
@@ -461,21 +501,6 @@ using IFree = detail::i_free;
 template <typename... Interfaces>
 using allocator_with =
     detail::type_with_bits<detail::get_bits_for_types<Interfaces...>()>;
-
-
-template <typename Interface> class ExRef
-{
-    Interface &m_ref;
-    inline constexpr ExRef(Interface &allocator) noexcept : m_ref(allocator) {}
-
-  public:
-    inline constexpr Interface &operator->() noexcept { return m_ref; }
-
-    static inline zl::opt<ExRef> make(Interface &allocator) noexcept
-    {
-        return {};
-    }
-};
 } // namespace allo
 #ifdef ALLO_HEADER_ONLY
 #include "allo/impl/allocator_interfaces.h"

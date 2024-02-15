@@ -7,6 +7,7 @@ namespace allo {
 class block_allocator_t : public detail::allocator_t,
                           public detail::freer_t,
                           public detail::reallocator_t,
+                          public detail::destruction_callback_provider_t,
                           private detail::dynamic_allocator_base_t
 {
   public:
@@ -19,8 +20,7 @@ class block_allocator_t : public detail::allocator_t,
     /// information which may take up space in the buffer
     inline explicit block_allocator_t(const zl::slice<uint8_t> &memory,
                                       size_t blocksize) noexcept
-        : m_mem(memory),
-          m_properties(make_properties(memory.size(), blocksize, max_alignment))
+        : m_mem(memory), m_properties(make_properties(blocksize, max_alignment))
     {
         type = enum_value;
     }
@@ -38,6 +38,10 @@ class block_allocator_t : public detail::allocator_t,
     {
         return m_properties;
     }
+
+    allocation_status_t
+    register_destruction_callback(destruction_callback_t callback,
+                                  void *user_data) noexcept;
 
   private:
     static constexpr size_t max_alignment = 32;

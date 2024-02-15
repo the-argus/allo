@@ -161,8 +161,7 @@ ALLO_FUNC void stack_allocator_t::zero() ALLO_NOEXCEPT
 
 stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
     : m_memory(other.m_memory),
-      m_properties(
-          make_properties(other.m_memory.size(), other.m_memory.size(), 8))
+      m_properties(make_properties(other.m_memory.size(), 8))
 {
     type = detail::AllocatorType::StackAllocator;
 }
@@ -180,8 +179,14 @@ stack_allocator_t::operator=(stack_allocator_t &&other) noexcept
 // mark all memory as available
 stack_allocator_t::stack_allocator_t(zl::slice<uint8_t> memory) ALLO_NOEXCEPT
     : m_memory(memory),
-      m_properties(make_properties(memory.size(), memory.size(), 8))
+      m_properties(make_properties(memory.size(), 8))
 {
     type = detail::AllocatorType::StackAllocator;
+}
+
+ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(
+    destruction_callback_t callback, void *user_data) noexcept
+{
+    return AllocationStatusCode::InvalidArgument;
 }
 } // namespace allo
