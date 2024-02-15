@@ -8,7 +8,7 @@ class threadsafe_allocator_t : public detail::allocator_t,
                                public detail::freer_t,
                                public detail::reallocator_t,
                                public detail::destruction_callback_provider_t,
-                               private detail::dynamic_allocator_base_t
+                               private detail::threadsafe_dynamic_allocator_base_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =
@@ -42,10 +42,10 @@ class threadsafe_allocator_t : public detail::allocator_t,
                                   void *user_data) noexcept;
 
     template <typename ChildAllocator>
-    zl::res<ChildAllocator, AllocationStatusCode> branch_shared() noexcept;
-
-    template <typename ChildAllocator>
-    zl::res<ChildAllocator, AllocationStatusCode> branch() noexcept;
+    inline zl::res<ChildAllocator, AllocationStatusCode>
+    branch() noexcept
+    {
+    }
 
   private:
     static constexpr size_t max_alignment = 32;

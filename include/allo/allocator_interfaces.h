@@ -252,6 +252,10 @@ class dynamic_allocator_base_t
     AllocatorType type;
 };
 
+// all threadsafe allocators inherit from this
+class threadsafe_dynamic_allocator_base_t : public dynamic_allocator_base_t
+{};
+
 class i_stack_free;                         // 0b00001 1
 class i_stack_realloc;                      // 0b00010 2
 class i_stack_realloc_i_stack_free;         // 0b00011 3
