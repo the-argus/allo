@@ -558,30 +558,56 @@ template <typename InterfaceOrAllocator> class threadsafe_t
 
     template <typename ThisType = InterfaceOrAllocator>
     [[nodiscard]] allocation_result_t alloc_bytes(
-        std::enable_if<has_alloc() &&
-                           std::is_same_v<InterfaceOrAllocator, ThisType>,
-                       size_t>
+        std::enable_if_t<has_alloc() &&
+                             std::is_same_v<InterfaceOrAllocator, ThisType>,
+                         size_t>
             bytes,
-        size_t alignment, size_t typehash);
+        size_t alignment, size_t typehash)
+    {
+        return m_parent.alloc_bytes(bytes, alignment, typehash);
+    }
 
     template <typename ThisType = InterfaceOrAllocator>
     [[nodiscard]] allocation_result_t realloc_bytes(
-        std::enable_if<has_realloc() &&
-                           std::is_same_v<InterfaceOrAllocator, ThisType>,
-                       zl::slice<uint8_t>>
+        std::enable_if_t<has_realloc() &&
+                             std::is_same_v<InterfaceOrAllocator, ThisType>,
+                         zl::slice<uint8_t>>
             mem,
-        size_t new_size, size_t typehash);
-
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
-
-    [[nodiscard]] inline constexpr const allocator_properties_t &
-    properties() const
+        size_t new_size, size_t typehash)
     {
+        return m_parent.realloc_bytes(mem, new_size, typehash);
     }
 
-    allocation_status_t
-    register_destruction_callback(destruction_callback_t callback,
-                                  void *user_data) noexcept;
+    template <typename ThisType = InterfaceOrAllocator>
+    allocation_status_t free_bytes(
+        std::enable_if_t<std::is_same_v<ThisType, InterfaceOrAllocator> &&
+                             has_free(),
+                         zl::slice<uint8_t>>
+            mem,
+        size_t typehash)
+    {
+        return m_parent.free_bytes(mem, typehash);
+    }
+
+    template <typename T = allocator_properties_t>
+    [[nodiscard]] inline constexpr const std::enable_if_t<
+        std::is_same_v<T, allocator_properties_t> &&
+            std::is_base_of_v<detail::memory_info_provider_t,
+                              InterfaceOrAllocator>,
+        T> &
+    properties() const
+    {
+        return m_parent.properties();
+    }
+
+    template <typename T = destruction_callback_t>
+    allocation_status_t register_destruction_callback(
+        std::enable_if_t<
+            std::is_base_of_v<detail::destruction_callback_provider_t,
+                              InterfaceOrAllocator>,
+            T>
+            callback,
+        void *user_data) noexcept;
 
   private:
     InterfaceOrAllocator &m_parent;
