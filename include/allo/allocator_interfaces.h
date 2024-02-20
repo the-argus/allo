@@ -184,6 +184,17 @@ class destruction_callback_provider_t
                                   void *user_data) noexcept;
 };
 
+// misc utility function
+inline constexpr uint8_t alignment_exponent(size_t alignment)
+{
+    for (size_t i = 0; i < sizeof(size_t) * 8; ++i) {
+        if (((size_t(1) << i) & alignment) == alignment) {
+            return i;
+        }
+    }
+    return sizeof(size_t) * 8;
+}
+
 enum class AllocatorType : uint8_t
 {
     HeapAllocator,

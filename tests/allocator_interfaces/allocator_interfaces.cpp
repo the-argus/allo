@@ -30,6 +30,12 @@ static_assert(std::is_same_v<allocator_with<IAlloc, IRealloc, IStackFree>, detai
 static_assert(std::is_same_v<allocator_with<IAlloc, IRealloc, IFree>, detail::i_alloc_i_realloc_i_free>);
 // clang-format on
 
+static_assert(detail::alignment_exponent(alignof(int)) == 2);
+static_assert(detail::alignment_exponent(alignof(size_t)) == 3);
+static_assert(detail::alignment_exponent(16) == 4);
+static_assert(detail::alignment_exponent(32) == 5);
+static_assert(detail::alignment_exponent(64) == 6);
+
 TEST_SUITE("allocator interfaces")
 {
     TEST_CASE("Upcasting")
@@ -38,8 +44,7 @@ TEST_SUITE("allocator interfaces")
         {
             auto makeint = [](detail::i_alloc &allocator)
                 -> zl::res<int *, AllocationStatusCode> {
-                auto mem_res =
-                    allocator.alloc_bytes(sizeof(int), alignof(int), 0);
+                auto mem_res = allocator.alloc_bytes(sizeof(int), 2, 0);
                 if (!mem_res.okay())
                     return mem_res.err();
 
@@ -61,7 +66,7 @@ TEST_SUITE("allocator interfaces")
         {
             auto makeint = [](detail::i_alloc &allocator)
                 -> zl::res<int &, AllocationStatusCode> {
-                return allo::alloc_one<int, detail::i_alloc>(allocator);
+                return allo::alloc_one<int, IAlloc>(allocator);
             };
 
             std::array<uint8_t, 512> mem;

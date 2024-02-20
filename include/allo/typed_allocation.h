@@ -31,7 +31,8 @@ alloc_one(Allocator &allocator) noexcept
 #else
         0;
 #endif
-    auto res = allocator.alloc_bytes(sizeof(T), alignment, typehash);
+    auto res = allocator.alloc_bytes(
+        sizeof(T), detail::alignment_exponent(alignment), typehash);
     if (!res.okay())
         return res.err();
     const auto &mem = res.release_ref();
@@ -62,7 +63,8 @@ inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(Allocator &allocator,
 #else
         0;
 #endif
-    auto res = allocator.alloc_bytes(sizeof(T) * number, alignment, typehash);
+    auto res = allocator.alloc_bytes(
+        sizeof(T) * number, detail::alignment_exponent(alignment), typehash);
     if (!res.okay())
         return res.err();
     const auto &mem = res.release_ref();
