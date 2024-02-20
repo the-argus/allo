@@ -19,14 +19,14 @@
 namespace allo {
 
 [[nodiscard]] allocation_result_t
-scratch_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t new_size,
-                                   size_t typehash)
+scratch_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
+                                   size_t new_size, size_t new_typehash)
 {
     return AllocationStatusCode::InvalidArgument;
 }
 
 [[nodiscard]] ALLO_FUNC allocation_result_t scratch_allocator_t::alloc_bytes(
-    size_t bytes, size_t alignment, size_t typehash)
+    size_t bytes, uint8_t alignment_exponent, size_t typehash)
 {
     return AllocationStatusCode::InvalidArgument;
 }

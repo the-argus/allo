@@ -4,11 +4,12 @@
 
 namespace allo {
 
-class threadsafe_allocator_t : public detail::allocator_t,
-                               public detail::freer_t,
-                               public detail::reallocator_t,
-                               public detail::destruction_callback_provider_t,
-                               private detail::threadsafe_dynamic_allocator_base_t
+class threadsafe_allocator_t
+    : public detail::allocator_t,
+      public detail::freer_t,
+      public detail::reallocator_t,
+      public detail::destruction_callback_provider_t,
+      private detail::threadsafe_dynamic_allocator_base_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =
@@ -26,8 +27,10 @@ class threadsafe_allocator_t : public detail::allocator_t,
     [[nodiscard]] allocation_result_t
     alloc_bytes(size_t bytes, size_t alignment, size_t typehash);
 
-    [[nodiscard]] allocation_result_t
-    realloc_bytes(zl::slice<uint8_t> mem, size_t new_size, size_t typehash);
+    [[nodiscard]] allocation_result_t realloc_bytes(zl::slice<uint8_t> mem,
+                                                    size_t old_typehash,
+                                                    size_t new_size,
+                                                    size_t new_typehash);
 
     allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
 
@@ -42,8 +45,7 @@ class threadsafe_allocator_t : public detail::allocator_t,
                                   void *user_data) noexcept;
 
     template <typename ChildAllocator>
-    inline zl::res<ChildAllocator, AllocationStatusCode>
-    branch() noexcept
+    inline zl::res<ChildAllocator, AllocationStatusCode> branch() noexcept
     {
     }
 

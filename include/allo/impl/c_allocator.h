@@ -18,16 +18,18 @@
 #endif
 
 namespace allo {
-ALLO_FUNC allocation_result_t c_allocator_t::alloc_bytes(size_t bytes,
-                                                         size_t alignment,
-                                                         size_t typehash)
+ALLO_FUNC allocation_result_t c_allocator_t::alloc_bytes(
+    size_t bytes, uint8_t alignment_exponent, size_t typehash)
 {
+    if (alignment_exponent > 5)
+        return AllocationStatusCode::AllocationTooAligned;
     void *newmem = ::malloc(bytes);
     return zl::raw_slice(*reinterpret_cast<uint8_t *>(newmem), bytes);
 }
 
-ALLO_FUNC allocation_result_t c_allocator_t::realloc_bytes(
-    zl::slice<uint8_t> mem, size_t new_size, size_t typehash)
+ALLO_FUNC allocation_result_t
+c_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
+                             size_t new_size, size_t new_typehash)
 {
     void *newmem = ::realloc(mem.data(), new_size);
     return zl::raw_slice(*reinterpret_cast<uint8_t *>(newmem), new_size);

@@ -40,10 +40,12 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
     void zero() ALLO_NOEXCEPT;
 
     [[nodiscard]] allocation_result_t
-    alloc_bytes(size_t bytes, size_t alignment, size_t typehash);
+    alloc_bytes(size_t bytes, uint8_t alignment_exponent, size_t typehash);
 
-    [[nodiscard]] allocation_result_t
-    realloc_bytes(zl::slice<uint8_t> mem, size_t new_size, size_t typehash);
+    [[nodiscard]] allocation_result_t realloc_bytes(zl::slice<uint8_t> mem,
+                                                    size_t old_typehash,
+                                                    size_t new_size,
+                                                    size_t new_typehash);
 
     allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
 

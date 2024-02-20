@@ -23,6 +23,22 @@ enum class AllocationStatusCode : uint8_t
     Corruption,
     // invalid item trying to be freed, usually
     InvalidArgument,
+    // if the allocation is too big (for example trying to allocate something
+    // bigger than a block in a block allocator) but the allocator does have
+    // more memory for further allocations. basically, this means "OOM, but try
+    // something else, that might work". Halfway between InvalidArgument and OOM
+    AllocationTooBig,
+
+    // you requested a greater alignment than the allocator can provide.
+    // guaranteed to not be produced if the allocators' properties meet
+    // requirements
+    AllocationTooAligned,
+    // memory passed in to an allocator function could not concievably be owned
+    // by that allocator, either by being outside its bounds or misaligned
+    MemoryInvalid,
+    // when using type checking, this indicates that you tried to free as a
+    // different type that what was originally allocated
+    InvalidType,
 };
 
 using allocation_status_t = zl::status<AllocationStatusCode>;
@@ -47,6 +63,7 @@ class memory_info_provider_t;
 struct allocator_properties_t
 {
   public:
+    allocator_properties_t() = delete;
     friend class detail::memory_info_provider_t;
     /// Check if the allocator properties meet some given requirements
     [[nodiscard]] inline constexpr bool
@@ -94,13 +111,25 @@ namespace detail {
 class memory_info_provider_t
 {
   public:
-    [[nodiscard]] const allocator_properties_t &properties() const;
+    [[nodiscard]] const allocator_properties_t &properties() const noexcept;
 
   protected:
     [[nodiscard]] static inline constexpr allocator_properties_t
-    make_properties(size_t max_contiguous_bytes, uint8_t max_alignment)
+    make_properties(size_t max_contiguous_bytes, uint8_t max_alignment) noexcept
     {
         return allocator_properties_t{max_contiguous_bytes, max_alignment};
+    }
+
+    [[nodiscard]] static inline constexpr size_t
+    get_max_contiguous_bytes(const allocator_properties_t &properties) noexcept
+    {
+        return properties.m_maximum_contiguous_bytes;
+    }
+
+    [[nodiscard]] static inline constexpr uint8_t
+    get_max_alignment(const allocator_properties_t &properties) noexcept
+    {
+        return properties.m_maximum_alignment;
     }
 };
 
@@ -116,8 +145,9 @@ class allocator_t : public memory_info_provider_t, public allocator_interface_t
     /// Request an allocation for some number of bytes with some alignment, and
     /// providing the typehash. If a non-typed allocator, 0 can be supplied as
     /// the hash.
-    [[nodiscard]] allocation_result_t
-    alloc_bytes(size_t bytes, size_t alignment, size_t typehash);
+    [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
+                                                  uint8_t alignment_exponent,
+                                                  size_t typehash) noexcept;
 };
 
 class stack_reallocator_t : public memory_info_provider_t,
@@ -125,7 +155,8 @@ class stack_reallocator_t : public memory_info_provider_t,
 {
   public:
     [[nodiscard]] allocation_result_t
-    realloc_bytes(zl::slice<uint8_t> mem, size_t new_size, size_t typehash);
+    realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+                  size_t new_typehash) noexcept;
 };
 
 class reallocator_t : public stack_reallocator_t
@@ -134,11 +165,12 @@ class reallocator_t : public stack_reallocator_t
 class stack_freer_t : public allocator_interface_t
 {
   public:
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
+    allocation_status_t free_bytes(zl::slice<uint8_t> mem,
+                                   size_t typehash) noexcept;
     /// Returns Okay if the free of the given memory would succeed, otherwise
     /// returns the error that would be returned if you tried to free.
-    [[nodiscard]] allocation_status_t free_status(zl::slice<uint8_t> mem,
-                                                  size_t typehash) const;
+    [[nodiscard]] allocation_status_t
+    free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
 };
 
 class freer_t : public stack_freer_t
@@ -488,14 +520,10 @@ template <typename Interface, typename InterfaceOrAllocator>
 inline constexpr Interface &upcast(InterfaceOrAllocator &allocator) noexcept
 {
     constexpr bool is_valid_interface =
-        std::is_base_of_v<InterfaceOrAllocator, detail::allocator_interface_t>;
+        std::is_base_of_v<detail::allocator_interface_t, InterfaceOrAllocator>;
     constexpr bool is_valid_allocator =
-        std::is_base_of_v<InterfaceOrAllocator,
-                          detail::dynamic_allocator_base_t>;
-    static_assert(!(is_valid_interface && is_valid_allocator),
-                  "Thing trying to be upcasted is both a valid interface and "
-                  "allocator. Is this "
-                  "a custom allocator with incorrect inheritance?");
+        std::is_base_of_v<detail::dynamic_allocator_base_t,
+                          InterfaceOrAllocator>;
     static_assert(is_valid_interface || is_valid_allocator,
                   "Invalid type trying to be upcasted: neither allocator "
                   "interface nor allocator.");
@@ -582,9 +610,9 @@ template <typename InterfaceOrAllocator> class threadsafe_t
                              std::is_same_v<InterfaceOrAllocator, ThisType>,
                          size_t>
             bytes,
-        size_t alignment, size_t typehash)
+        uint8_t alignment_exponent, size_t typehash) noexcept
     {
-        return m_parent.alloc_bytes(bytes, alignment, typehash);
+        return m_parent.alloc_bytes(bytes, alignment_exponent, typehash);
     }
 
     template <typename ThisType = InterfaceOrAllocator>
@@ -593,9 +621,10 @@ template <typename InterfaceOrAllocator> class threadsafe_t
                              std::is_same_v<InterfaceOrAllocator, ThisType>,
                          zl::slice<uint8_t>>
             mem,
-        size_t new_size, size_t typehash)
+        size_t old_typehash, size_t new_size, size_t new_typehash) noexcept
     {
-        return m_parent.realloc_bytes(mem, new_size, typehash);
+        return m_parent.realloc_bytes(mem, old_typehash, new_size,
+                                      new_typehash);
     }
 
     template <typename ThisType = InterfaceOrAllocator>

@@ -31,7 +31,8 @@ ALLO_FUNC allocation_result_t threadsafe_allocator_t::alloc_bytes(
 }
 
 ALLO_FUNC allocation_result_t threadsafe_allocator_t::realloc_bytes(
-    zl::slice<uint8_t> /*mem*/, size_t /*new_size*/, size_t /*typehash*/)
+    zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+    size_t new_typehash)
 {
     return AllocationStatusCode::InvalidArgument;
 }

@@ -49,11 +49,11 @@ TEST_SUITE("allocator interfaces")
             std::array<uint8_t, 512> mem;
             stack_allocator_t stack(mem);
 
-            auto maybe_int = makeint(upcast<detail::i_alloc>(stack));
+            auto maybe_int = makeint(upcast<IAlloc>(stack));
             REQUIRE(maybe_int.okay());
 
             c_allocator_t heap;
-            auto maybe_int_2 = makeint(upcast<detail::i_alloc>(heap));
+            auto maybe_int_2 = makeint(upcast<IAlloc>(heap));
             REQUIRE(maybe_int_2.okay());
         }
 
@@ -67,11 +67,11 @@ TEST_SUITE("allocator interfaces")
             std::array<uint8_t, 512> mem;
             stack_allocator_t stack(mem);
 
-            auto maybe_int = makeint(upcast<detail::i_alloc>(stack));
+            auto maybe_int = makeint(upcast<IAlloc>(stack));
             REQUIRE(maybe_int.okay());
 
             c_allocator_t heap;
-            auto maybe_int_2 = makeint(upcast<detail::i_alloc>(heap));
+            auto maybe_int_2 = makeint(upcast<IAlloc>(heap));
             REQUIRE(maybe_int_2.okay());
         }
     }

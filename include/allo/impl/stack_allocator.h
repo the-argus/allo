@@ -21,9 +21,13 @@
 
 namespace allo {
 
-[[nodiscard]] ALLO_FUNC allocation_result_t
-stack_allocator_t::alloc_bytes(size_t bytes, size_t alignment, size_t typehash)
+[[nodiscard]] ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
+    size_t bytes, uint8_t alignment_exponent, size_t typehash)
 {
+    auto alignment = static_cast<size_t>(std::pow(2, alignment_exponent));
+    if (alignment > get_max_alignment(properties())) {
+        return AllocationStatusCode::AllocationTooAligned;
+    }
     size_t original_available = m_first_available;
 
     auto *bookkeeping = static_cast<previous_state_t *>(
@@ -72,13 +76,13 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
     return nullptr;
 }
 
-[[nodiscard]] allocation_status_t
+ALLO_FUNC allocation_status_t
 stack_allocator_t::free_status(zl::slice<uint8_t> mem, size_t typehash) const
 {
     return free_common(mem, typehash).err();
 }
 
-zl::res<stack_allocator_t::previous_state_t &, AllocationStatusCode>
+ALLO_FUNC zl::res<stack_allocator_t::previous_state_t &, AllocationStatusCode>
 stack_allocator_t::free_common(zl::slice<uint8_t> mem,
                                size_t typehash) const noexcept
 {
@@ -143,11 +147,11 @@ stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
     return AllocationStatusCode::Okay;
 }
 
-allocation_result_t stack_allocator_t::realloc_bytes(zl::slice<uint8_t> mem,
-                                                     size_t new_size,
-                                                     size_t typehash)
+ALLO_FUNC allocation_result_t
+stack_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
+                                 size_t new_size, size_t new_typehash)
 {
-    if (typehash != m_last_type)
+    if (old_typehash != m_last_type)
         return AllocationStatusCode::InvalidArgument;
 
     // always err
@@ -159,6 +163,7 @@ ALLO_FUNC void stack_allocator_t::zero() ALLO_NOEXCEPT
     std::memset(m_memory.data(), 0, m_memory.size());
 }
 
+ALLO_FUNC
 stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
     : m_memory(other.m_memory),
       m_properties(make_properties(other.m_memory.size(), 8))
@@ -166,7 +171,12 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
     type = detail::AllocatorType::StackAllocator;
 }
 
-stack_allocator_t &
+ALLO_FUNC const allocator_properties_t &stack_allocator_t::properties() const
+{
+    return m_properties;
+}
+
+ALLO_FUNC stack_allocator_t &
 stack_allocator_t::operator=(stack_allocator_t &&other) noexcept
 {
     if (&other == this) [[unlikely]]
@@ -177,6 +187,7 @@ stack_allocator_t::operator=(stack_allocator_t &&other) noexcept
 }
 
 // mark all memory as available
+ALLO_FUNC
 stack_allocator_t::stack_allocator_t(zl::slice<uint8_t> memory) ALLO_NOEXCEPT
     : m_memory(memory),
       m_properties(make_properties(memory.size(), 8))
