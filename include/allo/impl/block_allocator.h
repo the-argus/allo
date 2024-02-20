@@ -1,5 +1,6 @@
 #pragma once
 
+#include "allo/allocator_interfaces.h"
 #include <cmath>
 #ifndef ALLO_HEADER_ONLY
 #ifndef ALLO_OVERRIDE_IMPL_INCLUSION_GUARD
@@ -273,6 +274,9 @@ ALLO_FUNC allocation_status_t block_allocator_t::free_status(
 ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
     destruction_callback_t callback, void *user_data) noexcept
 {
+    if (!callback) {
+        return AllocationStatusCode::InvalidArgument;
+    }
     bool has_arrays = m.num_destruction_array_blocks > 0;
     if (has_arrays && m.current_destruction_array_size !=
                           m.max_destruction_entries_per_block) {

@@ -1,4 +1,7 @@
 #pragma once
+#include "allo/allocator_interfaces.h"
+#include "allo/impl/block_allocator.h"
+#include "ziglike/slice.h"
 #ifndef ALLO_HEADER_ONLY
 #ifndef ALLO_OVERRIDE_IMPL_INCLUSION_GUARD
 #error \
@@ -21,14 +24,32 @@
 
 namespace allo {
 
+ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
+{
+    // call all destruction callbacks
+    // now that callbacks are called, free memory
+    m.parent.free_bytes(m.memory, 0);
+}
+
+ALLO_FUNC
+stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
+    : m(other.m)
+{
+    type = enum_value;
+}
+
 [[nodiscard]] ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
     size_t bytes, uint8_t alignment_exponent, size_t typehash)
 {
+    if (bytes == 0) {
+        return AllocationStatusCode::InvalidArgument;
+    }
+
     auto alignment = static_cast<size_t>(std::pow(2, alignment_exponent));
     if (alignment > get_max_alignment(properties())) {
         return AllocationStatusCode::AllocationTooAligned;
     }
-    size_t original_available = m_first_available;
+    zl::slice<uint8_t> original_available = m.available_memory;
 
     auto *bookkeeping = static_cast<previous_state_t *>(
         raw_alloc(alignof(previous_state_t), sizeof(previous_state_t)));
@@ -37,13 +58,13 @@ namespace allo {
         return AllocationStatusCode::OOM;
     }
 
-    zl::defer free_bookkeeping([this, original_available]() {
-        m_first_available = original_available;
-    });
+    zl::defer free_bookkeeping(
+        [this, original_available]() { m.memory = original_available; });
 
     *bookkeeping = {
-        .memory_available = original_available,
-        .type_hashcode = m_last_type,
+        .stack_top =
+            static_cast<size_t>(original_available.data() - m.memory.data()),
+        .type_hashcode = m.last_type_hashcode,
     };
 
     void *actual = raw_alloc(alignment, bytes);
@@ -53,7 +74,7 @@ namespace allo {
     }
     free_bookkeeping.cancel();
 
-    m_last_type = typehash;
+    m.last_type_hashcode = typehash;
 
     return zl::raw_slice(*static_cast<uint8_t *>(actual), bytes);
 }
@@ -62,14 +83,16 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
                                              size_t typesize) ALLO_NOEXCEPT
 {
     // these will get modified in place by std::align
-    void *new_available_start = m_memory.data() + m_first_available;
-    size_t new_size = m_memory.size() - m_first_available;
+    void *new_available_start = m.available_memory.data();
+    size_t new_size = m.available_memory.size();
     if (std::align(align, typesize, new_available_start, new_size)) {
         auto *available_after_alloc =
             static_cast<uint8_t *>(new_available_start);
 
         available_after_alloc += typesize;
-        m_first_available = available_after_alloc - m_memory.data();
+        m.available_memory = zl::slice<uint8_t>(
+            m.available_memory, m.available_memory.size() - new_size,
+            m.available_memory.size());
 
         return new_available_start;
     }
@@ -86,19 +109,19 @@ ALLO_FUNC zl::res<stack_allocator_t::previous_state_t &, AllocationStatusCode>
 stack_allocator_t::free_common(zl::slice<uint8_t> mem,
                                size_t typehash) const noexcept
 {
-    if (m_last_type != typehash)
-        return AllocationStatusCode::InvalidArgument;
+    if (m.last_type_hashcode != typehash)
+        return AllocationStatusCode::InvalidType;
 
-    if (mem.data() < m_memory.data() ||
-        mem.data() + mem.size() > m_memory.data() + m_memory.size()) {
-        return AllocationStatusCode::InvalidArgument;
+    if (mem.data() < m.memory.data() ||
+        mem.data() + mem.size() > m.memory.data() + m.memory.size()) {
+        return AllocationStatusCode::MemoryInvalid;
     }
 
     void *item = mem.data();
     // retrieve the bookeeping data from behind the given allocation
     void *bookkeeping_aligned = item;
     size_t size =
-        (m_memory.data() + m_memory.size()) - static_cast<uint8_t *>(item);
+        (m.memory.data() + m.memory.size()) - static_cast<uint8_t *>(item);
 
     if (!std::align(alignof(previous_state_t), sizeof(previous_state_t),
                     bookkeeping_aligned, size)) [[unlikely]] {
@@ -121,11 +144,12 @@ stack_allocator_t::free_common(zl::slice<uint8_t> mem,
     // try to detect invalid or corrupted memory. happens when you free a type
     // other than the last one to be allocated
     {
-        const bool too_big = bookkeeping->memory_available >= m_memory.size();
+        const bool too_big = bookkeeping->stack_top >=
+                             m.available_memory.data() - m.memory.data();
         const bool before_begin =
-            reinterpret_cast<uint8_t *>(maybe_bookkeeping) < m_memory.data();
+            reinterpret_cast<uint8_t *>(maybe_bookkeeping) < m.memory.data();
         const bool after_end = reinterpret_cast<uint8_t *>(maybe_bookkeeping) >=
-                               m_memory.data() + m_memory.size();
+                               m.memory.data() + m.memory.size();
         if (too_big || before_begin || after_end) {
             return AllocationStatusCode::Corruption;
         }
@@ -142,8 +166,10 @@ stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
         return mbookkeeping.err();
     // actually modify the container
     auto &bookkeeping = mbookkeeping.release();
-    m_first_available = bookkeeping.memory_available;
-    m_last_type = bookkeeping.type_hashcode;
+    m.available_memory =
+        zl::slice<uint8_t>(m.memory, bookkeeping.stack_top,
+                           m.available_memory.end().ptr() - m.memory.data());
+    m.last_type_hashcode = bookkeeping.type_hashcode;
     return AllocationStatusCode::Okay;
 }
 
@@ -151,53 +177,67 @@ ALLO_FUNC allocation_result_t
 stack_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
                                  size_t new_size, size_t new_typehash)
 {
-    if (old_typehash != m_last_type)
+    if (old_typehash != m.last_type_hashcode)
         return AllocationStatusCode::InvalidArgument;
 
     // always err
     return AllocationStatusCode::OOM;
 }
 
-ALLO_FUNC void stack_allocator_t::zero() ALLO_NOEXCEPT
+ALLO_FUNC zl::res<stack_allocator_t, AllocationStatusCode>
+stack_allocator_t::make(zl::slice<uint8_t> memory,
+                        allocator_with<IRealloc, IFree> &parent) ALLO_NOEXCEPT
 {
-    std::memset(m_memory.data(), 0, m_memory.size());
-}
+    // make sure there is at least one byte of space to be allocated in memory
+    if (memory.size() <= sizeof(previous_state_t)) {
+        return AllocationStatusCode::InvalidArgument;
+    }
 
-ALLO_FUNC
-stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
-    : m_memory(other.m_memory),
-      m_properties(make_properties(other.m_memory.size(), 8))
-{
-    type = detail::AllocatorType::StackAllocator;
+    assert(parent.free_status(memory, 0).okay());
+
+    return stack_allocator_t(M{
+        parent,
+        memory,
+        memory,
+        0,
+        make_properties(memory.size(), alignof(previous_state_t)),
+    });
 }
 
 ALLO_FUNC const allocator_properties_t &stack_allocator_t::properties() const
 {
-    return m_properties;
-}
-
-ALLO_FUNC stack_allocator_t &
-stack_allocator_t::operator=(stack_allocator_t &&other) noexcept
-{
-    if (&other == this) [[unlikely]]
-        return *this;
-    m_memory = other.m_memory;
-    m_first_available = other.m_first_available;
-    return *this;
-}
-
-// mark all memory as available
-ALLO_FUNC
-stack_allocator_t::stack_allocator_t(zl::slice<uint8_t> memory) ALLO_NOEXCEPT
-    : m_memory(memory),
-      m_properties(make_properties(memory.size(), 8))
-{
-    type = detail::AllocatorType::StackAllocator;
+    return m.properties;
 }
 
 ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(
     destruction_callback_t callback, void *user_data) noexcept
 {
-    return AllocationStatusCode::InvalidArgument;
+    if (!callback) {
+        return AllocationStatusCode::InvalidArgument;
+    }
+    // not valid/used in this case, except that if a
+    // destruction_callback_entry_t doesn't fit in the available space,
+    // std::align will return nullptr
+    size_t dummy_size = m.available_memory.size();
+    void *head = m.available_memory.end().ptr();
+    if (auto *aligned = (destruction_callback_entry_t *)std::align(
+            alignof(destruction_callback_entry_t),
+            sizeof(destruction_callback_entry_t), head, dummy_size)) {
+        while ((void *)(aligned + 1) > m.available_memory.end().ptr()) {
+            --aligned;
+        }
+
+        if ((void *)aligned < (void *)m.available_memory.data()) {
+            return AllocationStatusCode::OOM;
+        }
+
+        m.available_memory = zl::slice<uint8_t>(
+            m.available_memory, 0,
+            (uint8_t *)aligned - (uint8_t *)m.available_memory.data());
+
+        *aligned = {callback, user_data};
+        return AllocationStatusCode::Okay;
+    }
+    return AllocationStatusCode::OOM;
 }
 } // namespace allo

@@ -7,9 +7,6 @@
 
 namespace allo {
 
-/// A very simple allocator which takes in a fixed buffer of memory and
-/// allocates randomly sized items within that buffer. They can only be freed in
-/// the opposite order that they were allocated.
 class stack_allocator_t : private detail::dynamic_allocator_base_t,
                           public detail::allocator_t,
                           public detail::stack_freer_t,
@@ -25,19 +22,18 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
     stack_allocator_t(const stack_allocator_t &) = delete;
     stack_allocator_t &operator=(const stack_allocator_t &) = delete;
 
-    // can be explicitly constructed from a buffer of existing memory.
-    // it will modify this memory, but not free it on destruction.
-    explicit stack_allocator_t(zl::slice<uint8_t> memory) ALLO_NOEXCEPT;
+    static zl::res<stack_allocator_t, AllocationStatusCode>
+    make(zl::slice<uint8_t> memory,
+         allocator_with<IRealloc, IFree> &parent) ALLO_NOEXCEPT;
 
     // can be moved
     stack_allocator_t(stack_allocator_t &&) noexcept;
-    stack_allocator_t &operator=(stack_allocator_t &&) noexcept;
 
-    // no need to do anything upon destruction since this is non-owning
-    ~stack_allocator_t() = default;
+    // cannot be move assigned
+    stack_allocator_t &operator=(stack_allocator_t &&) = delete;
 
-    /// Zero all the memory in this stack allocator's buffer
-    void zero() ALLO_NOEXCEPT;
+    // owns its memory
+    ~stack_allocator_t() noexcept;
 
     [[nodiscard]] allocation_result_t
     alloc_bytes(size_t bytes, uint8_t alignment_exponent, size_t typehash);
@@ -61,21 +57,37 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
   private:
     /// Allocate stuff with no typing
     void *raw_alloc(size_t align, size_t typesize) ALLO_NOEXCEPT;
+
     /// the information placed underneath every allocation in the stack
     struct previous_state_t
     {
-        size_t memory_available;
+        size_t stack_top;
         size_t type_hashcode;
+    };
+
+    struct destruction_callback_entry_t
+    {
+        destruction_callback_t callback;
+        void *user_data;
     };
 
     /// Common logic shared between freeing functions
     [[nodiscard]] zl::res<previous_state_t &, AllocationStatusCode>
     free_common(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
 
-    zl::slice<uint8_t> m_memory;
-    size_t m_first_available = 0;
-    size_t m_last_type = 0;
-    allocator_properties_t m_properties;
+    struct M
+    {
+        allocator_with<IRealloc, IFree> &parent;
+        zl::slice<uint8_t> memory;
+        zl::slice<uint8_t> available_memory;
+        size_t last_type_hashcode = 0;
+        allocator_properties_t properties;
+    } m;
+
+    inline explicit stack_allocator_t(M &&members) noexcept : m(members)
+    {
+        type = enum_value;
+    }
 };
 } // namespace allo
 
