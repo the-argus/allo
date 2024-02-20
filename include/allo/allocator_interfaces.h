@@ -207,6 +207,7 @@ enum class AllocatorType : uint8_t
     // like an allocator-allocator
     RegionAllocator,
     ThreadsafeAllocator,
+    OneshotAllocator,
     MAX_ALLOCATOR_TYPE
 };
 
@@ -220,6 +221,7 @@ constexpr uint8_t interface_bits[uint8_t(AllocatorType::MAX_ALLOCATOR_TYPE)] = {
     0b10111, // scratch
     0b11111, // region allocator
     0b11111, // threadsafe allocator
+    0b01111, // oneshot allocator
 };
 
 // clang-format off

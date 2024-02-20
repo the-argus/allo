@@ -135,7 +135,7 @@ block_allocator_t::make(const zl::slice<uint8_t> &memory,
 }
 
 ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
-    size_t bytes, uint8_t alignment_exponent, size_t typehash)
+    size_t bytes, uint8_t alignment_exponent, size_t typehash) noexcept
 {
     if (m.blocks_free == 0) {
         return AllocationStatusCode::OOM;
@@ -194,7 +194,7 @@ block_allocator_t::get_location_for_typehash(uint8_t *blockhead,
 
 ALLO_FUNC allocation_result_t
 block_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
-                                 size_t new_size, size_t new_typehash)
+                                 size_t new_size, size_t new_typehash) noexcept
 {
     if (new_size > m.blocksize) {
         return AllocationStatusCode::AllocationTooAligned;
@@ -217,7 +217,7 @@ block_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
 }
 
 ALLO_FUNC allocation_status_t
-block_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
+block_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
 {
     auto manalysis = try_analyze_block(mem, typehash);
     if (!manalysis.okay()) {

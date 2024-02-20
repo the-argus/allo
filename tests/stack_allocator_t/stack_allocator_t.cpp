@@ -1,3 +1,4 @@
+#include "allo/oneshot_allocator.h"
 #include "allo/stack_allocator.h"
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
@@ -16,7 +17,12 @@ TEST_SUITE("stack_allocator_t")
         SUBCASE("Default construction")
         {
             std::array<uint8_t, 512> mem;
-            stack_allocator_t ally(mem);
+            oneshot_allocator_t oneshot =
+                oneshot_allocator_t::make(mem).release();
+            stack_allocator_t ally =
+                stack_allocator_t::make(
+                    mem, upcast<allocator_with<IRealloc, IFree>>(oneshot))
+                    .release();
         }
 
         SUBCASE("move semantics")
