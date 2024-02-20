@@ -21,6 +21,8 @@ alloc_one(Allocator &allocator) noexcept
         alignment >= alignof(T),
         "Alignment less than the type being allocated is probably not what "
         "you wanted. Use alloc_bytes if you have to.");
+    static_assert(detail::alignment_exponent(alignment) != sizeof(size_t) * 8,
+                  "Invalid alignment provided. Make sure its a power of 2.");
     size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifdef ALLO_USE_RTTI
@@ -53,6 +55,8 @@ inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(Allocator &allocator,
         alignment >= alignof(T),
         "Alignment less than the type being allocated is probably not what "
         "you wanted. Use alloc_bytes if you have to.");
+    static_assert(detail::alignment_exponent(alignment) != sizeof(size_t) * 8,
+                  "Invalid alignment provided. Make sure its a power of 2.");
     size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifdef ALLO_USE_RTTI
