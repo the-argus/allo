@@ -73,7 +73,7 @@ inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(Allocator &allocator,
         return res.err();
     const auto &mem = res.release_ref();
     assert(sizeof(T) * number == mem.size());
-    return zl::raw_slice(reinterpret_cast<T *>(mem.data()), number);
+    return zl::raw_slice(*reinterpret_cast<T *>(mem.data()), number);
 }
 
 /// Create one item of type T using an allocator, constructing it with "args".
