@@ -1,7 +1,4 @@
 #pragma once
-#include "allo/allocator_interfaces.h"
-#include "allo/impl/block_allocator.h"
-#include "ziglike/slice.h"
 #ifndef ALLO_HEADER_ONLY
 #ifndef ALLO_OVERRIDE_IMPL_INCLUSION_GUARD
 #error \
@@ -11,6 +8,7 @@
 
 #include "allo/stack_allocator.h"
 #include "ziglike/defer.h"
+#include "ziglike/slice.h"
 #include <cstring>
 #include <memory>
 

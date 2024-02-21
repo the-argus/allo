@@ -52,7 +52,11 @@ TEST_SUITE("allocator interfaces")
             };
 
             std::array<uint8_t, 512> mem;
-            stack_allocator_t stack(mem);
+            auto oneshot = oneshot_allocator_t::make(mem).release();
+            stack_allocator_t stack =
+                stack_allocator_t::make(
+                    mem, upcast<allocator_with<IRealloc, IFree>>(oneshot))
+                    .release();
 
             auto maybe_int = makeint(upcast<IAlloc>(stack));
             REQUIRE(maybe_int.okay());
@@ -70,7 +74,11 @@ TEST_SUITE("allocator interfaces")
             };
 
             std::array<uint8_t, 512> mem;
-            stack_allocator_t stack(mem);
+            auto oneshot = oneshot_allocator_t::make(mem).release();
+            stack_allocator_t stack =
+                stack_allocator_t::make(
+                    mem, upcast<allocator_with<IRealloc, IFree>>(oneshot))
+                    .release();
 
             auto maybe_int = makeint(upcast<IAlloc>(stack));
             REQUIRE(maybe_int.okay());

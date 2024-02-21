@@ -1,7 +1,5 @@
 #pragma once
 
-#include "allo/allocator_interfaces.h"
-#include <cmath>
 #ifndef ALLO_HEADER_ONLY
 #ifndef ALLO_OVERRIDE_IMPL_INCLUSION_GUARD
 #error \
@@ -10,6 +8,8 @@
 #endif
 
 #include "allo/block_allocator.h"
+#include <cmath>
+#include <memory>
 
 #ifdef ALLO_HEADER_ONLY
 #ifndef ALLO_FUNC

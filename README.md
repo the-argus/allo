@@ -20,6 +20,7 @@ that are used are:
 - \<iterator\> for stdlib iteration support (can optionally be disabled)
 - \<utility\> for std::forward and std::move
 - \<functional\> for std::ref
+- \<memory\> for std::align
 
 Allo uses templates liberally, but avoids forcing user code to be templated.
 
