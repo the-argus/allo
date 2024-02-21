@@ -105,6 +105,7 @@ class segmented_array_block_allocator_t;
 class block_allocator_t;
 class scratch_allocator_t;
 class region_allocator_t;
+class oneshot_allocator_t;
 
 namespace detail {
 
