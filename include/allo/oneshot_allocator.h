@@ -9,9 +9,10 @@ namespace allo {
 /// means reallocation will always fail unless you are shrinking the allocation,
 /// and freeing will always return Okay but will do nothing.
 /// Useful for breaking a dependency chain between allocators.
-class oneshot_allocator_t : public detail::freer_t,
-                            public detail::reallocator_t,
-                            private detail::dynamic_allocator_base_t
+class oneshot_allocator_t : private detail::dynamic_allocator_base_t,
+                            public detail::freer_t,
+                            public detail::reallocator_t
+
 {
   public:
     static constexpr detail::AllocatorType enum_value =
@@ -21,12 +22,12 @@ class oneshot_allocator_t : public detail::freer_t,
     make(const zl::slice<uint8_t> &memory,
          const zl::opt<allocator_with<IStackFree> &> &parent = {}) noexcept;
 
-    [[nodiscard]] allocation_result_t realloc_bytes(zl::slice<uint8_t> mem,
-                                                    size_t old_typehash,
-                                                    size_t new_size,
-                                                    size_t new_typehash) noexcept;
+    [[nodiscard]] allocation_result_t
+    realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+                  size_t new_typehash) noexcept;
 
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept;
+    allocation_status_t free_bytes(zl::slice<uint8_t> mem,
+                                   size_t typehash) noexcept;
 
     [[nodiscard]] allocation_status_t
     free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;

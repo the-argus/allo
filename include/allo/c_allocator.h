@@ -4,11 +4,11 @@
 
 namespace allo {
 
-class c_allocator_t : public detail::allocator_t,
+class c_allocator_t : private detail::dynamic_allocator_base_t,
+                      public detail::allocator_t,
                       public detail::freer_t,
                       public detail::reallocator_t,
-                      public detail::destruction_callback_provider_t,
-                      private detail::dynamic_allocator_base_t
+                      public detail::destruction_callback_provider_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =
