@@ -9,7 +9,7 @@
         },
         .ziglike = .{
             .url = "https://github.com/the-argus/ziglike/archive/bd040b75a0ce1cbd814c4414832027d2f2ff87c5.tar.gz",
-            .hash = "1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            .hash = "1220f478254ef0ee22b6a8df16a271ae1cfa7a25f26ebfba11dd61a5adc5e43a9e44",
         },
     }
 }
