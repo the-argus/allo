@@ -14,14 +14,21 @@ template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
 inline zl::res<T &, AllocationStatusCode>
 alloc_one(Allocator &allocator) noexcept
 {
-    static_assert(std::is_base_of_v<detail::allocator_t, Allocator>,
-                  "Cannot use given type to perform allocations");
+    constexpr bool is_valid_interface =
+        std::is_base_of_v<detail::allocator_interface_t, Allocator>;
+    constexpr bool is_valid_allocator =
+        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
+    static_assert(
+        (is_valid_interface && std::is_base_of_v<detail::i_alloc, Allocator>) ||
+            (is_valid_allocator &&
+             std::is_base_of_v<detail::allocator_t, Allocator>),
+        "Cannot use given type to perform allocations");
     static_assert(!std::is_reference_v<T>, "Cannot allocate a reference type.");
     static_assert(
         alignment >= alignof(T),
-        "Alignment less than the type being allocated is probably not what "
-        "you wanted. Use alloc_bytes if you have to.");
-    static_assert(detail::alignment_exponent(alignment) != sizeof(size_t) * 8,
+        "Not allocating at lower alignment than that of the given type.");
+    // very large alignment (2^64) is an error pretty much always
+    static_assert(detail::alignment_exponent(alignment) != 64,
                   "Invalid alignment provided. Make sure its a power of 2.");
     size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
@@ -33,11 +40,19 @@ alloc_one(Allocator &allocator) noexcept
 #else
         0;
 #endif
-    auto res = allocator.alloc_bytes(
-        sizeof(T), detail::alignment_exponent(alignment), typehash);
-    if (!res.okay())
-        return res.err();
-    const auto &mem = res.release_ref();
+    zl::opt<allocation_result_t> result;
+    if constexpr (is_valid_allocator) {
+        result = allocator.alloc_bytes(
+            sizeof(T), detail::alignment_exponent(alignment), typehash);
+    } else {
+        result = IAlloc::_alloc_bytes(std::addressof(allocator), sizeof(T),
+                                      detail::alignment_exponent(alignment),
+                                      typehash);
+    }
+    allocation_result_t &actual = result.value();
+    if (!actual.okay())
+        return actual.err();
+    const auto &mem = actual.release_ref();
     assert(sizeof(T) == mem.size());
     return *reinterpret_cast<T *>(mem.data());
 }
@@ -48,14 +63,21 @@ template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
 inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(Allocator &allocator,
                                                          size_t number) noexcept
 {
-    static_assert(std::is_base_of_v<detail::allocator_t, Allocator>,
-                  "Cannot use given type to perform allocations");
+    constexpr bool is_valid_interface =
+        std::is_base_of_v<detail::allocator_interface_t, Allocator>;
+    constexpr bool is_valid_allocator =
+        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
+    static_assert(
+        (is_valid_interface && std::is_base_of_v<detail::i_alloc, Allocator>) ||
+            (is_valid_allocator &&
+             std::is_base_of_v<detail::allocator_t, Allocator>),
+        "Cannot use given type to perform allocations");
     static_assert(!std::is_reference_v<T>, "Cannot allocate a reference type.");
     static_assert(
         alignment >= alignof(T),
-        "Alignment less than the type being allocated is probably not what "
-        "you wanted. Use alloc_bytes if you have to.");
-    static_assert(detail::alignment_exponent(alignment) != sizeof(size_t) * 8,
+        "Not allocating at lower alignment than that of the given type.");
+    // very large alignment (2^64) is an error pretty much always
+    static_assert(detail::alignment_exponent(alignment) != 64,
                   "Invalid alignment provided. Make sure its a power of 2.");
     size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
@@ -67,8 +89,17 @@ inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(Allocator &allocator,
 #else
         0;
 #endif
-    auto res = allocator.alloc_bytes(
-        sizeof(T) * number, detail::alignment_exponent(alignment), typehash);
+    zl::opt<allocation_result_t> mres;
+    if constexpr (is_valid_allocator) {
+        mres = allocator.alloc_bytes(sizeof(T) * number,
+                                     detail::alignment_exponent(alignment),
+                                     typehash);
+    } else {
+        mres = IAlloc::_alloc_bytes(
+            std::addressof(allocator), sizeof(T) * number,
+            detail::alignment_exponent(alignment), typehash);
+    }
+    auto &res = mres.value();
     if (!res.okay())
         return res.err();
     const auto &mem = res.release_ref();
@@ -85,8 +116,15 @@ template <typename T, typename Allocator, typename... Args>
 inline zl::res<T &, AllocationStatusCode> construct_one(Allocator &allocator,
                                                         Args &&...args)
 {
-    static_assert(std::is_base_of_v<detail::allocator_t, Allocator>,
-                  "Cannot use given type to perform allocations");
+    constexpr bool is_valid_interface =
+        std::is_base_of_v<detail::allocator_interface_t, Allocator>;
+    constexpr bool is_valid_allocator =
+        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
+    static_assert(
+        (is_valid_interface && std::is_base_of_v<detail::i_alloc, Allocator>) ||
+            (is_valid_allocator &&
+             std::is_base_of_v<detail::allocator_t, Allocator>),
+        "Cannot use given type to perform allocations");
     static_assert(!std::is_reference_v<T>, "Cannot allocate a reference type.");
     static_assert(std::is_constructible_v<T, Args...>,
                   "Type is not constructible with those arguments.");
@@ -108,8 +146,15 @@ template <typename T, typename Allocator, typename... Args>
 inline zl::res<zl::slice<T>, AllocationStatusCode>
 construct_many(Allocator &allocator, size_t number, Args &&...args)
 {
-    static_assert(std::is_base_of_v<detail::allocator_t, Allocator>,
-                  "Cannot use given type to perform allocations");
+    constexpr bool is_valid_interface =
+        std::is_base_of_v<detail::allocator_interface_t, Allocator>;
+    constexpr bool is_valid_allocator =
+        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
+    static_assert(
+        (is_valid_interface && std::is_base_of_v<detail::i_alloc, Allocator>) ||
+            (is_valid_allocator &&
+             std::is_base_of_v<detail::allocator_t, Allocator>),
+        "Cannot use given type to perform allocations");
     static_assert(!std::is_reference_v<T>, "Cannot allocate a reference type.");
     static_assert(std::is_constructible_v<T, Args...>,
                   "Type is not constructible with those arguments.");

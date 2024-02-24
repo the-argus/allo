@@ -16,7 +16,7 @@ class threadsafe_allocator_t
         detail::AllocatorType::ThreadsafeAllocator;
 
     template <typename Allocator>
-    inline threadsafe_allocator_t(Allocator &parent,
+    inline threadsafe_allocator_t(Allocator & /*parent*/,
                                   const zl::slice<uint8_t> &memory) noexcept
         : m_mem(memory),
           m_properties(make_properties(memory.size(), max_alignment))

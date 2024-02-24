@@ -14,6 +14,14 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t,
                             public detail::reallocator_t
 
 {
+  private:
+    struct M
+    {
+        zl::opt<allocator_with<IStackFree> &> parent;
+        zl::slice<uint8_t> mem;
+        allocator_properties_t properties;
+    } m;
+
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::OneshotAllocator;
@@ -46,14 +54,6 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t,
     oneshot_allocator_t(oneshot_allocator_t &&other) noexcept;
     // but not move assigned
     oneshot_allocator_t &operator=(oneshot_allocator_t &&other) = delete;
-
-  private:
-    struct M
-    {
-        zl::opt<allocator_with<IStackFree> &> parent;
-        zl::slice<uint8_t> mem;
-        allocator_properties_t properties;
-    } m;
 
     inline oneshot_allocator_t(M &&members) noexcept : m(members)
     {

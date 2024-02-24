@@ -13,6 +13,16 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
                           public detail::destruction_callback_provider_t,
                           public detail::stack_reallocator_t
 {
+  private:
+    struct M
+    {
+        allocator_with<IRealloc, IFree> &parent;
+        zl::slice<uint8_t> memory;
+        zl::slice<uint8_t> available_memory;
+        size_t last_type_hashcode = 0;
+        allocator_properties_t properties;
+    } m;
+
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::StackAllocator;
@@ -35,28 +45,34 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
     // owns its memory
     ~stack_allocator_t() noexcept;
 
+    [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
+                                                  uint8_t alignment_exponent,
+                                                  size_t typehash) noexcept;
+
     [[nodiscard]] allocation_result_t
-    alloc_bytes(size_t bytes, uint8_t alignment_exponent, size_t typehash);
+    realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+                  size_t new_typehash) noexcept;
 
-    [[nodiscard]] allocation_result_t realloc_bytes(zl::slice<uint8_t> mem,
-                                                    size_t old_typehash,
-                                                    size_t new_size,
-                                                    size_t new_typehash);
+    allocation_status_t free_bytes(zl::slice<uint8_t> mem,
+                                   size_t typehash) noexcept;
 
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
+    [[nodiscard]] allocation_status_t
+    free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
 
-    [[nodiscard]] allocation_status_t free_status(zl::slice<uint8_t> mem,
-                                                  size_t typehash) const;
-
-    [[nodiscard]] const allocator_properties_t &properties() const;
+    [[nodiscard]] const allocator_properties_t &properties() const noexcept;
 
     allocation_status_t
     register_destruction_callback(destruction_callback_t callback,
                                   void *user_data) noexcept;
 
+    inline explicit stack_allocator_t(M &&members) noexcept : m(members)
+    {
+        type = enum_value;
+    }
+
   private:
     /// Allocate stuff with no typing
-    void *raw_alloc(size_t align, size_t typesize) ALLO_NOEXCEPT;
+    void *raw_alloc(size_t align, size_t typesize) noexcept;
 
     /// the information placed underneath every allocation in the stack
     struct previous_state_t
@@ -74,20 +90,6 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
     /// Common logic shared between freeing functions
     [[nodiscard]] zl::res<previous_state_t &, AllocationStatusCode>
     free_common(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
-
-    struct M
-    {
-        allocator_with<IRealloc, IFree> &parent;
-        zl::slice<uint8_t> memory;
-        zl::slice<uint8_t> available_memory;
-        size_t last_type_hashcode = 0;
-        allocator_properties_t properties;
-    } m;
-
-    inline explicit stack_allocator_t(M &&members) noexcept : m(members)
-    {
-        type = enum_value;
-    }
 };
 } // namespace allo
 

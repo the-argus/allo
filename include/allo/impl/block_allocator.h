@@ -25,7 +25,7 @@ ALLO_FUNC block_allocator_t::~block_allocator_t() noexcept
 {
     if (m.owning) {
         call_all_destruction_callbacks();
-        m.parent.free_bytes(m.mem, 0);
+        IFree::_free_bytes(std::addressof(m.parent), m.mem, 0);
         m.blocks_free = 0;
         m.owning = false;
     }
@@ -87,7 +87,7 @@ block_allocator_t::make(const zl::slice<uint8_t> &memory,
     size_t actual_blocksize =
         (blocksize < minimum_blocksize) ? minimum_blocksize : blocksize;
 
-    assert(parent.free_status(memory, 0).okay());
+    assert(IFree::_free_status(std::addressof(parent), memory, 0).okay());
 
     auto num_blocks =
         static_cast<size_t>(std::floor(static_cast<double>(memory.size()) /
@@ -173,7 +173,8 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
         // allocation untyped.
     }
 
-    return chosen_block;
+    assert(chosen_block.size() >= bytes);
+    return zl::slice<uint8_t>(chosen_block, 0, bytes);
 }
 
 ALLO_FUNC size_t *

@@ -97,16 +97,16 @@ TEST_SUITE("stack_allocator_t")
                     mem, upcast<allocator_with<IRealloc, IFree>>(oneshot))
                     .release();
 
-            auto maybe_my_ints = allo::alloc_one<std::array<int, 100>>(ally);
+            auto maybe_my_ints = allo::alloc_one<std::array<int, 88>>(ally);
             REQUIRE(maybe_my_ints.okay());
 
-            std::array<int, 100> &my_ints = maybe_my_ints.release();
+            std::array<int, 88> &my_ints = maybe_my_ints.release();
 
             int *original_int_location = my_ints.data();
             auto free_status = allo::free_one(ally, my_ints);
             REQUIRE(free_status.okay());
 
-            auto my_new_ints = allo::alloc_one<std::array<int, 100>>(ally);
+            auto my_new_ints = allo::alloc_one<std::array<int, 88>>(ally);
             REQUIRE(my_new_ints.okay());
             REQUIRE((my_new_ints.release().data() == original_int_location));
         }
@@ -121,7 +121,7 @@ TEST_SUITE("stack_allocator_t")
                     mem, upcast<allocator_with<IRealloc, IFree>>(oneshot))
                     .release();
 
-            auto arr_res = allo::alloc_one<std::array<uint8_t, 496>>(ally);
+            auto arr_res = allo::alloc_one<std::array<uint8_t, 494>>(ally);
             REQUIRE(arr_res.okay());
             auto &arr = arr_res.release();
             REQUIRE(allo::free_one(ally, arr).okay());

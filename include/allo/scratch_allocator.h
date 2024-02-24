@@ -31,17 +31,24 @@ class scratch_allocator_t : private detail::dynamic_allocator_base_t,
     // no need to do anything upon destruction since this is non-owning
     ~scratch_allocator_t() = default;
 
-    [[nodiscard]] allocation_result_t
-    alloc_bytes(size_t bytes, uint8_t alignment_exponent, size_t typehash);
+    [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
+                                                  uint8_t alignment_exponent,
+                                                  size_t typehash) noexcept;
 
-    [[nodiscard]] allocation_result_t realloc_bytes(zl::slice<uint8_t> mem,
-                                                    size_t old_typehash,
-                                                    size_t new_size,
-                                                    size_t new_typehash);
+    [[nodiscard]] allocation_result_t
+    realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+                  size_t new_typehash) noexcept;
 
     /// Freeing with a scratch allocator is a no-op
-    inline constexpr allocation_status_t free_bytes(zl::slice<uint8_t> /*mem*/,
-                                                    size_t /*typehash*/)
+    inline constexpr allocation_status_t
+    free_bytes(zl::slice<uint8_t> /*mem*/, // NOLINT
+               size_t /*typehash*/) noexcept
+    {
+        return AllocationStatusCode::Okay;
+    }
+
+    [[nodiscard]] inline constexpr allocation_status_t
+    free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept
     {
         return AllocationStatusCode::Okay;
     }

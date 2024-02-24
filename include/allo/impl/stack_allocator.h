@@ -26,7 +26,7 @@ ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
 {
     // call all destruction callbacks
     // now that callbacks are called, free memory
-    m.parent.free_bytes(m.memory, 0);
+    IFree::_free_bytes(std::addressof(m.parent), m.memory, 0);
 }
 
 ALLO_FUNC
@@ -37,7 +37,7 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
 }
 
 [[nodiscard]] ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
-    size_t bytes, uint8_t alignment_exponent, size_t typehash)
+    size_t bytes, uint8_t alignment_exponent, size_t typehash) noexcept
 {
     if (bytes == 0) {
         return AllocationStatusCode::InvalidArgument;
@@ -66,6 +66,7 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
     };
 
     void *actual = raw_alloc(alignment, bytes);
+    assert(actual != bookkeeping);
     // if second alloc fails, undo the first one
     if (!actual) [[unlikely]] {
         return AllocationStatusCode::OOM;
@@ -78,27 +79,27 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
 }
 
 ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
-                                             size_t typesize) ALLO_NOEXCEPT
+                                             size_t typesize) noexcept
 {
     // these will get modified in place by std::align
     void *new_available_start = m.available_memory.data();
     size_t new_size = m.available_memory.size();
     if (std::align(align, typesize, new_available_start, new_size)) {
-        auto *available_after_alloc =
-            static_cast<uint8_t *>(new_available_start);
-
-        available_after_alloc += typesize;
-        m.available_memory = zl::slice<uint8_t>(
-            m.available_memory, m.available_memory.size() - new_size,
-            m.available_memory.size());
+        if (new_available_start >= (m.memory.end().ptr() - typesize)) {
+            return nullptr;
+        }
+        m.available_memory = zl::slice<uint8_t>(m.available_memory,
+                                                m.available_memory.size() -
+                                                    (new_size - typesize),
+                                                m.available_memory.size());
 
         return new_available_start;
     }
     return nullptr;
 }
 
-ALLO_FUNC allocation_status_t
-stack_allocator_t::free_status(zl::slice<uint8_t> mem, size_t typehash) const
+ALLO_FUNC allocation_status_t stack_allocator_t::free_status(
+    zl::slice<uint8_t> mem, size_t typehash) const noexcept
 {
     return free_common(mem, typehash).err();
 }
@@ -138,6 +139,8 @@ stack_allocator_t::free_common(zl::slice<uint8_t> mem,
     }
 
     auto *bookkeeping = reinterpret_cast<previous_state_t *>(maybe_bookkeeping);
+    assert((void *)bookkeeping >= m.memory.data() &&
+           (void *)bookkeeping < m.memory.end().ptr());
 
     // try to detect invalid or corrupted memory. happens when you free a type
     // other than the last one to be allocated
@@ -157,7 +160,7 @@ stack_allocator_t::free_common(zl::slice<uint8_t> mem,
 }
 
 ALLO_FUNC allocation_status_t
-stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
+stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
 {
     auto mbookkeeping = free_common(mem, typehash);
     if (!mbookkeeping.okay())
@@ -173,7 +176,7 @@ stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash)
 
 ALLO_FUNC allocation_result_t
 stack_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
-                                 size_t new_size, size_t new_typehash)
+                                 size_t new_size, size_t new_typehash) noexcept
 {
     if (old_typehash != m.last_type_hashcode)
         return AllocationStatusCode::InvalidArgument;
@@ -191,7 +194,7 @@ stack_allocator_t::make(zl::slice<uint8_t> memory,
         return AllocationStatusCode::InvalidArgument;
     }
 
-    assert(parent.free_status(memory, 0).okay());
+    assert(IFree::_free_status(std::addressof(parent), memory, 0).okay());
 
     return stack_allocator_t(M{
         parent,
@@ -202,7 +205,8 @@ stack_allocator_t::make(zl::slice<uint8_t> memory,
     });
 }
 
-ALLO_FUNC const allocator_properties_t &stack_allocator_t::properties() const
+ALLO_FUNC const allocator_properties_t &
+stack_allocator_t::properties() const noexcept
 {
     return m.properties;
 }

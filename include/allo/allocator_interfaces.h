@@ -112,7 +112,8 @@ namespace detail {
 class memory_info_provider_t
 {
   public:
-    [[nodiscard]] const allocator_properties_t &properties() const noexcept;
+    [[nodiscard]] static const allocator_properties_t &
+    _properties(const void *self) noexcept;
 
   protected:
     [[nodiscard]] static inline constexpr allocator_properties_t
@@ -146,18 +147,18 @@ class allocator_t : public memory_info_provider_t, public allocator_interface_t
     /// Request an allocation for some number of bytes with some alignment, and
     /// providing the typehash. If a non-typed allocator, 0 can be supplied as
     /// the hash.
-    [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
-                                                  uint8_t alignment_exponent,
-                                                  size_t typehash) noexcept;
+    [[nodiscard]] static allocation_result_t
+    _alloc_bytes(void *self, size_t bytes, uint8_t alignment_exponent,
+                 size_t typehash) noexcept;
 };
 
 class stack_reallocator_t : public memory_info_provider_t,
                             public allocator_interface_t
 {
   public:
-    [[nodiscard]] allocation_result_t
-    realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
-                  size_t new_typehash) noexcept;
+    [[nodiscard]] static allocation_result_t
+    _realloc_bytes(void *self, zl::slice<uint8_t> mem, size_t old_typehash,
+                   size_t new_size, size_t new_typehash) noexcept;
 };
 
 class reallocator_t : public stack_reallocator_t
@@ -166,12 +167,13 @@ class reallocator_t : public stack_reallocator_t
 class stack_freer_t : public allocator_interface_t
 {
   public:
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem,
-                                   size_t typehash) noexcept;
+    static allocation_status_t _free_bytes(void *self, zl::slice<uint8_t> mem,
+                                           size_t typehash) noexcept;
     /// Returns Okay if the free of the given memory would succeed, otherwise
     /// returns the error that would be returned if you tried to free.
-    [[nodiscard]] allocation_status_t
-    free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
+    [[nodiscard]] static allocation_status_t
+    _free_status(const void *self, zl::slice<uint8_t> mem,
+                 size_t typehash) noexcept;
 };
 
 class freer_t : public stack_freer_t
@@ -180,20 +182,22 @@ class freer_t : public stack_freer_t
 class destruction_callback_provider_t
 {
   public:
-    allocation_status_t
-    register_destruction_callback(destruction_callback_t callback,
-                                  void *user_data) noexcept;
+    static allocation_status_t
+    _register_destruction_callback(void *self, destruction_callback_t callback,
+                                   void *user_data) noexcept;
 };
 
-// misc utility function
+/// Take a given number divisible by two and find what n is in 2^n = number.
+/// Returns 64 (ie. 2^64) as an error value
 inline constexpr uint8_t alignment_exponent(size_t alignment)
 {
-    for (size_t i = 0; i < sizeof(size_t) * 8; ++i) {
+    constexpr auto bits = sizeof(size_t) * 8;
+    for (size_t i = 0; i < bits; ++i) {
         if (((size_t(1) << i) & alignment) == alignment) {
             return i;
         }
     }
-    return sizeof(size_t) * 8;
+    return bits;
 }
 
 enum class AllocatorType : uint8_t

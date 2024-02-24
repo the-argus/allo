@@ -139,57 +139,55 @@ auto return_from(dynamic_allocator_base_t *self, Args &&...args)
 }
 
 ALLO_FUNC const allocator_properties_t &
-memory_info_provider_t::properties() const noexcept
+memory_info_provider_t::_properties(const void *const self) noexcept
 {
     // the only thing that should inherit from this interface should also
     // inherit dynamic allocator base
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
-    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
+    const auto *dyn_self =
+        reinterpret_cast<const dynamic_allocator_base_t *>(self);
+    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(dyn_self);
     return return_from<get_properties_generic>(mutable_self);
 }
 
-ALLO_FUNC allocation_result_t allocator_t::alloc_bytes(
-    size_t bytes, uint8_t alignment_exponent, size_t typehash) noexcept
+ALLO_FUNC allocation_result_t
+allocator_t::_alloc_bytes(void *self, size_t bytes, uint8_t alignment_exponent,
+                          size_t typehash) noexcept
 {
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
-    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
-    return return_from<alloc_bytes_generic>(mutable_self, bytes,
-                                            alignment_exponent, typehash);
+    auto *dyn_self = reinterpret_cast<dynamic_allocator_base_t *>(self);
+    return return_from<alloc_bytes_generic>(dyn_self, bytes, alignment_exponent,
+                                            typehash);
 }
 
-ALLO_FUNC allocation_result_t stack_reallocator_t::realloc_bytes(
-    zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+ALLO_FUNC allocation_result_t stack_reallocator_t::_realloc_bytes(
+    void *self, zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
     size_t new_typehash) noexcept
 {
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
-    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
-    return return_from<realloc_bytes_generic>(mutable_self, mem, old_typehash,
+    auto *dyn_self = reinterpret_cast<dynamic_allocator_base_t *>(self);
+    return return_from<realloc_bytes_generic>(dyn_self, mem, old_typehash,
                                               new_size, new_typehash);
 }
 
-ALLO_FUNC allocation_status_t
-stack_freer_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
+ALLO_FUNC allocation_status_t stack_freer_t::_free_bytes(
+    void *self, zl::slice<uint8_t> mem, size_t typehash) noexcept
 {
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
-    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
-    return return_from<free_bytes_generic>(mutable_self, mem, typehash);
+    auto *dyn_self = reinterpret_cast<dynamic_allocator_base_t *>(self);
+    return return_from<free_bytes_generic>(dyn_self, mem, typehash);
 }
 
-ALLO_FUNC allocation_status_t stack_freer_t::free_status(
-    zl::slice<uint8_t> mem, size_t typehash) const noexcept
+ALLO_FUNC allocation_status_t stack_freer_t::_free_status(
+    const void *self, zl::slice<uint8_t> mem, size_t typehash) noexcept
 {
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
-    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
+    auto *dyn_self = reinterpret_cast<const dynamic_allocator_base_t *>(self);
+    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(dyn_self);
     return return_from<free_status_generic>(mutable_self, mem, typehash);
 }
 
 ALLO_FUNC allocation_status_t
-destruction_callback_provider_t::register_destruction_callback(
-    destruction_callback_t callback, void *user_data) noexcept
+destruction_callback_provider_t::_register_destruction_callback(
+    void *self, destruction_callback_t callback, void *user_data) noexcept
 {
-    const auto *self = reinterpret_cast<const dynamic_allocator_base_t *>(this);
-    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(self);
+    auto *dyn_self = reinterpret_cast<dynamic_allocator_base_t *>(self);
     return return_from<register_destruction_callback_generic>(
-        mutable_self, callback, user_data);
+        dyn_self, callback, user_data);
 }
 } // namespace allo::detail

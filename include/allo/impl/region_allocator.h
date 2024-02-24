@@ -25,26 +25,33 @@ namespace allo {
 ///
 
 ALLO_FUNC allocation_result_t region_allocator_t::alloc_bytes(
-    size_t /*bytes*/, uint8_t /*alignment_exponent*/, size_t /*typehash*/)
+    size_t /*bytes*/, uint8_t /*alignment_exponent*/,
+    size_t /*typehash*/) noexcept
 {
     return AllocationStatusCode::InvalidArgument;
 }
 
 ALLO_FUNC allocation_result_t
 region_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
-                                  size_t new_size, size_t new_typehash)
+                                  size_t new_size, size_t new_typehash) noexcept
 {
     return AllocationStatusCode::InvalidArgument;
 }
 
-ALLO_FUNC allocation_status_t
-region_allocator_t::free_bytes(zl::slice<uint8_t> /*mem*/, size_t /*typehash*/)
+ALLO_FUNC allocation_status_t region_allocator_t::free_bytes(
+    zl::slice<uint8_t> /*mem*/, size_t /*typehash*/) noexcept
 {
     return AllocationStatusCode::InvalidArgument;
 }
 
 ALLO_FUNC allocation_status_t region_allocator_t::register_destruction_callback(
     destruction_callback_t callback, void *user_data) noexcept
+{
+    return AllocationStatusCode::InvalidArgument;
+}
+
+ALLO_FUNC allocation_status_t region_allocator_t::free_status(
+    zl::slice<uint8_t> mem, size_t typehash) const noexcept
 {
     return AllocationStatusCode::InvalidArgument;
 }

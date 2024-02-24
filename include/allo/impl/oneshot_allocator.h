@@ -23,7 +23,7 @@ namespace allo {
 ALLO_FUNC oneshot_allocator_t::~oneshot_allocator_t() noexcept
 {
     if (m.parent.has_value()) {
-        m.parent.value().free_bytes(m.mem, 0);
+        IFree::_free_bytes(std::addressof(m.parent.value()), m.mem, 0);
     }
 }
 
@@ -33,6 +33,7 @@ oneshot_allocator_t::oneshot_allocator_t(oneshot_allocator_t &&other) noexcept
 {
     // the other one should no longer own the allocation, if it even did
     other.m.parent.reset();
+    type = enum_value;
 }
 
 ALLO_FUNC zl::res<oneshot_allocator_t, AllocationStatusCode>
@@ -44,7 +45,7 @@ oneshot_allocator_t::make(
         return AllocationStatusCode::InvalidArgument;
     }
 
-    return oneshot_allocator_t(M{
+    return zl::res<oneshot_allocator_t, AllocationStatusCode>(std::in_place, M{
         parent,
         memory,
         make_properties(memory.size(), 1),

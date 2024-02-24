@@ -44,7 +44,7 @@ TEST_SUITE("allocator interfaces")
         {
             auto makeint = [](detail::i_alloc &allocator)
                 -> zl::res<int *, AllocationStatusCode> {
-                auto mem_res = allocator.alloc_bytes(sizeof(int), 2, 0);
+                auto mem_res = allo::alloc<uint8_t>(allocator, sizeof(int) * 2);
                 if (!mem_res.okay())
                     return mem_res.err();
 

@@ -27,18 +27,22 @@ class region_allocator_t : private detail::dynamic_allocator_base_t,
         type = enum_value;
     }
 
+    [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
+                                                  uint8_t alignment_exponent,
+                                                  size_t typehash) noexcept;
+
     [[nodiscard]] allocation_result_t
-    alloc_bytes(size_t bytes, uint8_t alignment_exponent, size_t typehash);
+    realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+                  size_t new_typehash) noexcept;
 
-    [[nodiscard]] allocation_result_t realloc_bytes(zl::slice<uint8_t> mem,
-                                                    size_t old_typehash,
-                                                    size_t new_size,
-                                                    size_t new_typehash);
+    allocation_status_t free_bytes(zl::slice<uint8_t> mem,
+                                   size_t typehash) noexcept;
 
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem, size_t typehash);
+    [[nodiscard]] allocation_status_t
+    free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
 
     [[nodiscard]] inline constexpr const allocator_properties_t &
-    properties() const
+    properties() const noexcept
     {
         return m_properties;
     }
