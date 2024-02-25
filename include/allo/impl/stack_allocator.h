@@ -49,11 +49,21 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
     }
     zl::slice<uint8_t> original_available = m.available_memory;
 
-    auto *bookkeeping = static_cast<previous_state_t *>(
-        raw_alloc(alignof(previous_state_t), sizeof(previous_state_t)));
+    previous_state_t *bookkeeping = nullptr;
+
+    auto allocate_bookkeeping = [this, &bookkeeping]() {
+        bookkeeping = static_cast<previous_state_t *>(
+            raw_alloc(alignof(previous_state_t), sizeof(previous_state_t)));
+    };
+    allocate_bookkeeping();
 
     if (!bookkeeping) [[unlikely]] {
-        return AllocationStatusCode::OOM;
+        const allocation_status_t status = this->realloc();
+        if (!status.okay())
+            return status.err();
+        allocate_bookkeeping();
+        if (!bookkeeping) [[unlikely]]
+            return AllocationStatusCode::OOM;
     }
 
     zl::defer free_bookkeeping(
@@ -66,11 +76,20 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
     };
 
     void *actual = raw_alloc(alignment, bytes);
-    assert(actual != bookkeeping);
-    // if second alloc fails, undo the first one
     if (!actual) [[unlikely]] {
-        return AllocationStatusCode::OOM;
+        const allocation_status_t status = this->realloc();
+        if (!status.okay()) [[unlikely]]
+            return status.err();
+
+        actual = raw_alloc(alignment, bytes);
+
+        assert(actual);
+        if (!actual) [[unlikely]]
+            return AllocationStatusCode::OOM;
     }
+
+    assert(actual != bookkeeping);
+    // success, no way we can err now, so just
     free_bookkeeping.cancel();
 
     m.last_type_hashcode = typehash;
@@ -98,6 +117,29 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
     return nullptr;
 }
 
+ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
+{
+    auto result = IStackRealloc::_realloc_bytes(
+        std::addressof(m.parent), m.memory, 0,
+        size_t(std::ceil(static_cast<double>(m.memory.size()) *
+                         reallocation_ratio)),
+        0);
+
+    if (!result.okay())
+        return result.err();
+
+    const zl::slice<uint8_t> &newmem = result.release_ref();
+#ifndef NDEBUG
+    if (newmem.data() != m.memory.data()) {
+        // this shouldnt happen, reallocation is supposed to be stable
+        std::abort();
+    }
+#endif
+
+    m.memory = newmem;
+    return AllocationStatusCode::Okay;
+}
+
 ALLO_FUNC allocation_status_t stack_allocator_t::free_status(
     zl::slice<uint8_t> mem, size_t typehash) const noexcept
 {
@@ -120,12 +162,11 @@ stack_allocator_t::free_common(zl::slice<uint8_t> mem,
     // retrieve the bookeeping data from behind the given allocation
     void *bookkeeping_aligned = item;
     size_t size =
-        (m.memory.data() + m.memory.size()) - static_cast<uint8_t *>(item);
+        sizeof(previous_state_t) * 2; // always pretend its large enough
 
-    if (!std::align(alignof(previous_state_t), sizeof(previous_state_t),
-                    bookkeeping_aligned, size)) [[unlikely]] {
-        return AllocationStatusCode::OOM;
-    }
+    std::align(alignof(previous_state_t), sizeof(previous_state_t),
+               bookkeeping_aligned, size);
+    assert(bookkeeping_aligned);
 
     // this should be the location of where you could next put a bookkeeping
     // object
@@ -217,29 +258,38 @@ ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(
     if (!callback) {
         return AllocationStatusCode::InvalidArgument;
     }
-    // not valid/used in this case, except that if a
-    // destruction_callback_entry_t doesn't fit in the available space,
-    // std::align will return nullptr
-    size_t dummy_size = m.available_memory.size();
-    void *head = m.available_memory.end().ptr();
-    if (auto *aligned = (destruction_callback_entry_t *)std::align(
-            alignof(destruction_callback_entry_t),
-            sizeof(destruction_callback_entry_t), head, dummy_size)) {
-        while ((void *)(aligned + 1) > m.available_memory.end().ptr()) {
-            --aligned;
+    auto try_alloc = [this, callback, user_data]() -> allocation_status_t {
+        size_t dummy_size = m.available_memory.size();
+        void *head = m.available_memory.end().ptr();
+        if (auto *aligned = (destruction_callback_entry_t *)std::align(
+                alignof(destruction_callback_entry_t),
+                sizeof(destruction_callback_entry_t), head, dummy_size)) {
+            while ((void *)(aligned + 1) > m.available_memory.end().ptr()) {
+                --aligned;
+            }
+
+            if ((void *)aligned < (void *)m.available_memory.data()) {
+                return AllocationStatusCode::OOM;
+            }
+
+            m.available_memory = zl::slice<uint8_t>(
+                m.available_memory, 0,
+                (uint8_t *)aligned - (uint8_t *)m.available_memory.data());
+
+            *aligned = {callback, user_data};
+            return AllocationStatusCode::Okay;
         }
+        return AllocationStatusCode::OOM;
+    };
 
-        if ((void *)aligned < (void *)m.available_memory.data()) {
-            return AllocationStatusCode::OOM;
-        }
-
-        m.available_memory = zl::slice<uint8_t>(
-            m.available_memory, 0,
-            (uint8_t *)aligned - (uint8_t *)m.available_memory.data());
-
-        *aligned = {callback, user_data};
-        return AllocationStatusCode::Okay;
+    if (!try_alloc().okay()) [[unlikely]] {
+        const allocation_status_t realloc_status = this->realloc();
+        if (!realloc_status.okay()) [[unlikely]]
+            return realloc_status.err();
+        const allocation_status_t status = try_alloc();
+        if (!status.okay()) [[unlikely]]
+            return status.err();
     }
-    return AllocationStatusCode::OOM;
+    return AllocationStatusCode::Okay;
 }
 } // namespace allo

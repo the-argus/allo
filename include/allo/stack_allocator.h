@@ -74,6 +74,9 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
     /// Allocate stuff with no typing
     void *raw_alloc(size_t align, size_t typesize) noexcept;
 
+    static constexpr double reallocation_ratio = 1.5;
+    allocation_status_t realloc() noexcept;
+
     /// the information placed underneath every allocation in the stack
     struct previous_state_t
     {
