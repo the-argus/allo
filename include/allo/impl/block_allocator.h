@@ -174,7 +174,7 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
     }
 
     assert(chosen_block.size() >= bytes);
-    return zl::slice<uint8_t>(chosen_block, 0, bytes);
+    return allocation_result_t(std::in_place, chosen_block, 0, bytes);
 }
 
 ALLO_FUNC size_t *
