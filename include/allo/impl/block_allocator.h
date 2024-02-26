@@ -329,7 +329,10 @@ ALLO_FUNC allocation_status_t block_allocator_t::realloc() noexcept
     const auto num_blocks = static_cast<size_t>(std::floor(
         static_cast<double>(m.mem.size()) / static_cast<double>(m.blocksize)));
     assert(original_num_blocks < num_blocks);
-    m.blocks_free += num_blocks - original_num_blocks;
+    size_t difference = num_blocks - original_num_blocks;
+    for (size_t i = 0; i < difference; ++i) {
+        // TODO: set variant values to point to next fre item
+    }
     return AllocationStatusCode::Okay;
 }
 } // namespace allo
