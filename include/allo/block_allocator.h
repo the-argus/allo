@@ -60,8 +60,8 @@ class block_allocator_t : private detail::dynamic_allocator_base_t,
         allocator_properties_t properties;
         size_t last_freed_index;
         size_t blocks_free;
-        size_t blocksize;
-        size_t max_destruction_entries_per_block;
+        const size_t blocksize;
+        const size_t max_destruction_entries_per_block;
         size_t num_destruction_array_blocks;
         size_t current_destruction_array_index;
         size_t current_destruction_array_size;

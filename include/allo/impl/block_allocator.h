@@ -323,7 +323,13 @@ ALLO_FUNC allocation_status_t block_allocator_t::realloc() noexcept
         std::ceil(reallocation_ratio * static_cast<double>(m.mem.size())), 0);
     if (!res.okay())
         return res.err();
+    const auto original_num_blocks = static_cast<size_t>(std::floor(
+        static_cast<double>(m.mem.size()) / static_cast<double>(m.blocksize)));
     m.mem = res.release();
+    const auto num_blocks = static_cast<size_t>(std::floor(
+        static_cast<double>(m.mem.size()) / static_cast<double>(m.blocksize)));
+    assert(original_num_blocks < num_blocks);
+    m.blocks_free += num_blocks - original_num_blocks;
     return AllocationStatusCode::Okay;
 }
 } // namespace allo
