@@ -69,6 +69,9 @@ class block_allocator_t : private detail::dynamic_allocator_base_t,
         bool owning = true;
     } m;
 
+    static constexpr double reallocation_ratio = 1.5f;
+    allocation_status_t realloc() noexcept;
+
     struct destruction_callback_entry_t
     {
         destruction_callback_t callback;

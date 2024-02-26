@@ -138,7 +138,10 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
     size_t bytes, uint8_t alignment_exponent, size_t typehash) noexcept
 {
     if (m.blocks_free == 0) {
-        return AllocationStatusCode::OOM;
+        this->realloc();
+        if (m.blocks_free == 0) {
+            return AllocationStatusCode::OOM;
+        }
     }
 
     if (bytes > get_max_contiguous_bytes(m.properties)) {
@@ -292,7 +295,10 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
         ++m.current_destruction_array_size;
     } else {
         if (m.blocks_free == 0) {
-            return AllocationStatusCode::OOM;
+            this->realloc();
+            if (m.blocks_free == 0) {
+                return AllocationStatusCode::OOM;
+            }
         }
         const size_t free_index = m.last_freed_index;
         void *const freeblock = &m.mem.data()[free_index * m.blocksize];
@@ -307,6 +313,17 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
         m.current_destruction_array_size = 1;
         new_array->entries[0] = {callback, user_data};
     }
+    return AllocationStatusCode::Okay;
+}
+
+ALLO_FUNC allocation_status_t block_allocator_t::realloc() noexcept
+{
+    auto res = IStackRealloc::_realloc_bytes(
+        std::addressof(m.parent), m.mem, 0,
+        std::ceil(reallocation_ratio * static_cast<double>(m.mem.size())), 0);
+    if (!res.okay())
+        return res.err();
+    m.mem = res.release();
     return AllocationStatusCode::Okay;
 }
 } // namespace allo
