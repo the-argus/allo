@@ -21,6 +21,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
         zl::slice<uint8_t> available_memory;
         size_t last_type_hashcode = 0;
         allocator_properties_t properties;
+        size_t number_of_callbacks = 0;
     } m;
 
   public:
@@ -32,9 +33,16 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
     stack_allocator_t(const stack_allocator_t &) = delete;
     stack_allocator_t &operator=(const stack_allocator_t &) = delete;
 
-    static zl::res<stack_allocator_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> memory,
-         allocator_with<IRealloc, IFree> &parent) ALLO_NOEXCEPT;
+    template <typename Allocator>
+    inline static zl::res<stack_allocator_t, AllocationStatusCode>
+    make(zl::slice<uint8_t> memory, Allocator &parent) ALLO_NOEXCEPT
+    {
+        static_assert(
+            detail::can_upcast_to<allocator_with<IRealloc, IFree>, Allocator>,
+            "Cannot use given allocator to create a stack allocator.");
+        return make_inner(memory,
+                          upcast<allocator_with<IRealloc, IFree>>(parent));
+    }
 
     // can be moved
     stack_allocator_t(stack_allocator_t &&) noexcept;
@@ -76,6 +84,10 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
 
     static constexpr double reallocation_ratio = 1.5;
     allocation_status_t realloc() noexcept;
+
+    static zl::res<stack_allocator_t, AllocationStatusCode>
+    make_inner(zl::slice<uint8_t> memory,
+               allocator_with<IRealloc, IFree> &parent) ALLO_NOEXCEPT;
 
     /// the information placed underneath every allocation in the stack
     struct previous_state_t

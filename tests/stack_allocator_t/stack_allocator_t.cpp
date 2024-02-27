@@ -179,5 +179,20 @@ TEST_SUITE("stack_allocator_t")
             REQUIRE(allo::destroy_one(ally, vec).okay());
             REQUIRE(allo::destroy_one(ally, set).okay());
         }
+
+        SUBCASE("register destruction callback")
+        {
+            std::array<uint8_t, 512> mem;
+            int test = 0;
+            auto oneshot = oneshot_allocator_t::make(mem).release();
+            {
+                auto stack = stack_allocator_t::make(mem, oneshot).release();
+                auto status = stack.register_destruction_callback(
+                    [](void *test_int) { *((int *)test_int) = 1; }, &test);
+                REQUIRE(status.okay());
+                REQUIRE(test == 0);
+            }
+            REQUIRE(test == 1);
+        }
     }
 }

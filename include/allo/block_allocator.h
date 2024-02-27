@@ -98,11 +98,13 @@ class block_allocator_t : private detail::dynamic_allocator_base_t,
         (sizeof(destruction_callback_entry_t) +
          sizeof(destruction_callback_entry_t));
 
+  public:
     inline block_allocator_t(M &&members) noexcept : m(members)
     {
         type = enum_value;
     }
 
+  private:
     void call_all_destruction_callbacks() const noexcept;
     size_t *get_location_for_typehash(uint8_t *blockhead,
                                       size_t allocsize) const noexcept;

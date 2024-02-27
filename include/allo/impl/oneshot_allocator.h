@@ -37,19 +37,20 @@ oneshot_allocator_t::oneshot_allocator_t(oneshot_allocator_t &&other) noexcept
 }
 
 ALLO_FUNC zl::res<oneshot_allocator_t, AllocationStatusCode>
-oneshot_allocator_t::make(
+oneshot_allocator_t::make_inner(
     const zl::slice<uint8_t> &memory,
-    const zl::opt<allocator_with<IStackFree> &> &parent) noexcept
+    zl::opt<allocator_with<IStackFree> &> parent) noexcept
 {
     if (memory.size() == 0) {
         return AllocationStatusCode::InvalidArgument;
     }
 
-    return zl::res<oneshot_allocator_t, AllocationStatusCode>(std::in_place, M{
-        parent,
-        memory,
-        make_properties(memory.size(), 1),
-    });
+    return zl::res<oneshot_allocator_t, AllocationStatusCode>(
+        std::in_place, M{
+                           parent,
+                           memory,
+                           make_properties(memory.size(), 1),
+                       });
 }
 
 [[nodiscard]] ALLO_FUNC allocation_result_t oneshot_allocator_t::realloc_bytes(

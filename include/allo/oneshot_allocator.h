@@ -22,13 +22,29 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t,
         allocator_properties_t properties;
     } m;
 
+    static zl::res<oneshot_allocator_t, AllocationStatusCode>
+    make_inner(const zl::slice<uint8_t> &memory,
+               zl::opt<IStackFree &> parent) noexcept;
+
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::OneshotAllocator;
 
-    static zl::res<oneshot_allocator_t, AllocationStatusCode>
-    make(const zl::slice<uint8_t> &memory,
-         const zl::opt<allocator_with<IStackFree> &> &parent = {}) noexcept;
+    template <typename Allocator>
+    inline static zl::res<oneshot_allocator_t, AllocationStatusCode>
+    make_owned(zl::slice<uint8_t> memory, Allocator &parent) noexcept
+    {
+        static_assert(detail::can_upcast_to<IStackFree, Allocator>,
+                      "Cannot upcast given allocator to  IStackFree, needed "
+                      "for this oneshot allocator constructor.");
+        return make_inner(memory, upcast<IStackFree>(parent));
+    }
+
+    inline static zl::res<oneshot_allocator_t, AllocationStatusCode>
+    make(zl::slice<uint8_t> memory) noexcept
+    {
+        return make_inner(memory, {});
+    }
 
     [[nodiscard]] allocation_result_t
     realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,

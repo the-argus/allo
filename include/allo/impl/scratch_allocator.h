@@ -38,4 +38,9 @@ scratch_allocator_t::register_destruction_callback(
 {
     return AllocationStatusCode::InvalidArgument;
 }
+
+ALLO_FUNC const allocator_properties_t &scratch_allocator_t::properties() const
+{
+    std::abort();
+}
 } // namespace allo

@@ -66,6 +66,15 @@ TEST_SUITE("allocator interfaces")
             REQUIRE(maybe_int_2.okay());
         }
 
+        SUBCASE("upcast interface")
+        {
+            std::array<uint8_t, 512> mem;
+            auto oneshot = oneshot_allocator_t::make(mem).release();
+            auto stackalloc = upcast<allocator_with<IStackRealloc, IStackFree>>(
+                upcast<allocator_with<IRealloc, IFree>>(oneshot));
+            auto props = IStackRealloc::_properties(&stackalloc);
+        }
+
         SUBCASE("upcast to single interface, use typed alloc")
         {
             auto makeint = [](detail::i_alloc &allocator)

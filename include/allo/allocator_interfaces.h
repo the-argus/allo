@@ -217,6 +217,8 @@ enum class AllocatorType : uint8_t
 };
 
 // which interfaces each allocator has
+// why is this in one array instead of inside each type? honestly, i just like
+// having them next to each other
 constexpr uint8_t interface_bits[uint8_t(AllocatorType::MAX_ALLOCATOR_TYPE)] = {
     0b11111, // heap
     0b11111, // c allocator
@@ -527,10 +529,21 @@ template <uint8_t index> inline constexpr uint8_t get_bits_for_index() noexcept
     return detail::interface_bits[index];
 }
 
-template <typename Interface, typename Allocator>
+template <typename AllocatorOrInterface>
+inline constexpr uint8_t get_bits_for_allocator_or_interface() noexcept
+{
+    if constexpr (!std::is_base_of_v<detail::dynamic_allocator_base_t,
+                                     AllocatorOrInterface>) {
+        return AllocatorOrInterface::interfaces;
+    } else {
+        return get_bits_for_index<uint8_t(AllocatorOrInterface::enum_value)>();
+    }
+}
+
+template <typename Interface, typename AllocatorOrInterface>
 constexpr bool can_upcast_to =
     (Interface::interfaces &
-     get_bits_for_index<uint8_t(Allocator::enum_value)>()) ==
+     get_bits_for_allocator_or_interface<AllocatorOrInterface>()) ==
     Interface::interfaces;
 } // namespace detail
 

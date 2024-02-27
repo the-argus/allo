@@ -108,30 +108,32 @@ block_allocator_t::make(const zl::slice<uint8_t> &memory,
             i + 1;
     }
 
-    return block_allocator_t(M{
-        // parent allocator
-        parent,
-        // block of memory
-        memory,
-        // allocator properties
-        make_properties(actual_blocksize, alignment),
-        // last freed index (the first block is free at start)
-        0,
-        // blocks free (all are free at start)
-        num_blocks,
-        // blocksize
-        actual_blocksize,
-        // max destruction entries per block
-        max_destruction_entries_per_block,
-        // number of destruction blocks
-        0,
-        // current destruction array index,
-        0,
-        // size of current destruction array
-        0,
-        // whether we own our allocation
-        true,
-    });
+    return zl::res<block_allocator_t, AllocationStatusCode>(
+        std::in_place,
+        M{
+            // parent allocator
+            parent,
+            // block of memory
+            memory,
+            // allocator properties
+            make_properties(actual_blocksize, alignment),
+            // last freed index (the first block is free at start)
+            0,
+            // blocks free (all are free at start)
+            num_blocks,
+            // blocksize
+            actual_blocksize,
+            // max destruction entries per block
+            max_destruction_entries_per_block,
+            // number of destruction blocks
+            0,
+            // current destruction array index,
+            0,
+            // size of current destruction array
+            0,
+            // whether we own our allocation
+            true,
+        });
 }
 
 ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(

@@ -25,6 +25,21 @@ namespace allo {
 ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
 {
     // call all destruction callbacks
+    if (m.number_of_callbacks != 0) [[unlikely]] {
+        size_t dummy_size = m.available_memory.size();
+        void *head = m.available_memory.end().ptr();
+        if (auto *aligned = (destruction_callback_entry_t *)std::align(
+                alignof(destruction_callback_entry_t),
+                sizeof(destruction_callback_entry_t), head, dummy_size)) {
+            while ((void *)(aligned + 1) > m.available_memory.end().ptr()) {
+                --aligned;
+            }
+            for (size_t i = 0; i < m.number_of_callbacks; ++i) {
+                aligned->callback(aligned->user_data);
+                --aligned;
+            }
+        }
+    }
     // now that callbacks are called, free memory
     IFree::_free_bytes(std::addressof(m.parent), m.memory, 0);
 }
@@ -227,8 +242,9 @@ stack_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
 }
 
 ALLO_FUNC zl::res<stack_allocator_t, AllocationStatusCode>
-stack_allocator_t::make(zl::slice<uint8_t> memory,
-                        allocator_with<IRealloc, IFree> &parent) ALLO_NOEXCEPT
+stack_allocator_t::make_inner(zl::slice<uint8_t> memory,
+                              allocator_with<IRealloc, IFree> &parent)
+    ALLO_NOEXCEPT
 {
     // make sure there is at least one byte of space to be allocated in memory
     if (memory.size() <= sizeof(previous_state_t)) {
@@ -237,13 +253,15 @@ stack_allocator_t::make(zl::slice<uint8_t> memory,
 
     assert(IFree::_free_status(std::addressof(parent), memory, 0).okay());
 
-    return stack_allocator_t(M{
-        parent,
-        memory,
-        memory,
-        0,
-        make_properties(memory.size(), alignof(previous_state_t)),
-    });
+    return zl::res<stack_allocator_t, AllocationStatusCode>{
+        std::in_place,
+        M{
+            parent,
+            memory,
+            memory,
+            0,
+            make_properties(memory.size(), alignof(previous_state_t)),
+        }};
 }
 
 ALLO_FUNC const allocator_properties_t &
@@ -290,6 +308,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(
         if (!status.okay()) [[unlikely]]
             return status.err();
     }
+    ++m.number_of_callbacks;
     return AllocationStatusCode::Okay;
 }
 } // namespace allo
