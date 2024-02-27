@@ -15,6 +15,7 @@ class segmented_array_block_allocator_t
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::SegmentedArrayBlockAllocator;
+    static constexpr uint8_t interfaces = 0b11111;
 
     /// Create a heap allocator which will allocate into a given buffer of
     /// memory

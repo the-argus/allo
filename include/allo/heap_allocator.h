@@ -13,6 +13,7 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t,
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::HeapAllocator;
+    static constexpr uint8_t interfaces = 0b11111;
 
     /// Create a heap allocator which will allocate into a given buffer of
     /// memory

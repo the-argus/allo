@@ -19,6 +19,7 @@ class scratch_allocator_t : private detail::dynamic_allocator_base_t,
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::ScratchAllocator;
+    static constexpr uint8_t interfaces = 0b10111;
 
     // can be explicitly constructed from a buffer of existing memory.
     // it will modify this memory, but not free it on destruction.

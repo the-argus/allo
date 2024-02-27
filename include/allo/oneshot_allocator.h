@@ -29,6 +29,7 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t,
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::OneshotAllocator;
+    static constexpr uint8_t interfaces = 0b01111;
 
     template <typename Allocator>
     inline static zl::res<oneshot_allocator_t, AllocationStatusCode>

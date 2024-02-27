@@ -9,7 +9,7 @@
 
 namespace allo {
 template <typename T, typename Freer>
-allocation_status_t free_one(Freer &allocator, T &item) noexcept
+inline allocation_status_t free_one(Freer &allocator, T &item) noexcept
 {
     static_assert(std::is_base_of_v<detail::stack_freer_t, Freer>,
                   "Can't use the given type to perform a free");
@@ -48,7 +48,7 @@ allocation_status_t free_one(Freer &allocator, T &item) noexcept
 }
 
 template <typename T, typename Freer>
-allocation_status_t free(Freer &allocator, const zl::slice<T> items) noexcept
+inline allocation_status_t free(Freer &allocator, const zl::slice<T> items) noexcept
 {
     static_assert(std::is_base_of_v<detail::stack_freer_t, Freer>,
                   "Can't use the given type to perform a free");
@@ -87,7 +87,7 @@ allocation_status_t free(Freer &allocator, const zl::slice<T> items) noexcept
 }
 
 template <typename T, typename Freer>
-allocation_status_t destroy_one(Freer &allocator, T &item) noexcept
+inline allocation_status_t destroy_one(Freer &allocator, T &item) noexcept
 {
     constexpr bool is_valid_interface =
         std::is_base_of_v<detail::allocator_interface_t, Freer>;

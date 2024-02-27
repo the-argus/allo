@@ -13,6 +13,7 @@ class block_allocator_t : private detail::dynamic_allocator_base_t,
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::BlockAllocator;
+    static constexpr uint8_t interfaces = 0b11111;
 
     static zl::res<block_allocator_t, AllocationStatusCode>
     make(const zl::slice<uint8_t> &memory,
