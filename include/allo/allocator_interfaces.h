@@ -61,7 +61,8 @@ struct allocator_requirements_t
 struct allocator_properties_t;
 
 template <typename AllocatorOrInterface>
-constexpr const allocator_properties_t& properties_of(AllocatorOrInterface &allocator) noexcept;
+inline constexpr const allo::allocator_properties_t&\
+properties_of(const AllocatorOrInterface &allocator) noexcept;
 
 template <typename T, typename Freer>
 allocation_status_t free_one(Freer &allocator, T &item) noexcept;
@@ -89,10 +90,48 @@ namespace detail {
 class memory_info_provider_t;
 }
 
+using destruction_callback_t = void (*)(void *user_data);
+
+class heap_allocator_t;
+class c_allocator_t;
+class stack_allocator_t;
+class segmented_array_block_allocator_t;
+class block_allocator_t;
+class scratch_allocator_t;
+class region_allocator_t;
+class oneshot_allocator_t;
+
+/// This gets undefined a few lines below
+#define ALLO_DETAIL_FRIEND_DECLS public:\
+    friend class allo::heap_allocator_t;\
+    friend class allo::c_allocator_t;\
+    friend class allo::stack_allocator_t;\
+    friend class allo::segmented_array_block_allocator_t;\
+    friend class allo::block_allocator_t;\
+    friend class allo::scratch_allocator_t;\
+    friend class allo::region_allocator_t;\
+    friend class allo::oneshot_allocator_t;\
+    template <typename AllocatorOrInterface>\
+    friend constexpr const allocator_properties_t& allo::properties_of(AllocatorOrInterface &allocator) noexcept;\
+    template <typename AllocatorOrInterface>\
+    friend inline constexpr const allo::allocator_properties_t&\
+    allo::properties_of(const AllocatorOrInterface &allocator) noexcept;\
+    template <typename T, typename Freer> \
+    friend allocation_status_t allo::free_one(Freer &allocator, T &item) noexcept; \
+    template <typename T, typename Freer> \
+    friend allocation_status_t allo::free(Freer &allocator, const zl::slice<T> items) noexcept; \
+    template <typename T, typename Freer> \
+    friend allocation_status_t allo::destroy_one(Freer &allocator, T &item) noexcept; \
+    template <typename T, typename Freer> \
+    friend allocation_status_t allo::destroy_many(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer> && !std::is_reference_v<T>, Freer> &allocator, const zl::slice<T> items) noexcept; \
+    template <typename T, typename Allocator, uint8_t alignment> \
+    friend zl::res<T &, AllocationStatusCode> allo::alloc_one(Allocator &allocator) noexcept; \
+    template <typename T, typename Allocator, uint8_t alignment> \
+    friend zl::res<zl::slice<T>, AllocationStatusCode> allo::alloc(Allocator &allocator, size_t number) noexcept;
+
 struct allocator_properties_t
 {
   public:
-    allocator_properties_t() = delete;
     friend class detail::memory_info_provider_t;
     /// Check if the allocator properties meet some given requirements
     [[nodiscard]] inline constexpr bool
@@ -134,49 +173,14 @@ struct allocator_properties_t
           m_maximum_alignment(max_alignment)
     {
     }
+    ALLO_DETAIL_FRIEND_DECLS
 };
-
-using destruction_callback_t = void (*)(void *user_data);
-
-class heap_allocator_t;
-class c_allocator_t;
-class stack_allocator_t;
-class segmented_array_block_allocator_t;
-class block_allocator_t;
-class scratch_allocator_t;
-class region_allocator_t;
-class oneshot_allocator_t;
-
-/// This gets undefined a few lines below
-#define ALLO_DETAIL_FRIEND_DECLS public:\
-    friend class allo::heap_allocator_t;\
-    friend class allo::c_allocator_t;\
-    friend class allo::stack_allocator_t;\
-    friend class allo::segmented_array_block_allocator_t;\
-    friend class allo::block_allocator_t;\
-    friend class allo::scratch_allocator_t;\
-    friend class allo::region_allocator_t;\
-    friend class allo::oneshot_allocator_t;\
-    template <typename AllocatorOrInterface>\
-    friend constexpr const allocator_properties_t& allo::properties_of(AllocatorOrInterface &allocator) noexcept;\
-    template <typename T, typename Freer> \
-    friend allocation_status_t allo::free_one(Freer &allocator, T &item) noexcept; \
-    template <typename T, typename Freer> \
-    friend allocation_status_t allo::free(Freer &allocator, const zl::slice<T> items) noexcept; \
-    template <typename T, typename Freer> \
-    friend allocation_status_t allo::destroy_one(Freer &allocator, T &item) noexcept; \
-    template <typename T, typename Freer> \
-    friend allocation_status_t allo::destroy_many(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer> && !std::is_reference_v<T>, Freer> &allocator, const zl::slice<T> items) noexcept; \
-    template <typename T, typename Allocator, uint8_t alignment> \
-    friend zl::res<T &, AllocationStatusCode> allo::alloc_one(Allocator &allocator) noexcept; \
-    template <typename T, typename Allocator, uint8_t alignment> \
-    friend zl::res<zl::slice<T>, AllocationStatusCode> allo::alloc(Allocator &allocator, size_t number) noexcept;
 
 namespace detail {
 
 class memory_info_provider_t
 {
-  private:
+  protected:
     [[nodiscard]] static const allocator_properties_t &
     _properties(const void *self) noexcept;
 
@@ -202,10 +206,12 @@ class memory_info_provider_t
 
 class allocator_interface_t
 {
-    allocator_interface_t(const allocator_interface_t&) = delete;
-    allocator_interface_t& operator=(const allocator_interface_t&) = delete;
-    allocator_interface_t(allocator_interface_t&&) = delete;
-    allocator_interface_t& operator=(allocator_interface_t&&) = delete;
+  protected:
+    allocator_interface_t() = default;
+    allocator_interface_t(const allocator_interface_t&) = default;
+    allocator_interface_t& operator=(const allocator_interface_t&) = default;
+    allocator_interface_t(allocator_interface_t&&) = default;
+    allocator_interface_t& operator=(allocator_interface_t&&) = default;
 };
 
 class threadsafe_allocator_base_t
