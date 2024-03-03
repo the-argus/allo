@@ -17,7 +17,6 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
         zl::slice<uint8_t> available_memory;
         size_t last_type_hashcode = 0;
         allocator_properties_t properties;
-        size_t number_of_callbacks = 0;
     } m;
 
   public:

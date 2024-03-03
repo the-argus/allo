@@ -24,21 +24,11 @@ namespace allo {
 
 ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
 {
-    // call all destruction callbacks
-    if (m.number_of_callbacks != 0) [[unlikely]] {
-        size_t dummy_size = m.available_memory.size();
-        void *head = m.available_memory.end().ptr();
-        if (auto *aligned = (destruction_callback_entry_t *)std::align(
-                alignof(destruction_callback_entry_t),
-                sizeof(destruction_callback_entry_t), head, dummy_size)) {
-            while ((void *)(aligned + 1) > m.available_memory.end().ptr()) {
-                --aligned;
-            }
-            for (size_t i = 0; i < m.number_of_callbacks; ++i) {
-                aligned->callback(aligned->user_data);
-                --aligned;
-            }
-        }
+    auto *entry = reinterpret_cast<destruction_callback_entry_t *>(
+        m.available_memory.end().ptr());
+    while ((uint8_t *)(entry + 1) <= m.memory.end().ptr()) {
+        entry->callback(entry->user_data);
+        ++entry;
     }
     // now that callbacks are called, free memory
     m.parent.free_bytes(m.memory, 0);
@@ -307,7 +297,6 @@ ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(
         if (!status.okay()) [[unlikely]]
             return status.err();
     }
-    ++m.number_of_callbacks;
     return AllocationStatusCode::Okay;
 }
 } // namespace allo
