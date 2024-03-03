@@ -61,6 +61,7 @@ inline allocation_status_t free(Freer &allocator,
         typehash);
 }
 
+#ifdef ALLO_ALLOW_DESTRUCTORS
 template <typename T, typename Freer>
 inline allocation_status_t destroy_one(Freer &allocator, T &item) noexcept
 {
@@ -125,6 +126,7 @@ allocation_status_t destroy_many(Freer &allocator,
     }
     return status;
 }
+#endif
 #undef ALLO_FREE_VALIDITY_CHECKS
 
 } // namespace allo

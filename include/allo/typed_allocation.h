@@ -11,7 +11,7 @@ namespace allo {
 /// Allocate memory for one "T". The contents of this memory is undefined.
 /// T must not be a reference type.
 template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
-inline zl::res<T &, AllocationStatusCode>
+[[nodiscard]] inline zl::res<T &, AllocationStatusCode>
 alloc_one(Allocator &allocator) noexcept
 {
     constexpr bool is_valid_interface =
@@ -49,8 +49,8 @@ alloc_one(Allocator &allocator) noexcept
 /// Allocate memory for a contiguous buffer of a number of items of type T.
 /// The contents of this memory is undefined. T must not be a reference type.
 template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
-inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(Allocator &allocator,
-                                                         size_t number) noexcept
+[[nodiscard]] inline zl::res<zl::slice<T>, AllocationStatusCode>
+alloc(Allocator &allocator, size_t number) noexcept
 {
     constexpr bool is_valid_interface =
         std::is_base_of_v<detail::allocator_common_t, Allocator>;
@@ -90,9 +90,14 @@ inline zl::res<zl::slice<T>, AllocationStatusCode> alloc(Allocator &allocator,
 /// If a constructor throws an exception, the function will exit but the memory
 /// will not be freed, and leak.
 template <typename T, typename Allocator, typename... Args>
-inline zl::res<T &, AllocationStatusCode> construct_one(Allocator &allocator,
-                                                        Args &&...args)
+[[nodiscard]] inline zl::res<T &, AllocationStatusCode>
+construct_one(Allocator &allocator, Args &&...args)
 {
+#ifndef ALLO_ALLOW_DESTRUCTORS
+    static_assert(std::is_trivially_destructible_v<T>,
+                  "Refusing to construct_one for a type with a non-trivial "
+                  "destructor which will never be called");
+#endif
     constexpr bool is_valid_interface =
         std::is_base_of_v<detail::allocator_common_t, Allocator>;
     constexpr bool is_valid_allocator =
@@ -117,9 +122,14 @@ inline zl::res<T &, AllocationStatusCode> construct_one(Allocator &allocator,
 /// If a constructor throws an exception, the function will exit but the memory
 /// will not be freed, and leak.
 template <typename T, typename Allocator, typename... Args>
-inline zl::res<zl::slice<T>, AllocationStatusCode>
+[[nodiscard]] inline zl::res<zl::slice<T>, AllocationStatusCode>
 construct_many(Allocator &allocator, size_t number, Args &&...args)
 {
+#ifndef ALLO_ALLOW_DESTRUCTORS
+    static_assert(std::is_trivially_destructible_v<T>,
+                  "Refusing to construct_one for a type with a non-trivial "
+                  "destructor which will never be called");
+#endif
     constexpr bool is_valid_interface =
         std::is_base_of_v<detail::allocator_common_t, Allocator>;
     constexpr bool is_valid_allocator =

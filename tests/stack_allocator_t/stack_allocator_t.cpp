@@ -1,5 +1,6 @@
 #include "allo/oneshot_allocator.h"
 #include "allo/stack_allocator.h"
+#define ALLO_ALLOW_DESTRUCTORS
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
 #include "test_header.h"
