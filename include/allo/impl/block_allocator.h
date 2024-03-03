@@ -25,7 +25,7 @@ ALLO_FUNC block_allocator_t::~block_allocator_t() noexcept
 {
     if (m.owning) {
         call_all_destruction_callbacks();
-        IFree::_free_bytes(std::addressof(m.parent), m.mem, 0);
+        m.parent.free_bytes(m.mem, 0);
         m.blocks_free = 0;
         m.owning = false;
     }
@@ -69,8 +69,8 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
 
 ALLO_FUNC zl::res<block_allocator_t, AllocationStatusCode>
 block_allocator_t::make(const zl::slice<uint8_t> &memory,
-                        allocator_with<IRealloc, IFree> &parent,
-                        size_t blocksize, uint8_t alignment_exponent) noexcept
+                        DynamicHeapAllocatorRef parent, size_t blocksize,
+                        uint8_t alignment_exponent) noexcept
 {
     // NOTE: this could be supported by adding padding, but it would make things
     // more complicated.
@@ -87,7 +87,7 @@ block_allocator_t::make(const zl::slice<uint8_t> &memory,
     size_t actual_blocksize =
         (blocksize < minimum_blocksize) ? minimum_blocksize : blocksize;
 
-    assert(IFree::_free_status(std::addressof(parent), memory, 0).okay());
+    assert(parent.free_status(memory, 0).okay());
 
     auto num_blocks =
         static_cast<size_t>(std::floor(static_cast<double>(memory.size()) /
@@ -95,7 +95,7 @@ block_allocator_t::make(const zl::slice<uint8_t> &memory,
     assert(num_blocks < memory.size() + 1);
 
     if (num_blocks == 0)
-        return AllocationStatusCode::AllocationTooBig;
+        return AllocationStatusCode::OOM;
 
     size_t max_destruction_entries_per_block =
         (actual_blocksize - sizeof(destruction_callback_array_t)) /
@@ -116,7 +116,7 @@ block_allocator_t::make(const zl::slice<uint8_t> &memory,
             // block of memory
             memory,
             // allocator properties
-            make_properties(actual_blocksize, alignment),
+            allocator_properties_t(actual_blocksize, alignment),
             // last freed index (the first block is free at start)
             0,
             // blocks free (all are free at start)
@@ -146,12 +146,12 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
         }
     }
 
-    if (bytes > get_max_contiguous_bytes(m.properties)) {
-        return AllocationStatusCode::AllocationTooBig;
+    if (bytes > m.properties.m_maximum_contiguous_bytes) {
+        return AllocationStatusCode::OOM;
     }
 
     auto alignment = static_cast<size_t>(std::pow(2, alignment_exponent));
-    if (alignment > get_max_alignment(m.properties)) {
+    if (alignment > m.properties.m_maximum_alignment) {
         return AllocationStatusCode::AllocationTooAligned;
     }
 
@@ -320,8 +320,8 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
 
 ALLO_FUNC allocation_status_t block_allocator_t::realloc() noexcept
 {
-    auto res = IStackRealloc::_realloc_bytes(
-        std::addressof(m.parent), m.mem, 0,
+    auto res = m.parent.realloc_bytes(
+        m.mem, 0,
         std::ceil(reallocation_ratio * static_cast<double>(m.mem.size())), 0);
     if (!res.okay())
         return res.err();
@@ -333,7 +333,7 @@ ALLO_FUNC allocation_status_t block_allocator_t::realloc() noexcept
     assert(original_num_blocks < num_blocks);
     size_t difference = num_blocks - original_num_blocks;
     for (size_t i = 0; i < difference; ++i) {
-        // TODO: set variant values to point to next fre item
+        // TODO: set variant values to point to next free item
     }
     return AllocationStatusCode::Okay;
 }

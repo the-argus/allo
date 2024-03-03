@@ -1,5 +1,5 @@
 #pragma once
-#include "allo/allocator_interfaces.h"
+#include "allo/abstracts.h"
 
 #ifndef ALLO_NOEXCEPT
 #define ALLO_NOEXCEPT noexcept
@@ -7,16 +7,12 @@
 
 namespace allo {
 
-class stack_allocator_t : private detail::dynamic_allocator_base_t,
-                          public detail::allocator_t,
-                          public detail::stack_freer_t,
-                          public detail::destruction_callback_provider_t,
-                          public detail::stack_reallocator_t
+class stack_allocator_t : private detail::dynamic_allocator_base_t
 {
   private:
     struct M
     {
-        allocator_with<IRealloc, IFree> &parent;
+        DynamicHeapAllocatorRef &parent;
         zl::slice<uint8_t> memory;
         zl::slice<uint8_t> available_memory;
         size_t last_type_hashcode = 0;
@@ -38,11 +34,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
     inline static zl::res<stack_allocator_t, AllocationStatusCode>
     make(zl::slice<uint8_t> memory, Allocator &parent) ALLO_NOEXCEPT
     {
-        static_assert(
-            detail::can_upcast_to<allocator_with<IRealloc, IFree>, Allocator>,
-            "Cannot use given allocator to create a stack allocator.");
-        return make_inner(memory,
-                          upcast<allocator_with<IRealloc, IFree>>(parent));
+        return make_inner(memory, DynamicHeapAllocatorRef(parent));
     }
 
     // can be moved
@@ -88,7 +80,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t,
 
     static zl::res<stack_allocator_t, AllocationStatusCode>
     make_inner(zl::slice<uint8_t> memory,
-               allocator_with<IRealloc, IFree> &parent) ALLO_NOEXCEPT;
+               DynamicHeapAllocatorRef parent) ALLO_NOEXCEPT;
 
     /// the information placed underneath every allocation in the stack
     struct previous_state_t

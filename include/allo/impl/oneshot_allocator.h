@@ -1,6 +1,5 @@
 #pragma once
 
-#include "allo/allocator_interfaces.h"
 #ifndef ALLO_HEADER_ONLY
 #ifndef ALLO_OVERRIDE_IMPL_INCLUSION_GUARD
 #error \
@@ -23,7 +22,7 @@ namespace allo {
 ALLO_FUNC oneshot_allocator_t::~oneshot_allocator_t() noexcept
 {
     if (m.parent.has_value()) {
-        IFree::_free_bytes(std::addressof(m.parent.value()), m.mem, 0);
+        m.parent.value().free_bytes(m.mem, 0);
     }
 }
 
@@ -39,7 +38,7 @@ oneshot_allocator_t::oneshot_allocator_t(oneshot_allocator_t &&other) noexcept
 ALLO_FUNC zl::res<oneshot_allocator_t, AllocationStatusCode>
 oneshot_allocator_t::make_inner(
     const zl::slice<uint8_t> &memory,
-    zl::opt<allocator_with<IStackFree> &> parent) noexcept
+    zl::opt<DynamicHeapAllocatorRef> parent) noexcept
 {
     if (memory.size() == 0) {
         return AllocationStatusCode::InvalidArgument;
@@ -49,7 +48,7 @@ oneshot_allocator_t::make_inner(
         std::in_place, M{
                            parent,
                            memory,
-                           make_properties(memory.size(), 1),
+                           allocator_properties_t(memory.size(), 1),
                        });
 }
 
