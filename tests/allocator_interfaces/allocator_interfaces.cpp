@@ -1,8 +1,8 @@
 #include "allo/allocator_interfaces.h"
 #include "allo/c_allocator.h"
+#include "allo/properties_of.h"
 #include "allo/stack_allocator.h"
 #include "allo/typed_allocation.h"
-#include "allo/properties_of.h"
 #include "test_header.h"
 #include <array>
 
@@ -71,9 +71,11 @@ TEST_SUITE("allocator interfaces")
         {
             std::array<uint8_t, 512> mem;
             auto oneshot = oneshot_allocator_t::make(mem).release();
-            auto& stackalloc = upcast<allocator_with<IStackRealloc, IStackFree>>(
-                upcast<allocator_with<IRealloc, IFree>>(oneshot));
-            REQUIRE(allo::properties_of(oneshot) == allo::properties_of(stackalloc));
+            auto &stackalloc =
+                upcast<allocator_with<IStackRealloc, IStackFree>>(
+                    upcast<allocator_with<IRealloc, IFree>>(oneshot));
+            REQUIRE(allo::properties_of(oneshot) ==
+                    allo::properties_of(stackalloc));
         }
 
         SUBCASE("upcast to single interface, use typed alloc")

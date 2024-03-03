@@ -61,7 +61,7 @@ struct allocator_requirements_t
 struct allocator_properties_t;
 
 template <typename AllocatorOrInterface>
-inline constexpr const allo::allocator_properties_t&\
+constexpr const allocator_properties_t &
 properties_of(const AllocatorOrInterface &allocator) noexcept;
 
 template <typename T, typename Freer>
@@ -78,13 +78,18 @@ class stack_freer_t;
 }
 
 template <typename T, typename Freer>
-allocation_status_t destroy_many(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer> && !std::is_reference_v<T>, Freer> &allocator, const zl::slice<T> items) noexcept;
+allocation_status_t
+destroy_many(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer> &&
+                                  !std::is_reference_v<T>,
+                              Freer> &allocator,
+             const zl::slice<T> items) noexcept;
 
 template <typename T, typename Allocator, uint8_t alignment>
 zl::res<T &, AllocationStatusCode> alloc_one(Allocator &allocator) noexcept;
 
 template <typename T, typename Allocator, uint8_t alignment>
-zl::res<zl::slice<T>, AllocationStatusCode> alloc(Allocator &allocator, size_t number) noexcept;
+zl::res<zl::slice<T>, AllocationStatusCode> alloc(Allocator &allocator,
+                                                  size_t number) noexcept;
 
 namespace detail {
 class memory_info_provider_t;
@@ -102,32 +107,40 @@ class region_allocator_t;
 class oneshot_allocator_t;
 
 /// This gets undefined a few lines below
-#define ALLO_DETAIL_FRIEND_DECLS public:\
-    friend class allo::heap_allocator_t;\
-    friend class allo::c_allocator_t;\
-    friend class allo::stack_allocator_t;\
-    friend class allo::segmented_array_block_allocator_t;\
-    friend class allo::block_allocator_t;\
-    friend class allo::scratch_allocator_t;\
-    friend class allo::region_allocator_t;\
-    friend class allo::oneshot_allocator_t;\
-    template <typename AllocatorOrInterface>\
-    friend constexpr const allocator_properties_t& allo::properties_of(AllocatorOrInterface &allocator) noexcept;\
-    template <typename AllocatorOrInterface>\
-    friend inline constexpr const allo::allocator_properties_t&\
-    allo::properties_of(const AllocatorOrInterface &allocator) noexcept;\
-    template <typename T, typename Freer> \
-    friend allocation_status_t allo::free_one(Freer &allocator, T &item) noexcept; \
-    template <typename T, typename Freer> \
-    friend allocation_status_t allo::free(Freer &allocator, const zl::slice<T> items) noexcept; \
-    template <typename T, typename Freer> \
-    friend allocation_status_t allo::destroy_one(Freer &allocator, T &item) noexcept; \
-    template <typename T, typename Freer> \
-    friend allocation_status_t allo::destroy_many(std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer> && !std::is_reference_v<T>, Freer> &allocator, const zl::slice<T> items) noexcept; \
-    template <typename T, typename Allocator, uint8_t alignment> \
-    friend zl::res<T &, AllocationStatusCode> allo::alloc_one(Allocator &allocator) noexcept; \
-    template <typename T, typename Allocator, uint8_t alignment> \
-    friend zl::res<zl::slice<T>, AllocationStatusCode> allo::alloc(Allocator &allocator, size_t number) noexcept;
+#define ALLO_DETAIL_FRIEND_DECLS                                              \
+  public:                                                                     \
+    friend class allo::heap_allocator_t;                                      \
+    friend class allo::c_allocator_t;                                         \
+    friend class allo::stack_allocator_t;                                     \
+    friend class allo::segmented_array_block_allocator_t;                     \
+    friend class allo::block_allocator_t;                                     \
+    friend class allo::scratch_allocator_t;                                   \
+    friend class allo::region_allocator_t;                                    \
+    friend class allo::oneshot_allocator_t;                                   \
+    template <typename AllocatorOrInterface>                                  \
+    friend constexpr const allocator_properties_t &allo::properties_of(       \
+        const AllocatorOrInterface &allocator) noexcept;                      \
+    template <typename T, typename Freer>                                     \
+    friend allocation_status_t allo::free_one(Freer &allocator,               \
+                                              T &item) noexcept;              \
+    template <typename T, typename Freer>                                     \
+    friend allocation_status_t allo::free(Freer &allocator,                   \
+                                          const zl::slice<T> items) noexcept; \
+    template <typename T, typename Freer>                                     \
+    friend allocation_status_t allo::destroy_one(Freer &allocator,            \
+                                                 T &item) noexcept;           \
+    template <typename T, typename Freer>                                     \
+    friend allocation_status_t allo::destroy_many(                            \
+        std::enable_if_t<std::is_base_of_v<detail::stack_freer_t, Freer> &&   \
+                             !std::is_reference_v<T>,                         \
+                         Freer> &allocator,                                   \
+        const zl::slice<T> items) noexcept;                                   \
+    template <typename T, typename Allocator, uint8_t alignment>              \
+    friend zl::res<T &, AllocationStatusCode> allo::alloc_one(                \
+        Allocator &allocator) noexcept;                                       \
+    template <typename T, typename Allocator, uint8_t alignment>              \
+    friend zl::res<zl::slice<T>, AllocationStatusCode> allo::alloc(           \
+        Allocator &allocator, size_t number) noexcept;
 
 struct allocator_properties_t
 {
@@ -153,16 +166,20 @@ struct allocator_properties_t
 
     /// Useful for testing, as a way of asserting that properties()
     /// getter works for a type and its upcasted reference
-    inline constexpr friend bool operator==(const allocator_properties_t& a, const allocator_properties_t& b) noexcept
+    inline constexpr friend bool
+    operator==(const allocator_properties_t &a,
+               const allocator_properties_t &b) noexcept
     {
-        return a.m_maximum_alignment == b.m_maximum_alignment && a.m_maximum_contiguous_bytes == b.m_maximum_contiguous_bytes;
+        return a.m_maximum_alignment == b.m_maximum_alignment &&
+               a.m_maximum_contiguous_bytes == b.m_maximum_contiguous_bytes;
     }
 
   private:
-    allocator_properties_t(const allocator_properties_t& other) = default;
-    allocator_properties_t& operator=(const allocator_properties_t& other) = default;
-    allocator_properties_t(allocator_properties_t&& other) = default;
-    allocator_properties_t& operator=(allocator_properties_t&& other) = default;
+    allocator_properties_t(const allocator_properties_t &other) = default;
+    allocator_properties_t &
+    operator=(const allocator_properties_t &other) = default;
+    allocator_properties_t(allocator_properties_t &&other) = default;
+    allocator_properties_t &operator=(allocator_properties_t &&other) = default;
     // zero means theoretically limitless contiguous allocation is possible
     size_t m_maximum_contiguous_bytes;
     uint8_t m_maximum_alignment;
@@ -201,6 +218,8 @@ class memory_info_provider_t
     {
         return properties.m_maximum_alignment;
     }
+
+  public:
     ALLO_DETAIL_FRIEND_DECLS
 };
 
@@ -208,10 +227,10 @@ class allocator_interface_t
 {
   protected:
     allocator_interface_t() = default;
-    allocator_interface_t(const allocator_interface_t&) = default;
-    allocator_interface_t& operator=(const allocator_interface_t&) = default;
-    allocator_interface_t(allocator_interface_t&&) = default;
-    allocator_interface_t& operator=(allocator_interface_t&&) = default;
+    allocator_interface_t(const allocator_interface_t &) = default;
+    allocator_interface_t &operator=(const allocator_interface_t &) = default;
+    allocator_interface_t(allocator_interface_t &&) = default;
+    allocator_interface_t &operator=(allocator_interface_t &&) = default;
 };
 
 class threadsafe_allocator_base_t
@@ -466,38 +485,38 @@ class i_alloc_i_realloc_i_free : public allocator_t,
     static constexpr uint8_t interfaces = 0b11111;
 };
 
-template <typename T>
-inline constexpr bool has_alloc()
+template <typename T> inline constexpr bool has_alloc()
 {
-    static_assert(std::is_base_of_v<dynamic_allocator_base_t, T> || std::is_base_of_v<allocator_interface_t, T>);
+    static_assert(std::is_base_of_v<dynamic_allocator_base_t, T> ||
+                  std::is_base_of_v<allocator_interface_t, T>);
     return (T::interfaces & mask_alloc) > 0;
 }
 
-template <typename T>
-inline constexpr bool has_realloc()
+template <typename T> inline constexpr bool has_realloc()
 {
-    static_assert(std::is_base_of_v<dynamic_allocator_base_t, T> || std::is_base_of_v<allocator_interface_t, T>);
+    static_assert(std::is_base_of_v<dynamic_allocator_base_t, T> ||
+                  std::is_base_of_v<allocator_interface_t, T>);
     return (T::interfaces & mask_realloc) > 0;
 }
 
-template <typename T>
-inline constexpr bool has_free()
+template <typename T> inline constexpr bool has_free()
 {
-    static_assert(std::is_base_of_v<dynamic_allocator_base_t, T> || std::is_base_of_v<allocator_interface_t, T>);
+    static_assert(std::is_base_of_v<dynamic_allocator_base_t, T> ||
+                  std::is_base_of_v<allocator_interface_t, T>);
     return (T::interfaces & mask_free) > 0;
 }
 
-template <typename T>
-inline constexpr bool has_stack_realloc()
+template <typename T> inline constexpr bool has_stack_realloc()
 {
-    static_assert(std::is_base_of_v<dynamic_allocator_base_t, T> || std::is_base_of_v<allocator_interface_t, T>);
+    static_assert(std::is_base_of_v<dynamic_allocator_base_t, T> ||
+                  std::is_base_of_v<allocator_interface_t, T>);
     return (T::interfaces & mask_stack_realloc) > 0;
 }
 
-template <typename T>
-inline constexpr bool has_stack_free()
+template <typename T> inline constexpr bool has_stack_free()
 {
-    static_assert(std::is_base_of_v<dynamic_allocator_base_t, T> || std::is_base_of_v<allocator_interface_t, T>);
+    static_assert(std::is_base_of_v<dynamic_allocator_base_t, T> ||
+                  std::is_base_of_v<allocator_interface_t, T>);
     return (T::interfaces & mask_stack_free) > 0;
 }
 
@@ -564,7 +583,9 @@ template <typename... Ts> inline constexpr uint8_t get_bits_for_types()
 }
 
 template <typename Interface, typename AllocatorOrInterface>
-constexpr bool can_upcast_to = (Interface::interfaces & AllocatorOrInterface::interfaces) == Interface::interfaces;
+constexpr bool can_upcast_to =
+    (Interface::interfaces & AllocatorOrInterface::interfaces) ==
+    Interface::interfaces;
 } // namespace detail
 
 template <typename Interface, typename InterfaceOrAllocator>
