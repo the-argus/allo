@@ -160,15 +160,19 @@ class allocator_common_t
     allocator_common_t(const allocator_common_t &) noexcept = default;
 
     template <typename Allocator>
-    inline constexpr allocator_common_t(
-        const std::enable_if_t<std::is_base_of_v<
-            allo::detail::dynamic_allocator_base_t, Allocator>>
-            &allocator) noexcept
-        : ref(&allocator)
+    inline constexpr allocator_common_t(Allocator &allocator) noexcept
+        : ref([](Allocator &allocator) -> void * {
+              static_assert(
+                  detail::can_upcast<Allocator,
+                                     allocator_common_t>::type::value,
+                  "Given type cannot be converted to a DynamicAllocatorRef");
+              if constexpr (std::is_base_of_v<allocator_common_t, Allocator>) {
+                  return allocator.ref;
+              } else {
+                  return &allocator;
+              }
+          }(allocator))
     {
-        static_assert(detail::can_upcast<Allocator, allocator_common_t>::type,
-                      "The give allocator type cannot be converted to a "
-                      "DynamicAllocatorRef.");
     }
 
     /// Request an allocation for some number of bytes with some alignment, and
@@ -206,14 +210,18 @@ class dynamic_stack_allocator_t : public allocator_common_t
 
     template <typename Allocator>
     inline constexpr dynamic_stack_allocator_t(Allocator &allocator) noexcept
-        : allocator_common_t(std::is_base_of_v<allocator_common_t, Allocator>
-                                 ? allocator.ref
-                                 : &allocator)
+        : allocator_common_t([](Allocator &allocator) -> void * {
+              static_assert(detail::can_upcast<Allocator,
+                                               dynamic_stack_allocator_t>::type,
+                            "The give allocator type cannot be converted to a "
+                            "DynamicStackAllocatorRef.");
+              if constexpr (std::is_base_of_v<allocator_common_t, Allocator>) {
+                  return allocator.ref;
+              } else {
+                  return &allocator;
+              }
+          }(allocator))
     {
-        static_assert(
-            detail::can_upcast<Allocator, dynamic_stack_allocator_t>::type,
-            "The give allocator type cannot be converted to a "
-            "DynamicStackAllocatorRef.");
     }
 
     template <>
@@ -232,14 +240,19 @@ class dynamic_heap_allocator_t : public dynamic_stack_allocator_t
   public:
     template <typename Allocator>
     inline constexpr dynamic_heap_allocator_t(Allocator &allocator) noexcept
-        : dynamic_stack_allocator_t(
-              std::is_base_of_v<allocator_common_t, Allocator> ? allocator.ref
-                                                               : &allocator)
+        : dynamic_stack_allocator_t([](Allocator &allocator) -> void * {
+              static_assert(
+                  detail::can_upcast<Allocator,
+                                     dynamic_heap_allocator_t>::type::value,
+                  "The give allocator type cannot be converted to a "
+                  "DynamicHeapAllocatorRef.");
+              if constexpr (std::is_base_of_v<allocator_common_t, Allocator>) {
+                  return allocator.ref;
+              } else {
+                  return &allocator;
+              }
+          }(allocator))
     {
-        static_assert(detail::can_upcast<Allocator,
-                                         dynamic_heap_allocator_t>::type::value,
-                      "The give allocator type cannot be converted to a "
-                      "DynamicHeapAllocatorRef.");
     }
 
     template <>
@@ -283,6 +296,9 @@ ALLO_DETAIL_ALLOW_UPCAST(block_allocator_t, dynamic_stack_allocator_t)
 ALLO_DETAIL_ALLOW_UPCAST(block_allocator_t, dynamic_heap_allocator_t)
 // stack allocator
 ALLO_DETAIL_ALLOW_UPCAST(stack_allocator_t, dynamic_stack_allocator_t)
+// oneshot allocator
+ALLO_DETAIL_ALLOW_UPCAST(oneshot_allocator_t, dynamic_stack_allocator_t)
+ALLO_DETAIL_ALLOW_UPCAST(oneshot_allocator_t, dynamic_heap_allocator_t)
 #undef ALLO_DETAIL_ALLOW_UPCAST
 
 /// Take a given number divisible by two and find what n is in 2^n = number.

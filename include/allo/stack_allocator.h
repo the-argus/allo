@@ -12,7 +12,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
   private:
     struct M
     {
-        DynamicHeapAllocatorRef &parent;
+        DynamicHeapAllocatorRef parent;
         zl::slice<uint8_t> memory;
         zl::slice<uint8_t> available_memory;
         size_t last_type_hashcode = 0;
