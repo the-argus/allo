@@ -69,7 +69,7 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
 }
 
 ALLO_FUNC zl::res<block_allocator_t, AllocationStatusCode>
-block_allocator_t::make(const zl::slice<uint8_t> &memory,
+block_allocator_t::make(zl::slice<uint8_t> &&memory,
                         DynamicHeapAllocatorRef parent, size_t blocksize,
                         uint8_t alignment_exponent) noexcept
 {
@@ -159,7 +159,6 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
 
     size_t next_to_last_freed = *reinterpret_cast<size_t *>(
         &m.mem.data()[m.last_freed_index * m.blocksize]);
-    assert(m.mem.size() % m.blocksize == 0);
     if (next_to_last_freed > (m.mem.size() / m.blocksize)) {
         return AllocationStatusCode::Corruption;
     }

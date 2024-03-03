@@ -15,10 +15,9 @@ TEST_SUITE("block_allocator_t")
         SUBCASE("Default construction")
         {
             c_allocator_t global_allocator;
-            auto initial_memory =
-                allo::alloc<uint8_t>(global_allocator, 2000).release();
-            auto mally = block_allocator_t::make(initial_memory,
-                                                 global_allocator, 200, 2);
+            auto mally = block_allocator_t::make(
+                allo::alloc<uint8_t>(global_allocator, 2000).release(),
+                global_allocator, 200, 2);
             REQUIRE(mally.okay());
             block_allocator_t ally = mally.release();
 
@@ -69,18 +68,17 @@ TEST_SUITE("block_allocator_t")
             c_allocator_t global_allocator;
 
             {
-                auto initial_memory =
-                    allo::alloc<uint8_t>(global_allocator, 2000).release();
-                auto ally = block_allocator_t::make(initial_memory,
-                                                    global_allocator, 200, 2)
-                                .release();
+                // 256 bytes per block, 32 byte aligned blocks
+                auto ally =
+                    block_allocator_t::make(
+                        // this memory will be cleaned up by the allocator
+                        allo::alloc<uint8_t>(global_allocator, 2000).release(),
+                        global_allocator, 256)
+                        .release();
 
                 Parent &parent1 = Parent::make_on_heap(ally, "Sharon");
                 Parent &parent1_wife = Parent::make_on_heap(ally, "Leslie");
                 Parent &parent2 = Parent::make_on_heap(ally, "Steve");
-                // have to free this because c allocator has no way of knowing
-                // what it has freed and what it has not
-                allo::free(global_allocator, initial_memory);
                 REQUIRE(strcmp("Sharon", parent1.name.data()) == 0);
                 REQUIRE(strcmp("Leslie", parent1_wife.name.data()) == 0);
                 REQUIRE(strcmp("Steve", parent2.name.data()) == 0);
@@ -99,7 +97,8 @@ TEST_SUITE("block_allocator_t")
             // silly usage of memcompare on cstrings. but hey its one time i can
             // actually use it heh
             REQUIRE(zl::memcompare(
-                zl::slice<const char>(parent1.name),
+                zl::slice<const char>(parent1.name, 0,
+                                      strlen(parent1.name.data())),
                 zl::raw_slice<const char>(*((char *)"Sharon"), 6)));
         }
     }
