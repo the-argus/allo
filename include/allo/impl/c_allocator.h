@@ -46,7 +46,7 @@ ALLO_FUNC const allocator_properties_t &
 c_allocator_t::properties() const noexcept
 {
     static constexpr allocator_properties_t c_allocator_properties =
-        make_properties(0, 32);
+        allocator_properties_t(0, 32);
 
     return c_allocator_properties;
 }

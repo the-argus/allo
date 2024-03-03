@@ -16,10 +16,8 @@ TEST_SUITE("block_allocator_t")
             auto minitial_memory = allo::alloc<uint8_t>(global_allocator, 2000);
             REQUIRE(minitial_memory.okay());
             auto initial_memory = minitial_memory.release();
-            auto mally = block_allocator_t::make(
-                initial_memory,
-                upcast<allocator_with<IRealloc, IFree>>(global_allocator), 200,
-                2);
+            auto mally = block_allocator_t::make(initial_memory,
+                                                 global_allocator, 200, 2);
             REQUIRE(mally.okay());
             block_allocator_t ally = mally.release();
 

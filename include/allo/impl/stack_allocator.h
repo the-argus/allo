@@ -41,7 +41,7 @@ ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
         }
     }
     // now that callbacks are called, free memory
-    IFree::_free_bytes(std::addressof(m.parent), m.memory, 0);
+    m.parent.free_bytes(m.memory, 0);
 }
 
 ALLO_FUNC
@@ -59,7 +59,7 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
     }
 
     auto alignment = static_cast<size_t>(std::pow(2, alignment_exponent));
-    if (alignment > get_max_alignment(properties())) {
+    if (alignment > properties().m_maximum_alignment) {
         return AllocationStatusCode::AllocationTooAligned;
     }
     zl::slice<uint8_t> original_available = m.available_memory;
@@ -134,8 +134,8 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
 
 ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
 {
-    auto result = IStackRealloc::_realloc_bytes(
-        std::addressof(m.parent), m.memory, 0,
+    auto result = m.parent.realloc_bytes(
+        m.memory, 0,
         size_t(std::ceil(static_cast<double>(m.memory.size()) *
                          reallocation_ratio)),
         0);
@@ -243,15 +243,14 @@ stack_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
 
 ALLO_FUNC zl::res<stack_allocator_t, AllocationStatusCode>
 stack_allocator_t::make_inner(zl::slice<uint8_t> memory,
-                              allocator_with<IRealloc, IFree> &parent)
-    ALLO_NOEXCEPT
+                              DynamicHeapAllocatorRef parent) ALLO_NOEXCEPT
 {
     // make sure there is at least one byte of space to be allocated in memory
     if (memory.size() <= sizeof(previous_state_t)) {
         return AllocationStatusCode::InvalidArgument;
     }
 
-    assert(IFree::_free_status(std::addressof(parent), memory, 0).okay());
+    assert(parent.free_status(memory, 0).okay());
 
     return zl::res<stack_allocator_t, AllocationStatusCode>{
         std::in_place,
@@ -260,7 +259,7 @@ stack_allocator_t::make_inner(zl::slice<uint8_t> memory,
             memory,
             memory,
             0,
-            make_properties(memory.size(), alignof(previous_state_t)),
+            allocator_properties_t(memory.size(), alignof(previous_state_t)),
         }};
 }
 

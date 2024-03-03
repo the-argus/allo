@@ -22,8 +22,7 @@ TEST_SUITE("stack_allocator_t")
             REQUIRE(maybe_oneshot.okay());
             oneshot_allocator_t oneshot = maybe_oneshot.release();
 
-            auto maybe_ally = stack_allocator_t::make(
-                mem, upcast<allocator_with<IRealloc, IFree>>(oneshot));
+            auto maybe_ally = stack_allocator_t::make(mem, oneshot);
             REQUIRE(maybe_ally.okay());
             stack_allocator_t ally = maybe_ally.release();
         }
@@ -36,8 +35,7 @@ TEST_SUITE("stack_allocator_t")
             REQUIRE(maybe_oneshot.okay());
             oneshot_allocator_t oneshot = maybe_oneshot.release();
 
-            auto maybe_ally = stack_allocator_t::make(
-                mem, upcast<allocator_with<IRealloc, IFree>>(oneshot));
+            auto maybe_ally = stack_allocator_t::make(mem, oneshot);
             REQUIRE(maybe_ally.okay());
             stack_allocator_t ally = maybe_ally.release();
 
@@ -74,10 +72,7 @@ TEST_SUITE("stack_allocator_t")
             oneshot_allocator_t oneshot =
                 oneshot_allocator_t::make(subslice).release();
 
-            auto ally =
-                stack_allocator_t::make(
-                    subslice, upcast<allocator_with<IRealloc, IFree>>(oneshot))
-                    .release();
+            auto ally = stack_allocator_t::make(subslice, oneshot).release();
 
             uint8_t &a_byte = allo::alloc_one<uint8_t>(ally).release();
             REQUIRE(a_byte == 1); // alloc one does not zero-initialize memory,
@@ -92,10 +87,7 @@ TEST_SUITE("stack_allocator_t")
             std::array<uint8_t, 512> mem;
             oneshot_allocator_t oneshot =
                 oneshot_allocator_t::make(mem).release();
-            auto ally =
-                stack_allocator_t::make(
-                    mem, upcast<allocator_with<IRealloc, IFree>>(oneshot))
-                    .release();
+            auto ally = stack_allocator_t::make(mem, oneshot).release();
 
             auto maybe_my_ints = allo::alloc_one<std::array<int, 88>>(ally);
             REQUIRE(maybe_my_ints.okay());
@@ -116,10 +108,7 @@ TEST_SUITE("stack_allocator_t")
             std::array<uint8_t, 512> mem;
             oneshot_allocator_t oneshot =
                 oneshot_allocator_t::make(mem).release();
-            auto ally =
-                stack_allocator_t::make(
-                    mem, upcast<allocator_with<IRealloc, IFree>>(oneshot))
-                    .release();
+            auto ally = stack_allocator_t::make(mem, oneshot).release();
 
             auto arr_res = allo::alloc_one<std::array<uint8_t, 494>>(ally);
             REQUIRE(arr_res.okay());
@@ -133,10 +122,7 @@ TEST_SUITE("stack_allocator_t")
             std::array<uint8_t, 512> mem;
             oneshot_allocator_t oneshot =
                 oneshot_allocator_t::make(mem).release();
-            auto ally =
-                stack_allocator_t::make(
-                    mem, upcast<allocator_with<IRealloc, IFree>>(oneshot))
-                    .release();
+            auto ally = stack_allocator_t::make(mem, oneshot).release();
 
             auto guy_res = allo::alloc_one<int>(ally);
             size_t fake;
@@ -149,10 +135,7 @@ TEST_SUITE("stack_allocator_t")
             std::array<uint8_t, 512> mem;
             oneshot_allocator_t oneshot =
                 oneshot_allocator_t::make(mem).release();
-            auto ally =
-                stack_allocator_t::make(
-                    mem, upcast<allocator_with<IRealloc, IFree>>(oneshot))
-                    .release();
+            auto ally = stack_allocator_t::make(mem, oneshot).release();
 
             auto set_res = allo::construct_one<std::set<const char *>>(ally);
             REQUIRE(set_res.okay());

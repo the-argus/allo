@@ -1,6 +1,6 @@
 #pragma once
 
-#include "allo/allocator_interfaces.h"
+#include "allo/abstracts.h"
 
 namespace allo {
 
@@ -9,22 +9,19 @@ namespace allo {
 /// means reallocation will always fail unless you are shrinking the allocation,
 /// and freeing will always return Okay but will do nothing.
 /// Useful for breaking a dependency chain between allocators.
-class oneshot_allocator_t : private detail::dynamic_allocator_base_t,
-                            public detail::freer_t,
-                            public detail::reallocator_t
-
+class oneshot_allocator_t : private detail::dynamic_allocator_base_t
 {
   private:
     struct M
     {
-        zl::opt<allocator_with<IStackFree> &> parent;
+        zl::opt<DynamicHeapAllocatorRef> parent;
         zl::slice<uint8_t> mem;
         allocator_properties_t properties;
     } m;
 
     static zl::res<oneshot_allocator_t, AllocationStatusCode>
     make_inner(const zl::slice<uint8_t> &memory,
-               zl::opt<IStackFree &> parent) noexcept;
+               zl::opt<DynamicHeapAllocatorRef> parent) noexcept;
 
   public:
     static constexpr detail::AllocatorType enum_value =
@@ -35,10 +32,7 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t,
     inline static zl::res<oneshot_allocator_t, AllocationStatusCode>
     make_owned(zl::slice<uint8_t> memory, Allocator &parent) noexcept
     {
-        static_assert(detail::can_upcast_to<IStackFree, Allocator>,
-                      "Cannot upcast given allocator to  IStackFree, needed "
-                      "for this oneshot allocator constructor.");
-        return make_inner(memory, upcast<IStackFree>(parent));
+        return make_inner(memory, DynamicHeapAllocatorRef(parent));
     }
 
     inline static zl::res<oneshot_allocator_t, AllocationStatusCode>

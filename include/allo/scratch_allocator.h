@@ -1,5 +1,5 @@
 #pragma once
-#include "allo/allocator_interfaces.h"
+#include "allo/abstracts.h"
 
 #ifndef ALLO_NOEXCEPT
 #define ALLO_NOEXCEPT noexcept
@@ -10,11 +10,7 @@ namespace allo {
 /// A very simple allocator which takes in a fixed buffer of memory and
 /// allocates randomly sized items within that buffer. It has free available as
 /// an operation but it does nothing.
-class scratch_allocator_t : private detail::dynamic_allocator_base_t,
-                            public detail::allocator_t,
-                            public detail::freer_t,
-                            public detail::stack_reallocator_t,
-                            public detail::destruction_callback_provider_t
+class scratch_allocator_t : private detail::dynamic_allocator_base_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =

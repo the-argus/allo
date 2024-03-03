@@ -1,24 +1,18 @@
 #pragma once
 
-#include "allo/allocator_interfaces.h"
+#include "allo/abstracts.h"
 
 namespace allo {
 
-class block_allocator_t : private detail::dynamic_allocator_base_t,
-                          public detail::allocator_t,
-                          public detail::freer_t,
-                          public detail::reallocator_t,
-                          public detail::destruction_callback_provider_t
+class block_allocator_t : private detail::dynamic_allocator_base_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::BlockAllocator;
-    static constexpr uint8_t interfaces = 0b11111;
 
     static zl::res<block_allocator_t, AllocationStatusCode>
-    make(const zl::slice<uint8_t> &memory,
-         allocator_with<IRealloc, IFree> &parent, size_t blocksize,
-         uint8_t alignment_exponent) noexcept;
+    make(const zl::slice<uint8_t> &memory, DynamicHeapAllocatorRef parent,
+         size_t blocksize, uint8_t alignment_exponent) noexcept;
 
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
                                                   uint8_t alignment_exponent,
@@ -56,7 +50,7 @@ class block_allocator_t : private detail::dynamic_allocator_base_t,
   private:
     struct M
     {
-        allocator_with<IRealloc, IFree> &parent;
+        DynamicHeapAllocatorRef parent;
         zl::slice<uint8_t> mem;
         allocator_properties_t properties;
         size_t last_freed_index;
