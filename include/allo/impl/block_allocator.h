@@ -35,6 +35,7 @@ ALLO_FUNC
 block_allocator_t::block_allocator_t(block_allocator_t &&other) noexcept
     : m(other.m)
 {
+    type = other.type;
     other.m.owning = false;
     other.m.blocks_free = 0;
 }
@@ -112,27 +113,28 @@ block_allocator_t::make(const zl::slice<uint8_t> &memory,
         std::in_place,
         M{
             // parent allocator
-            parent,
+            .parent = parent,
             // block of memory
-            memory,
+            .mem = memory,
             // allocator properties
-            allocator_properties_t(actual_blocksize, alignment),
+            .properties = allocator_properties_t(actual_blocksize, alignment),
             // last freed index (the first block is free at start)
-            0,
+            .last_freed_index = 0,
             // blocks free (all are free at start)
-            num_blocks,
+            .blocks_free = num_blocks,
             // blocksize
-            actual_blocksize,
+            .blocksize = actual_blocksize,
             // max destruction entries per block
-            max_destruction_entries_per_block,
+            .max_destruction_entries_per_block =
+                max_destruction_entries_per_block,
             // number of destruction blocks
-            0,
+            .num_destruction_array_blocks = 0,
             // current destruction array index,
-            0,
+            .current_destruction_array_index = 0,
             // size of current destruction array
-            0,
+            .current_destruction_array_size = 0,
             // whether we own our allocation
-            true,
+            .owning = true,
         });
 }
 
