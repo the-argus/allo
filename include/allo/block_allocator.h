@@ -12,7 +12,7 @@ class block_allocator_t : private detail::dynamic_allocator_base_t
 
     static zl::res<block_allocator_t, AllocationStatusCode>
     make(zl::slice<uint8_t> &&memory, DynamicHeapAllocatorRef parent,
-         size_t blocksize, uint8_t alignment_exponent = 5) noexcept;
+         size_t blocksize) noexcept;
 
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
                                                   uint8_t alignment_exponent,

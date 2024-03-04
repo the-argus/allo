@@ -70,23 +70,22 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
 
 ALLO_FUNC zl::res<block_allocator_t, AllocationStatusCode>
 block_allocator_t::make(zl::slice<uint8_t> &&memory,
-                        DynamicHeapAllocatorRef parent, size_t blocksize,
-                        uint8_t alignment_exponent) noexcept
+                        DynamicHeapAllocatorRef parent,
+                        size_t blocksize) noexcept
 {
-    // NOTE: this could be supported by adding padding, but it would make things
-    // more complicated.
-    auto alignment = static_cast<size_t>(std::pow(2, alignment_exponent));
-    if (alignment > blocksize)
-        return AllocationStatusCode::InvalidArgument;
-
-    if (((uintptr_t)memory.data() & alignment - 1) != 0) {
-        // memory given is not correctly aligned.
-        return AllocationStatusCode::InvalidArgument;
-    }
-
     // blocksize must be at least 8 bytes
     size_t actual_blocksize =
         (blocksize < minimum_blocksize) ? minimum_blocksize : blocksize;
+
+    // find the biggest alignment that we can guarantee all elements of the
+    // array will have.
+    const auto blocksize_alignment = static_cast<size_t>(
+        std::pow(2, detail::nearest_alignment(actual_blocksize)));
+    const auto parent_alignment = static_cast<size_t>(
+        std::pow(2, detail::nearest_alignment((size_t)memory.data())));
+    const size_t alignment = parent_alignment > blocksize_alignment
+                                 ? blocksize_alignment
+                                 : parent_alignment;
 
     assert(parent.free_status(memory, 0).okay());
 

@@ -48,6 +48,10 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
     allocation_status_t free_bytes(zl::slice<uint8_t> mem,
                                    size_t typehash) noexcept;
 
+    [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
+                                                  uint8_t alignment_exponent,
+                                                  size_t typehash) noexcept;
+
     [[nodiscard]] allocation_status_t
     free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
 

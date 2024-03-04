@@ -313,6 +313,25 @@ inline constexpr uint8_t alignment_exponent(size_t alignment)
     }
     return bits;
 }
+
+/// Take a memory address as a unsigned long and return the nearest power of 2
+/// that it is divisible by. Useful for figuring out what the alignment is of
+/// all items in an array of things of a given size (ie in the block allocator)
+inline constexpr uint8_t nearest_alignment(size_t num)
+{
+    constexpr auto bits = sizeof(size_t) * 8;
+    size_t mask = 1;
+    for (size_t i = 0; i < bits; ++i) {
+        if ((mask & num) != 0) {
+            return i;
+        }
+        mask = mask << 1;
+        mask += 1;
+    }
+    // should only happen on 0 address
+    return bits;
+}
+
 } // namespace detail
 
 using DynamicAllocatorRef = detail::allocator_common_t;

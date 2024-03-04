@@ -78,4 +78,11 @@ ALLO_FUNC allocation_status_t oneshot_allocator_t::free_bytes(
     return AllocationStatusCode::Okay;
 }
 
+[[nodiscard]] allocation_result_t
+oneshot_allocator_t::alloc_bytes(size_t bytes, uint8_t alignment_exponent,
+                                 size_t typehash) noexcept
+{
+    return AllocationStatusCode::OOM;
+}
+
 } // namespace allo
