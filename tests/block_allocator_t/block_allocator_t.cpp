@@ -142,5 +142,34 @@ TEST_SUITE("block_allocator_t")
                 REQUIRE(five.err() == AllocationStatusCode::OOM);
             }
         }
+
+        SUBCASE("destruction callback")
+        {
+            c_allocator_t global_allocator;
+            uint8_t called = 0;
+            {
+                auto ally =
+                    block_allocator_t::make(
+                        // this memory will be cleaned up by the allocator
+                        allo::alloc<uint8_t>(global_allocator, 32UL * 4)
+                            .release(),
+                        global_allocator, 32)
+                        .release();
+                auto callback = [](void *data) {
+                    ++(*reinterpret_cast<uint8_t *>(data));
+                };
+                REQUIRE(ally.register_destruction_callback(callback, &called)
+                            .okay());
+                REQUIRE(ally.register_destruction_callback(callback, &called)
+                            .okay());
+                REQUIRE(ally.register_destruction_callback(callback, &called)
+                            .okay());
+                REQUIRE(ally.register_destruction_callback(callback, &called)
+                            .okay());
+                REQUIRE(ally.register_destruction_callback(callback, &called)
+                            .err() == AllocationStatusCode::OOM);
+            }
+            REQUIRE(called == 4);
+        }
     }
 }
