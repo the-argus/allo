@@ -9,7 +9,6 @@ class c_allocator_t : private detail::dynamic_allocator_base_t
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::CAllocator;
-    static constexpr uint8_t interfaces = 0b11111;
 
     inline explicit c_allocator_t() noexcept { type = enum_value; }
 

@@ -22,7 +22,6 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::StackAllocator;
-    static constexpr uint8_t interfaces = 0b10011;
 
     // cannot be default constructed or copied
     stack_allocator_t() = delete;

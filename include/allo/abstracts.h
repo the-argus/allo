@@ -67,6 +67,7 @@ enum class AllocatorType : uint8_t
     StackAllocator,
     ScratchAllocator,
     OneshotAllocator,
+    HeapAllocator,
     MAX_ALLOCATOR_TYPE
 };
 
@@ -83,6 +84,7 @@ class stack_allocator_t;
 class block_allocator_t;
 class scratch_allocator_t;
 class oneshot_allocator_t;
+class heap_allocator_t;
 
 struct allocator_properties_t
 {
@@ -138,6 +140,7 @@ struct allocator_properties_t
     friend class allo::block_allocator_t;
     friend class allo::scratch_allocator_t;
     friend class allo::oneshot_allocator_t;
+    friend class allo::heap_allocator_t;
 };
 
 namespace detail {
@@ -299,6 +302,9 @@ ALLO_DETAIL_ALLOW_UPCAST(stack_allocator_t, dynamic_stack_allocator_t)
 // oneshot allocator
 ALLO_DETAIL_ALLOW_UPCAST(oneshot_allocator_t, dynamic_stack_allocator_t)
 ALLO_DETAIL_ALLOW_UPCAST(oneshot_allocator_t, dynamic_heap_allocator_t)
+// heap allocator
+ALLO_DETAIL_ALLOW_UPCAST(heap_allocator_t, dynamic_stack_allocator_t)
+ALLO_DETAIL_ALLOW_UPCAST(heap_allocator_t, dynamic_heap_allocator_t)
 #undef ALLO_DETAIL_ALLOW_UPCAST
 
 /// Take a given number divisible by two and find what n is in 2^n = number.
@@ -317,7 +323,7 @@ inline constexpr uint8_t alignment_exponent(size_t alignment)
 /// Take a memory address as a unsigned long and return the nearest power of 2
 /// that it is divisible by. Useful for figuring out what the alignment is of
 /// all items in an array of things of a given size (ie in the block allocator)
-inline constexpr uint8_t nearest_alignment(size_t num)
+inline constexpr uint8_t nearest_alignment_exponent(size_t num)
 {
     constexpr auto bits = sizeof(size_t) * 8;
     size_t mask = 1;

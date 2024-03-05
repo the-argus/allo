@@ -26,7 +26,6 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::OneshotAllocator;
-    static constexpr uint8_t interfaces = 0b01111;
 
     template <typename Allocator>
     inline static zl::res<oneshot_allocator_t, AllocationStatusCode>
@@ -54,6 +53,13 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
 
     [[nodiscard]] allocation_status_t
     free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
+
+    inline allocation_status_t
+    register_destruction_callback(destruction_callback_t /*callback*/,
+                                  void * /*user_data*/) noexcept
+    {
+        return AllocationStatusCode::OOM;
+    }
 
     [[nodiscard]] inline constexpr const allocator_properties_t &
     properties() const noexcept

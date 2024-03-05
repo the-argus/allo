@@ -80,9 +80,9 @@ block_allocator_t::make(zl::slice<uint8_t> &&memory,
     // find the biggest alignment that we can guarantee all elements of the
     // array will have.
     const auto blocksize_alignment = static_cast<size_t>(
-        std::pow(2, detail::nearest_alignment(actual_blocksize)));
+        std::pow(2, detail::nearest_alignment_exponent(actual_blocksize)));
     const auto parent_alignment = static_cast<size_t>(
-        std::pow(2, detail::nearest_alignment((size_t)memory.data())));
+        std::pow(2, detail::nearest_alignment_exponent((size_t)memory.data())));
     const size_t alignment = parent_alignment > blocksize_alignment
                                  ? blocksize_alignment
                                  : parent_alignment;

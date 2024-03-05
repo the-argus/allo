@@ -10,6 +10,7 @@
 
 #include "allo/block_allocator.h"
 #include "allo/c_allocator.h"
+#include "allo/heap_allocator.h"
 #include "allo/oneshot_allocator.h"
 #include "allo/scratch_allocator.h"
 #include "allo/stack_allocator.h"
@@ -99,21 +100,17 @@ auto return_from(dynamic_allocator_base_t *self, Args &&...args)
         return Callable<scratch_allocator_t, Args...>{}(
             scratch, std::forward<Args>(args)...);
     }
+    case AllocatorType::HeapAllocator: {
+        auto *heap = reinterpret_cast<heap_allocator_t *>(self);
+        return Callable<heap_allocator_t, Args...>{}(
+            heap, std::forward<Args>(args)...);
+    }
+    case AllocatorType::OneshotAllocator: {
+        auto *oneshot = reinterpret_cast<oneshot_allocator_t *>(self);
+        return Callable<oneshot_allocator_t, Args...>{}(
+            oneshot, std::forward<Args>(args)...);
+    }
     default:
-        // oneshot allocator special case :(
-        // needed to avoid template instantiation
-        if constexpr (!std::is_same_v<
-                          Callable<oneshot_allocator_t, Args...>,
-                          alloc_bytes_generic<oneshot_allocator_t, Args...>> &&
-                      !std::is_same_v<Callable<oneshot_allocator_t, Args...>,
-                                      register_destruction_callback_generic<
-                                          oneshot_allocator_t, Args...>>) {
-            if (self->type == AllocatorType::OneshotAllocator) {
-                auto *segmented = reinterpret_cast<oneshot_allocator_t *>(self);
-                return Callable<oneshot_allocator_t, Args...>{}(
-                    segmented, std::forward<Args>(args)...);
-            }
-        }
         // some sort of memory corruption going on
         std::abort();
     }
