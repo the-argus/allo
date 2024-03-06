@@ -194,19 +194,21 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
                   "heap allocator relies on free nodes and allocation nodes "
                   "being able to have the same allocation");
 
+    assert(m.free_list_head);
+    free_node_t *prev = nullptr;
     free_node_t *iter = m.free_list_head;
     // NOTE: if alignment exponent is smaller than 3, this could be inaccurate
     size_t actual_size = bytes + sizeof(allocation_bookkeeping_t);
-    while (auto *const next = iter->next) {
-        assert(next->size <= m.mem.size());
-        assert((uint8_t *)next >= m.mem.data() &&
-               (uint8_t *)next < m.mem.end().ptr());
-        if (next->size >= actual_size) {
-            size_t space = next->size;
-            void *block = next;
+    while (iter != nullptr) {
+        assert(iter->size <= m.mem.size());
+        assert(((uint8_t *)iter >= m.mem.data() &&
+                (uint8_t *)iter < m.mem.end().ptr()));
+        if (iter->size >= actual_size) {
+            size_t space = iter->size;
+            void *block = iter;
             assert(std::align(alignof(allocation_bookkeeping_t),
                               sizeof(allocation_bookkeeping_t), block, space));
-            assert(block == next);
+            assert(block == iter);
             assert(space > sizeof(allocation_bookkeeping_t));
 
             auto *bookkeeping =
@@ -225,30 +227,39 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
             bool is_space_remaining = std::align(
                 alignof(free_node_t), sizeof(free_node_t), remaining, space);
             if (is_space_remaining) {
+                assert(remaining != nullptr);
                 // able to fit a free node in here, use that to shrink the size
                 auto *newnode = reinterpret_cast<free_node_t *>(remaining);
-                // insert into linked list, removing "next"
+                auto *old_next = iter->next;
+                // insert into linked list, removing/replacing "next"
                 iter->next = newnode;
-                newnode->next = next->next;
+                newnode->next = old_next->next;
                 newnode->size = space;
             } else {
                 // can't fit free node, so we must be taking up the whole block
                 // remove the free node from this, before we write to anything
                 // (read the "next" pointer first)
-                iter->next = next->next;
+                if (prev) {
+                    // remove ourselves from the list
+                    prev->next = iter->next;
+                } else {
+                    // first node, so just set the first node to be the
+                    // now-second node
+                    m.free_list_head = iter->next;
+                }
             }
 
             const size_t diff = reinterpret_cast<uint8_t *>(bookkeeping) -
-                                reinterpret_cast<uint8_t *>(next);
+                                reinterpret_cast<uint8_t *>(iter);
             assert(diff < alignof(allocation_bookkeeping_t));
-            assert((void *)bookkeeping == next);
+            assert((void *)bookkeeping == iter);
             *bookkeeping = {
                 .size_requested = bytes,
                 // NOTE: reading from next right before we assign over it...
                 .size_actual =
                     is_space_remaining
-                        ? size_t(((uint8_t *)remaining) - ((uint8_t *)next))
-                        : next->size,
+                        ? size_t(((uint8_t *)remaining) - ((uint8_t *)iter))
+                        : iter->size,
 #ifndef ALLO_DISABLE_TYPEINFO
                 .typehash = typehash,
 #endif
@@ -256,7 +267,8 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
 
             return zl::raw_slice(*reinterpret_cast<uint8_t *>(block), bytes);
         }
-        iter = next;
+        prev = iter;
+        iter = iter->next;
     }
     // TODO: request more space from parent if owning
     return AllocationStatusCode::OOM;
