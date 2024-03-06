@@ -146,30 +146,45 @@ TEST_SUITE("block_allocator_t")
         SUBCASE("destruction callback")
         {
             c_allocator_t global_allocator;
+            uint8_t expected_called = 0;
             uint8_t called = 0;
-            {
+            for (size_t i = 0; i < 5; ++i) {
+                const auto blocksize = static_cast<size_t>(32 * std::pow(2, i));
                 auto ally =
                     block_allocator_t::make(
                         // this memory will be cleaned up by the allocator
-                        allo::alloc<uint8_t>(global_allocator, 32UL * 4)
+                        allo::alloc<uint8_t>(global_allocator, blocksize * 4)
                             .release(),
-                        global_allocator, 32)
+                        global_allocator, blocksize)
                         .release();
                 auto callback = [](void *data) {
                     ++(*reinterpret_cast<uint8_t *>(data));
                 };
                 REQUIRE(ally.register_destruction_callback(callback, &called)
                             .okay());
+                ++expected_called;
                 REQUIRE(ally.register_destruction_callback(callback, &called)
                             .okay());
+                ++expected_called;
                 REQUIRE(ally.register_destruction_callback(callback, &called)
                             .okay());
+                ++expected_called;
                 REQUIRE(ally.register_destruction_callback(callback, &called)
                             .okay());
-                REQUIRE(ally.register_destruction_callback(callback, &called)
-                            .err() == AllocationStatusCode::OOM);
+                ++expected_called;
+
+                auto lasterr =
+                    ally.register_destruction_callback(callback, &called).err();
+
+                // if the blocks are 32 bytes in size, then we should oom on the
+                // fifth time
+                if (i == 0) {
+                    REQUIRE(lasterr == AllocationStatusCode::OOM);
+                } else {
+                    ++expected_called;
+                }
             }
-            REQUIRE(called == 4);
+            REQUIRE(called == expected_called);
         }
     }
 }
