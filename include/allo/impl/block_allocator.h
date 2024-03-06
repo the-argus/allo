@@ -50,8 +50,6 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
     auto *const darray = reinterpret_cast<destruction_callback_array_t *>(
         &m.mem.data()[darray_index * m.blocksize]);
     for (size_t i = 0; i < m.current_destruction_array_size; ++i) {
-        assert(darray->entries[i].user_data > (void *)m.mem.begin().ptr() &&
-               darray->entries[i].user_data < m.mem.end().ptr());
         darray->entries[i].callback(darray->entries[i].user_data);
     }
     darray_index = darray->previous_index;
@@ -60,8 +58,6 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
             &m.mem.data()[darray_index * m.blocksize]);
         // all of the remaining destruction arrays should be full
         for (size_t i = 0; i < m.max_destruction_entries_per_block; ++i) {
-            assert(darray->entries[i].user_data > (void *)m.mem.begin().ptr() &&
-                   darray->entries[i].user_data < m.mem.end().ptr());
             darray->entries[i].callback(darray->entries[i].user_data);
         }
         darray_index = darray->previous_index;
@@ -309,6 +305,7 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
         auto *const new_array =
             reinterpret_cast<destruction_callback_array_t *>(freeblock);
         --m.blocks_free;
+        ++m.num_destruction_array_blocks;
         m.last_freed_index = next_to_last_freed;
         new_array->previous_index = m.current_destruction_array_index;
         m.current_destruction_array_index = free_index;

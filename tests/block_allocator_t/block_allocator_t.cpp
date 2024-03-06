@@ -7,15 +7,15 @@
 #include <ziglike/stdmem.h>
 
 using namespace allo;
-static_assert(detail::nearest_alignment(1) == 0);
-static_assert(detail::nearest_alignment(3) == 0);
-static_assert(detail::nearest_alignment(67) == 0);
-static_assert(detail::nearest_alignment(2) == 1);
-static_assert(detail::nearest_alignment(4) == 2);
-static_assert(detail::nearest_alignment(8) == 3);
-static_assert(detail::nearest_alignment(16) == 4);
-static_assert(detail::nearest_alignment(32) == 5);
-static_assert(detail::nearest_alignment(64) == 6);
+static_assert(detail::nearest_alignment_exponent(1) == 0);
+static_assert(detail::nearest_alignment_exponent(3) == 0);
+static_assert(detail::nearest_alignment_exponent(67) == 0);
+static_assert(detail::nearest_alignment_exponent(2) == 1);
+static_assert(detail::nearest_alignment_exponent(4) == 2);
+static_assert(detail::nearest_alignment_exponent(8) == 3);
+static_assert(detail::nearest_alignment_exponent(16) == 4);
+static_assert(detail::nearest_alignment_exponent(32) == 5);
+static_assert(detail::nearest_alignment_exponent(64) == 6);
 
 TEST_SUITE("block_allocator_t")
 {
