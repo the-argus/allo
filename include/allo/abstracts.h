@@ -160,6 +160,8 @@ class allocator_common_t
     }
 
   public:
+    allocator_common_t() = delete;
+
     allocator_common_t(const allocator_common_t &) noexcept = default;
 
     template <typename Allocator>
@@ -276,10 +278,15 @@ template <typename From> struct can_upcast<From, allocator_common_t>
         std::true_type, std::false_type>;
 };
 
+template <> struct can_upcast<allocator_common_t, allocator_common_t>
+{
+    using type = std::true_type;
+};
+
 // specialization where you are upcasting something to itself
 template <typename From> struct can_upcast<From, From>
 {
-    using type = std::false_type;
+    using type = std::true_type;
 };
 
 #define ALLO_DETAIL_ALLOW_UPCAST(from, to)  \

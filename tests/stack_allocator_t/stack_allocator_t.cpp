@@ -3,6 +3,7 @@
 #define ALLO_ALLOW_DESTRUCTORS
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
+#include "generic_allocator_tests.h"
 #include "test_header.h"
 #include <array>
 #include <optional>
@@ -102,6 +103,23 @@ TEST_SUITE("stack_allocator_t")
             auto my_new_ints = allo::alloc_one<std::array<int, 88>>(ally);
             REQUIRE(my_new_ints.okay());
             REQUIRE((my_new_ints.release().data() == original_int_location));
+        }
+
+        SUBCASE("generic ref, allocate linked list")
+        {
+            // TODO: this test is only supposed to need something like 830
+            // bytes? but because of the bookkeeping data in each stack
+            // allocation, it uses an extra kilobyte...
+            // look at the block allocator's version, which uses a similar
+            // amount. maybe this is actually roughly the amount to expect from
+            // the algorithm? but it seems like in theory the algorithm should
+            // only alloc about 830.
+            std::array<uint8_t, 1875> mem; // just barely enough memory for the
+                                           // linked list of strings
+            oneshot_allocator_t oneshot =
+                oneshot_allocator_t::make(mem).release();
+            auto ally = stack_allocator_t::make(mem, oneshot).release();
+            tests::allocate_object_with_linked_list(ally);
         }
 
         SUBCASE("OOM")

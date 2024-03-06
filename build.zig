@@ -37,6 +37,12 @@ const test_source_files = &[_][]const u8{
     "stack_allocator_t/stack_allocator_t.cpp",
     "block_allocator_t/block_allocator_t.cpp",
     "nonvirtual_inheritance/nonvirtual_inheritance.cpp",
+    "heap_allocator_t/heap_allocator_t.cpp",
+};
+
+const universal_tests_source_files = &[_][]const u8{
+    "tests/generic_allocator_tests.cpp",
+    "tests/heap_tests.cpp",
 };
 
 var ziglike: ?*std.Build.Dependency = null;
@@ -79,6 +85,7 @@ pub fn build(b: *std.Build) !void {
             .file = .{ .path = b.pathJoin(&.{ "tests", source_file }) },
             .flags = flags_owned,
         });
+        test_exe.addCSourceFiles(universal_tests_source_files, flags_owned);
         test_exe.linkLibCpp();
         test_exe.step.dependOn(ziglike.?.builder.getInstallStep());
         try tests.append(test_exe);

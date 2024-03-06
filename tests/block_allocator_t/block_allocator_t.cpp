@@ -2,6 +2,8 @@
 #include "allo/c_allocator.h"
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
+#include "generic_allocator_tests.h"
+#include "heap_tests.h"
 #include "test_header.h"
 
 #include <ziglike/stdmem.h>
@@ -39,40 +41,7 @@ TEST_SUITE("block_allocator_t")
     }
     TEST_CASE("functionality")
     {
-        struct Parent;
-
-        struct Child
-        {
-            int age;
-            Parent *parent;
-        };
-
-        struct Parent
-        {
-            std::array<char, 80> name;
-            size_t num_children = 0;
-            std::array<Child, 4> *children;
-            [[nodiscard]] inline zl::slice<Child> getChildren() const
-            {
-                return zl::slice<Child>(*children, 0, num_children);
-            }
-
-            static Parent &make_on_heap(DynamicHeapAllocatorRef allocator,
-                                        const char *name)
-            {
-                Parent &parent =
-                    allo::construct_one<Parent>(allocator).release();
-                parent.children =
-                    &allo::construct_one<std::array<Child, 4>>(allocator)
-                         .release();
-                // NOLINTNEXTLINE
-                std::snprintf(parent.name.data(), parent.name.size(), "%s",
-                              name);
-                return parent;
-            }
-        };
-
-        SUBCASE("parent/children example")
+        SUBCASE("related objects, similar structure to linked list")
         {
             c_allocator_t global_allocator;
 
@@ -84,37 +53,11 @@ TEST_SUITE("block_allocator_t")
                         allo::alloc<uint8_t>(global_allocator, 2000).release(),
                         global_allocator, 256)
                         .release();
-
-                Parent &parent1 = Parent::make_on_heap(ally, "Sharon");
-                Parent &parent1_wife = Parent::make_on_heap(ally, "Leslie");
-                Parent &parent2 = Parent::make_on_heap(ally, "Steve");
-                REQUIRE(strcmp("Sharon", parent1.name.data()) == 0);
-                REQUIRE(strcmp("Leslie", parent1_wife.name.data()) == 0);
-                REQUIRE(strcmp("Steve", parent2.name.data()) == 0);
-
-                free_one(ally, *parent1.children);
-                parent1.children = nullptr;
+                tests::allocate_480_bytes_related_objects(ally);
             }
 
             // this memory will leak since we aren't using a real allocator
-            Parent &parent1 = Parent::make_on_heap(global_allocator, "Sharon");
-            Parent &parent1_wife =
-                Parent::make_on_heap(global_allocator, "Leslie");
-            Parent &parent2 = Parent::make_on_heap(global_allocator, "Steve");
-
-            REQUIRE(strcmp("Sharon", parent1.name.data()) == 0);
-            REQUIRE(strcmp("Leslie", parent1_wife.name.data()) == 0);
-            REQUIRE(strcmp("Steve", parent2.name.data()) == 0);
-
-            free_one(global_allocator, *parent1.children);
-            parent1.children = nullptr;
-
-            // silly usage of memcompare on cstrings. but hey its one time i can
-            // actually use it heh
-            REQUIRE(zl::memcompare(
-                zl::slice<const char>(parent1.name, 0,
-                                      strlen(parent1.name.data())),
-                zl::raw_slice<const char>(*((char *)"Sharon"), 6)));
+            tests::allocate_480_bytes_related_objects(global_allocator);
         }
 
         SUBCASE("OOM")
@@ -143,7 +86,32 @@ TEST_SUITE("block_allocator_t")
             }
         }
 
-        SUBCASE("destruction callback")
+        SUBCASE("generic tets")
+        {
+            c_allocator_t global_allocator;
+
+            // 256 bytes per block, 32 byte aligned blocks
+            auto ally =
+                block_allocator_t::make(
+                    // this memory will be cleaned up by the allocator
+                    // TODO: optimize this... similar memory usage to stack
+                    // allocator, although linked list nodes should be a perfect
+                    // use case for block allocator
+                    // TODO: look in to what is actually going on here...
+                    // blocks in a block allocator dont' have extra space for
+                    // bookkeeping, and all these allocations fit in the blocks,
+                    // so this should be really solid memory usage
+                    // I think it's due to the minimum block size of the block
+                    // allocator being 32? although I'm not sure it would even
+                    // work with smaller blocks
+                    allo::alloc<uint8_t>(global_allocator, 1825).release(),
+                    global_allocator, 16)
+                    .release();
+            tests::allocate_object_with_linked_list(ally);
+        }
+
+        SUBCASE("destruction callback and sometimes OOM on register, doesnt "
+                "get called")
         {
             c_allocator_t global_allocator;
             uint8_t expected_called = 0;
