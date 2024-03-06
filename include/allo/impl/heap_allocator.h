@@ -63,17 +63,48 @@ heap_allocator_t::make_inner(const zl::slice<uint8_t> &memory,
     };
 }
 
-ALLO_FUNC heap_allocator_t::heap_allocator_t(M &&members) noexcept : m(members)
+ALLO_FUNC heap_allocator_t::heap_allocator_t(M &&members) noexcept
+    : m(std::move(members))
 {
     type = enum_value;
+}
+
+ALLO_FUNC heap_allocator_t::heap_allocator_t(heap_allocator_t &&other) noexcept
+    : m(std::move(other.m))
+{
+    type = enum_value;
+}
+
+ALLO_FUNC heap_allocator_t::~heap_allocator_t() noexcept
+{
+    if (m.last_callback_node) {
+        size_t num_in_last_node = m.num_callbacks % callbacks_per_node;
+        // there is never 0 in the last node
+        num_in_last_node =
+            num_in_last_node == 0 ? callbacks_per_node : num_in_last_node;
+        assert(num_in_last_node > 0 && num_in_last_node <= callbacks_per_node);
+        for (auto &callback : zl::slice<destruction_callback_entry_t>(
+                 m.last_callback_node->entries, 0, num_in_last_node)) {
+            callback.callback(callback.user_data);
+        }
+
+        destruction_callback_node_t *iterator = m.last_callback_node->prev;
+        while (iterator != nullptr) {
+            for (auto &callback : iterator->entries) {
+                callback.callback(callback.user_data);
+            }
+            iterator = iterator->prev;
+        }
+    }
+
+    if (m.parent.has_value()) {
+        m.parent.value().free_bytes(m.mem, 0);
+    }
 }
 
 ALLO_FUNC allocation_status_t heap_allocator_t::register_destruction_callback(
     destruction_callback_t callback, void *user_data) noexcept
 {
-    constexpr size_t callbacks_per_node =
-        (sizeof(destruction_callback_node_t::entries) /
-         sizeof(destruction_callback_node_t::destruction_callback_entry_t));
     const size_t callback_offset = m.num_callbacks % callbacks_per_node;
     // might be necessary to allocate space for some more destruction callbacks
     if (m.last_callback_node == nullptr || callback_offset == 0) {
@@ -104,20 +135,45 @@ heap_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
 ALLO_FUNC allocation_status_t
 heap_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
 {
+    auto res = free_common(mem, typehash);
+    if (!res.okay())
+        return res.err();
+    auto *bk = res.release();
+
+    auto *node = reinterpret_cast<free_node_t *>(bk);
+    *node = free_node_t{.size = bk->size_actual, .next = m.free_list_head};
+    m.free_list_head = node;
+
+    return AllocationStatusCode::Okay;
+}
+
+ALLO_FUNC auto heap_allocator_t::free_common(zl::slice<uint8_t> mem,
+                                             size_t typehash) const noexcept
+    -> zl::res<allocation_bookkeeping_t *, AllocationStatusCode>
+{
+
+#ifndef NDEBUG
     void *head = mem.data();
     size_t dummyspace = sizeof(allocation_bookkeeping_t) * 2;
-#ifndef NDEBUG
-    auto *res =
+    assert(std::align(alignof(allocation_bookkeeping_t),
+                      sizeof(allocation_bookkeeping_t), head,
+                      dummyspace) == mem.data());
 #endif
-        std::align(alignof(allocation_bookkeeping_t),
-                   sizeof(allocation_bookkeeping_t), head, dummyspace);
-    // alignment in this way should always produce something
-    assert(res);
     auto *bk = static_cast<allocation_bookkeeping_t *>(head);
     while ((uint8_t *)(bk + 1) > mem.data()) {
         --bk;
     }
-    assert(bk->size_requested == mem.size());
+    if (bk->size_requested == mem.size()) {
+        return AllocationStatusCode::MemoryInvalid;
+    }
+#ifndef ALLO_DISABLE_TYPEINFO
+    // NOTE: this really should be a log message... you probably don't want
+    // memory returning an error and therefore not being freed because of a
+    // typing mistake. maybe would be different if free_bytes was always
+    // nodiscard? using an assert to alert in debug mode
+    assert(bk->typehash != typehash);
+#endif
+    return bk;
 }
 
 ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
@@ -129,6 +185,14 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
     // refuse to align to less than 8 bytes
     const size_t actual_align_ex =
         alignment_exponent < 3 ? 3 : alignment_exponent;
+    static_assert(
+        detail::nearest_alignment_exponent(alignof(allocation_bookkeeping_t)) ==
+            3,
+        "The reason heap allocator aligns to 2^3 is because thats the expected "
+        "alignment of its linked list nodes, but that is not correct");
+    static_assert(alignof(allocation_bookkeeping_t) == alignof(free_node_t),
+                  "heap allocator relies on free nodes and allocation nodes "
+                  "being able to have the same allocation");
 
     free_node_t *iter = m.free_list_head;
     // NOTE: if alignment exponent is smaller than 3, this could be inaccurate
@@ -140,14 +204,10 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
         if (next->size >= actual_size) {
             size_t space = next->size;
             void *block = next;
-            if (!std::align(alignof(allocation_bookkeeping_t),
-                            sizeof(allocation_bookkeeping_t), block, space)) {
-                // this shouldn't really ever happen
-                continue;
-            }
-            if (space <= sizeof(allocation_bookkeeping_t)) {
-                continue;
-            }
+            assert(std::align(alignof(allocation_bookkeeping_t),
+                              sizeof(allocation_bookkeeping_t), block, space));
+            assert(block == next);
+            assert(space > sizeof(allocation_bookkeeping_t));
 
             auto *bookkeeping =
                 reinterpret_cast<allocation_bookkeeping_t *>(block);
@@ -181,14 +241,17 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
             const size_t diff = reinterpret_cast<uint8_t *>(bookkeeping) -
                                 reinterpret_cast<uint8_t *>(next);
             assert(diff < alignof(allocation_bookkeeping_t));
+            assert((void *)bookkeeping == next);
             *bookkeeping = {
                 .size_requested = bytes,
                 // NOTE: reading from next right before we assign over it...
-                .size_original =
+                .size_actual =
                     is_space_remaining
                         ? size_t(((uint8_t *)remaining) - ((uint8_t *)next))
                         : next->size,
+#ifndef ALLO_DISABLE_TYPEINFO
                 .typehash = typehash,
+#endif
             };
 
             return zl::raw_slice(*reinterpret_cast<uint8_t *>(block), bytes);
@@ -202,5 +265,7 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
 ALLO_FUNC allocation_status_t heap_allocator_t::free_status(
     zl::slice<uint8_t> mem, size_t typehash) const noexcept
 {
+    return free_common(mem, typehash).err();
 }
+
 } // namespace allo

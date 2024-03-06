@@ -7,15 +7,15 @@ namespace allo {
 class heap_allocator_t : private detail::dynamic_allocator_base_t
 {
   public:
+    struct destruction_callback_entry_t
+    {
+        destruction_callback_t callback;
+        void *user_data;
+    };
     // destruction callbacks are grouped in three since thats how many we
     // can fit in a cache line
     struct destruction_callback_node_t
     {
-        struct destruction_callback_entry_t
-        {
-            destruction_callback_t callback;
-            void *user_data;
-        };
         destruction_callback_node_t *prev;
         std::array<destruction_callback_entry_t, 3> entries;
     };
@@ -24,12 +24,17 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
     struct allocation_bookkeeping_t
     {
         size_t size_requested;
-        size_t size_original;
-        // TODO: make typehash conditional ifdef
+        size_t size_actual;
+#ifndef ALLO_DISABLE_TYPEINFO
         size_t typehash;
+#endif
     };
 
   private:
+    static constexpr size_t callbacks_per_node =
+        (sizeof(destruction_callback_node_t::entries) /
+         sizeof(destruction_callback_entry_t));
+
     struct M
     {
         zl::opt<DynamicHeapAllocatorRef> parent;
@@ -96,6 +101,10 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
     heap_allocator_t &operator=(heap_allocator_t &&other) = delete;
 
     heap_allocator_t(M &&members) noexcept;
+
+  private:
+    [[nodiscard]] zl::res<allocation_bookkeeping_t *, AllocationStatusCode>
+    free_common(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
 };
 } // namespace allo
 
