@@ -27,7 +27,7 @@
           packages =
             (with pkgs; [
               gdb
-              # valgrind
+              valgrind
               zig_0_11
             ]);
         };
