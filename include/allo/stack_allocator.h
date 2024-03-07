@@ -12,7 +12,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
   private:
     struct M
     {
-        DynamicStableHeapAllocatorRef parent;
+        DynamicHeapAllocatorRef parent;
         zl::slice<uint8_t> memory;
         zl::slice<uint8_t> available_memory;
         size_t last_type_hashcode = 0;
@@ -32,7 +32,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
     inline static zl::res<stack_allocator_t, AllocationStatusCode>
     make(zl::slice<uint8_t> memory, Allocator &parent) ALLO_NOEXCEPT
     {
-        return make_inner(memory, DynamicStableHeapAllocatorRef(parent));
+        return make_inner(memory, DynamicHeapAllocatorRef(parent));
     }
 
     // can be moved
@@ -78,7 +78,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
 
     static zl::res<stack_allocator_t, AllocationStatusCode>
     make_inner(zl::slice<uint8_t> memory,
-               DynamicStableHeapAllocatorRef parent) ALLO_NOEXCEPT;
+               DynamicHeapAllocatorRef parent) ALLO_NOEXCEPT;
 
     /// the information placed underneath every allocation in the stack
     struct previous_state_t

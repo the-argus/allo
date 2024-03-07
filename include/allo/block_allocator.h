@@ -11,7 +11,7 @@ class block_allocator_t : private detail::dynamic_allocator_base_t
         detail::AllocatorType::BlockAllocator;
 
     static zl::res<block_allocator_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> &&memory, DynamicStableHeapAllocatorRef parent,
+    make(zl::slice<uint8_t> &&memory, DynamicHeapAllocatorRef parent,
          size_t blocksize) noexcept;
 
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
@@ -50,7 +50,7 @@ class block_allocator_t : private detail::dynamic_allocator_base_t
   private:
     struct M
     {
-        DynamicStableHeapAllocatorRef parent;
+        DynamicHeapAllocatorRef parent;
         zl::slice<uint8_t> mem;
         allocator_properties_t properties;
         size_t last_freed_index;

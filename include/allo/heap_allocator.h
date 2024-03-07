@@ -37,7 +37,7 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
 
     struct M
     {
-        zl::opt<DynamicStableHeapAllocatorRef> parent;
+        zl::opt<DynamicHeapAllocatorRef> parent;
         zl::slice<uint8_t> mem;
         allocator_properties_t properties;
         size_t num_nodes; // also == number of entries in free list data
@@ -48,7 +48,7 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
 
     static zl::res<heap_allocator_t, AllocationStatusCode>
     make_inner(const zl::slice<uint8_t> &memory,
-               const zl::opt<DynamicStableHeapAllocatorRef> &parent) noexcept;
+               const zl::opt<DynamicHeapAllocatorRef> &parent) noexcept;
 
   public:
     static constexpr detail::AllocatorType enum_value =
@@ -58,7 +58,7 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
     inline static zl::res<heap_allocator_t, AllocationStatusCode>
     make_owned(zl::slice<uint8_t> memory, Allocator &parent) noexcept
     {
-        return make_inner(memory, DynamicStableHeapAllocatorRef(parent));
+        return make_inner(memory, DynamicHeapAllocatorRef(parent));
     }
 
     inline static zl::res<heap_allocator_t, AllocationStatusCode>

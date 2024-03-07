@@ -28,7 +28,7 @@ struct heap_allocator_t::free_node_t
 ALLO_FUNC zl::res<heap_allocator_t, AllocationStatusCode>
 heap_allocator_t::make_inner(
     const zl::slice<uint8_t> &memory,
-    const zl::opt<DynamicStableHeapAllocatorRef> &parent) noexcept
+    const zl::opt<DynamicHeapAllocatorRef> &parent) noexcept
 {
     void *head = memory.data();
     size_t space = memory.size();
