@@ -60,18 +60,20 @@ TEST_SUITE("block_allocator_t")
             tests::allocate_480_bytes_related_objects(global_allocator);
         }
 
-        SUBCASE("OOM")
+        SUBCASE("OOM when using oneshot allocator layer")
         {
             c_allocator_t global_allocator;
 
             {
-                // 256 bytes per block, 32 byte aligned blocks
-                auto ally =
-                    block_allocator_t::make(
-                        // this memory will be cleaned up by the allocator
+                auto oneshot =
+                    oneshot_allocator_t::make_owned(
                         allo::alloc<uint8_t>(global_allocator, 32UL * 4)
                             .release(),
-                        global_allocator, 32)
+                        global_allocator)
+                        .release();
+                // 256 bytes per block, 32 byte aligned blocks
+                auto ally =
+                    block_allocator_t::make(oneshot.shoot(), oneshot, 32)
                         .release();
                 auto one = alloc_one<int>(ally);
                 REQUIRE(one.okay());
@@ -86,7 +88,31 @@ TEST_SUITE("block_allocator_t")
             }
         }
 
-        SUBCASE("generic tets")
+        SUBCASE("No OOM when using global allocator directly")
+        {
+            c_allocator_t global_allocator;
+
+            {
+                // 256 bytes per block, 32 byte aligned blocks
+                auto ally = block_allocator_t::make(
+                                allo::alloc<uint8_t>(global_allocator, 32UL * 4)
+                                    .release(),
+                                global_allocator, 32)
+                                .release();
+                auto one = alloc_one<int>(ally);
+                REQUIRE(one.okay());
+                auto two = alloc_one<int>(ally);
+                REQUIRE(two.okay());
+                auto three = alloc_one<int>(ally);
+                REQUIRE(three.okay());
+                auto four = alloc_one<int>(ally);
+                REQUIRE(four.okay());
+                auto five = alloc_one<int>(ally);
+                REQUIRE(five.okay());
+            }
+        }
+
+        SUBCASE("generic tests")
         {
             c_allocator_t global_allocator;
 
@@ -118,13 +144,19 @@ TEST_SUITE("block_allocator_t")
             uint8_t called = 0;
             for (size_t i = 0; i < 5; ++i) {
                 const auto blocksize = static_cast<size_t>(32 * std::pow(2, i));
-                auto ally =
-                    block_allocator_t::make(
-                        // this memory will be cleaned up by the allocator
+
+                // oneshot allocator so that we OOM instead of realloc-ing
+                auto oneshot =
+                    oneshot_allocator_t::make_owned(
                         allo::alloc<uint8_t>(global_allocator, blocksize * 4)
                             .release(),
-                        global_allocator, blocksize)
+                        global_allocator)
                         .release();
+                // 256 bytes per block, 32 byte aligned blocks
+                auto ally =
+                    block_allocator_t::make(oneshot.shoot(), oneshot, blocksize)
+                        .release();
+
                 auto callback = [](void *data) {
                     ++(*reinterpret_cast<uint8_t *>(data));
                 };

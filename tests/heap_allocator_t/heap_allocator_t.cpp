@@ -35,7 +35,12 @@ TEST_SUITE("heap_allocator_t")
         SUBCASE("generic allocator test - linked list")
         {
             c_allocator_t global_allocator;
-            auto mem = alloc<uint8_t>(global_allocator, 2000).release();
+            // NOTE: bytes required at time of writing by allocator type:
+            // block allocator: 1825
+            // heap allocator: 2315
+            // stack allocator: 1875
+            // heap allocator has a significant amount of bookkeeping space
+            auto mem = alloc<uint8_t>(global_allocator, 2315).release();
             heap_allocator_t heap =
                 heap_allocator_t::make_owned(mem, global_allocator).release();
             tests::allocate_object_with_linked_list(heap);

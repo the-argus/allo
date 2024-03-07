@@ -329,9 +329,20 @@ ALLO_FUNC allocation_status_t block_allocator_t::realloc() noexcept
         static_cast<double>(m.mem.size()) / static_cast<double>(m.blocksize)));
     assert(original_num_blocks < num_blocks);
     size_t difference = num_blocks - original_num_blocks;
-    for (size_t i = 0; i < difference; ++i) {
-        // TODO: set variant values to point to next free item
+    size_t next_available = m.last_freed_index;
+    // NOTE: if we assert that there is always at least one block before
+    // realloc, we can use size_t for iterator instead of int64_t
+    for (int64_t i = static_cast<int64_t>(num_blocks) - 1;
+         i >= original_num_blocks; --i) {
+        uint8_t *first_byte_of_new_block = m.mem.data() + (m.blocksize * i);
+        assert(detail::nearest_alignment_exponent(
+                   (size_t)first_byte_of_new_block) >= 3);
+        *reinterpret_cast<size_t *>(first_byte_of_new_block) = next_available;
+        // the next block we iterate over will be pointing to this one
+        next_available = i;
     }
+    m.last_freed_index = original_num_blocks;
+    m.blocks_free += difference;
     return AllocationStatusCode::Okay;
 }
 } // namespace allo

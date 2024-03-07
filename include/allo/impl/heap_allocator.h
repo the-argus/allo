@@ -230,11 +230,15 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
                 assert(remaining != nullptr);
                 // able to fit a free node in here, use that to shrink the size
                 auto *newnode = reinterpret_cast<free_node_t *>(remaining);
-                auto *old_next = iter->next;
-                // insert into linked list, removing/replacing "next"
-                iter->next = newnode;
-                newnode->next = old_next->next;
-                newnode->size = space;
+                *newnode = {.size = space, .next = iter->next};
+
+                // make the previous item point to our new node. behavior has to
+                // be different if we're at the beginning of the list, though
+                if (prev) {
+                    prev->next = newnode;
+                } else {
+                    m.free_list_head = newnode;
+                }
             } else {
                 // can't fit free node, so we must be taking up the whole block
                 // remove the free node from this, before we write to anything

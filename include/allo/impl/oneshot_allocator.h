@@ -56,26 +56,22 @@ oneshot_allocator_t::make_inner(
     zl::slice<uint8_t> mem, size_t /*old_typehash*/, size_t new_size,
     size_t /*new_typehash*/) noexcept
 {
-    if (mem.data() != m.mem.data() || mem.size() > m.mem.size()) {
-        return AllocationStatusCode::MemoryInvalid;
-    }
-
-    if (new_size > m.mem.size()) {
+    if (mem == m.mem)
         return AllocationStatusCode::OOM;
-    }
-
-    return zl::slice<uint8_t>(m.mem, 0, new_size);
+    return AllocationStatusCode::MemoryInvalid;
 }
 
 ALLO_FUNC allocation_status_t oneshot_allocator_t::free_bytes(
-    zl::slice<uint8_t> /*mem*/, size_t /*typehash*/) noexcept
+    zl::slice<uint8_t> mem, size_t typehash) noexcept
 {
-    return AllocationStatusCode::Okay;
+    return free_status(mem, typehash);
 }
 [[nodiscard]] ALLO_FUNC allocation_status_t oneshot_allocator_t::free_status(
-    zl::slice<uint8_t> /*mem*/, size_t /*typehash*/) const noexcept
+    zl::slice<uint8_t> mem, size_t /*typehash*/) const noexcept
 {
-    return AllocationStatusCode::Okay;
+    if (mem == m.mem)
+        return AllocationStatusCode::Okay;
+    return AllocationStatusCode::MemoryInvalid;
 }
 
 ALLO_FUNC allocation_result_t oneshot_allocator_t::alloc_bytes(
@@ -83,5 +79,4 @@ ALLO_FUNC allocation_result_t oneshot_allocator_t::alloc_bytes(
 {
     return AllocationStatusCode::OOM;
 }
-
 } // namespace allo

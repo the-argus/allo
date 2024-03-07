@@ -27,30 +27,43 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::OneshotAllocator;
 
+    /// Make a oneshot allocator which takes ownership of some memory. It will
+    /// ask the given parent allocator to free the given memory when it is
+    /// destroyed.
     template <typename Allocator>
     inline static zl::res<oneshot_allocator_t, AllocationStatusCode>
-    make_owned(zl::slice<uint8_t> memory, Allocator &parent) noexcept
+    make_owned(zl::slice<uint8_t> &&memory, Allocator &parent) noexcept
     {
         return make_inner(memory, DynamicHeapAllocatorRef(parent));
     }
 
+    /// Return a oneshot allocator that does not try to free its memory when
+    /// it is destroyed.
     inline static zl::res<oneshot_allocator_t, AllocationStatusCode>
     make(zl::slice<uint8_t> memory) noexcept
     {
         return make_inner(memory, {});
     }
 
+    /// Returns OOM or MemoryInvalid, always.
     [[nodiscard]] allocation_result_t
     realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
                   size_t new_typehash) noexcept;
 
+    /// Identical to free_status. There's no need for this allocator to do
+    /// anything on free because it only keeps track of one allocation and you
+    /// can't do anything like realloc it anyways.
     allocation_status_t free_bytes(zl::slice<uint8_t> mem,
                                    size_t typehash) noexcept;
 
+    /// Always  returns OOM with a oneshot allocator, to simulate an actual
+    /// heap OOM.
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
 
+    /// Returns Okay if the memory you are trying to free is the memory returned
+    /// by shoot(), otherwise it returns MemoryInvalid.
     [[nodiscard]] allocation_status_t
     free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
 
@@ -65,6 +78,13 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
     properties() const noexcept
     {
         return m.properties;
+    }
+
+    /// Return the memory owned by this allocator, the only thing which is okay
+    /// to free
+    [[nodiscard]] inline constexpr zl::slice<uint8_t> shoot() const noexcept
+    {
+        return m.mem;
     }
 
     ~oneshot_allocator_t() noexcept;
