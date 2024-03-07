@@ -233,7 +233,8 @@ stack_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
 
 ALLO_FUNC zl::res<stack_allocator_t, AllocationStatusCode>
 stack_allocator_t::make_inner(zl::slice<uint8_t> memory,
-                              DynamicHeapAllocatorRef parent) ALLO_NOEXCEPT
+                              DynamicStableHeapAllocatorRef parent)
+    ALLO_NOEXCEPT
 {
     // make sure there is at least one byte of space to be allocated in memory
     if (memory.size() <= sizeof(previous_state_t)) {

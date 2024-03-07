@@ -66,7 +66,7 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
 
 ALLO_FUNC zl::res<block_allocator_t, AllocationStatusCode>
 block_allocator_t::make(zl::slice<uint8_t> &&memory,
-                        DynamicHeapAllocatorRef parent,
+                        DynamicStableHeapAllocatorRef parent,
                         size_t blocksize) noexcept
 {
     // blocksize must be at least 8 bytes

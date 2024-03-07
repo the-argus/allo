@@ -242,6 +242,12 @@ class dynamic_stack_allocator_t : public allocator_common_t
 // reallocate and free in any order
 class dynamic_heap_allocator_t : public dynamic_stack_allocator_t
 {
+  protected:
+    inline constexpr explicit dynamic_heap_allocator_t(void *_ref) noexcept
+        : dynamic_stack_allocator_t(_ref)
+    {
+    }
+
   public:
     template <typename Allocator>
     inline constexpr dynamic_heap_allocator_t(Allocator &allocator) noexcept
@@ -264,6 +270,37 @@ class dynamic_heap_allocator_t : public dynamic_stack_allocator_t
     inline constexpr dynamic_heap_allocator_t( // NOLINT
         dynamic_heap_allocator_t &other) noexcept
         : dynamic_stack_allocator_t(other.ref)
+    {
+    }
+};
+
+/// A "stable" heap allocator is able to realloc without invalidating existing
+/// pointers to anything.
+class dynamic_stable_heap_allocator_t : public dynamic_heap_allocator_t
+{
+  public:
+    template <typename Allocator>
+    inline constexpr dynamic_stable_heap_allocator_t(
+        Allocator &allocator) noexcept
+        : dynamic_heap_allocator_t([](Allocator &allocator) -> void * {
+              static_assert(
+                  detail::can_upcast<
+                      Allocator, dynamic_stable_heap_allocator_t>::type::value,
+                  "The give allocator type cannot be converted to a "
+                  "DynamicHeapAllocatorRef.");
+              if constexpr (std::is_base_of_v<allocator_common_t, Allocator>) {
+                  return allocator.ref;
+              } else {
+                  return &allocator;
+              }
+          }(allocator))
+    {
+    }
+
+    template <>
+    inline constexpr dynamic_stable_heap_allocator_t( // NOLINT
+        dynamic_stable_heap_allocator_t &other) noexcept
+        : dynamic_heap_allocator_t(other.ref)
     {
     }
 };
@@ -297,6 +334,10 @@ template <typename From> struct can_upcast<From, From>
 
 // specializations for upcasting dynamic references to other dynamic references
 ALLO_DETAIL_ALLOW_UPCAST(dynamic_heap_allocator_t, dynamic_stack_allocator_t)
+ALLO_DETAIL_ALLOW_UPCAST(dynamic_stable_heap_allocator_t,
+                         dynamic_heap_allocator_t)
+ALLO_DETAIL_ALLOW_UPCAST(dynamic_stable_heap_allocator_t,
+                         dynamic_stack_allocator_t)
 
 // c allocator
 ALLO_DETAIL_ALLOW_UPCAST(c_allocator_t, dynamic_stack_allocator_t)
@@ -309,6 +350,7 @@ ALLO_DETAIL_ALLOW_UPCAST(stack_allocator_t, dynamic_stack_allocator_t)
 // oneshot allocator
 ALLO_DETAIL_ALLOW_UPCAST(oneshot_allocator_t, dynamic_stack_allocator_t)
 ALLO_DETAIL_ALLOW_UPCAST(oneshot_allocator_t, dynamic_heap_allocator_t)
+ALLO_DETAIL_ALLOW_UPCAST(oneshot_allocator_t, dynamic_stable_heap_allocator_t)
 // heap allocator
 ALLO_DETAIL_ALLOW_UPCAST(heap_allocator_t, dynamic_stack_allocator_t)
 ALLO_DETAIL_ALLOW_UPCAST(heap_allocator_t, dynamic_heap_allocator_t)
@@ -348,8 +390,9 @@ inline constexpr uint8_t nearest_alignment_exponent(size_t num)
 } // namespace detail
 
 using DynamicAllocatorRef = detail::allocator_common_t;
-using DynamicHeapAllocatorRef = detail::dynamic_heap_allocator_t;
 using DynamicStackAllocatorRef = detail::dynamic_stack_allocator_t;
+using DynamicHeapAllocatorRef = detail::dynamic_heap_allocator_t;
+using DynamicStableHeapAllocatorRef = detail::dynamic_stable_heap_allocator_t;
 } // namespace allo
 #ifdef ALLO_HEADER_ONLY
 #include "allo/impl/abstracts.h"

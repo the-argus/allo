@@ -26,8 +26,9 @@ struct heap_allocator_t::free_node_t
 };
 
 ALLO_FUNC zl::res<heap_allocator_t, AllocationStatusCode>
-heap_allocator_t::make_inner(const zl::slice<uint8_t> &memory,
-                             zl::opt<DynamicHeapAllocatorRef> parent) noexcept
+heap_allocator_t::make_inner(
+    const zl::slice<uint8_t> &memory,
+    const zl::opt<DynamicStableHeapAllocatorRef> &parent) noexcept
 {
     void *head = memory.data();
     size_t space = memory.size();
@@ -130,6 +131,7 @@ ALLO_FUNC allocation_result_t
 heap_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
                                 size_t new_size, size_t new_typehash) noexcept
 {
+    return AllocationStatusCode::InvalidArgument;
 }
 
 ALLO_FUNC allocation_status_t
