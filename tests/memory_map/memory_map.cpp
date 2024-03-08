@@ -24,7 +24,6 @@ TEST_SUITE("memory mapping alloc")
         }
         SUBCASE("reallocating which requires a new page")
         {
-            // this test will fail on systems without a gig of free ram
             void *initial_allocation = mm_alloc(1);
             REQUIRE(initial_allocation);
             *(int *)initial_allocation = 42;
