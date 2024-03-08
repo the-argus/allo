@@ -18,6 +18,8 @@ extern "C"
     // to free the pages allocated with mm_alloc.
     inline void *mm_alloc(size_t bytes)
     {
+        if (bytes == 0)
+            return nullptr;
         // the user thinks this allocation is 32 bytes smaller than it is
         mm_memory_map_result_t res = mm_memory_map(nullptr, bytes + 32);
         if (res.code != 0) {
