@@ -30,13 +30,27 @@ TEST_SUITE("memory mapping alloc")
             int free_result = mm_free(initial_allocation);
             REQUIRE(free_result == 0);
         }
-        SUBCASE("reallocating which requires a new page")
+        SUBCASE("reallocating a large amount and then shrinking the allocation")
         {
-            void *initial_allocation = mm_alloc(1);
+            // should take two pages
+            void *initial_allocation = mm_alloc(mm_get_page_size() * 10);
             REQUIRE(initial_allocation);
             *(int *)initial_allocation = 42;
             int realloc_result =
-                mm_realloc(initial_allocation, mm_get_page_size() + 1);
+                mm_realloc(initial_allocation, mm_get_page_size() - 32);
+            REQUIRE(realloc_result == 0);
+            REQUIRE(*(int *)initial_allocation == 42);
+            int free_result = mm_free(initial_allocation);
+            REQUIRE(free_result == 0);
+        }
+        SUBCASE("reallocation which requires additional pages")
+        {
+            // should take two pages
+            void *initial_allocation = mm_alloc(mm_get_page_size() * 10);
+            REQUIRE(initial_allocation);
+            *(int *)initial_allocation = 42;
+            int realloc_result =
+                mm_realloc(initial_allocation, mm_get_page_size() * 11);
             REQUIRE(realloc_result == 0);
             REQUIRE(*(int *)initial_allocation == 42);
             int free_result = mm_free(initial_allocation);
