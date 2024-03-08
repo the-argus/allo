@@ -5,6 +5,14 @@ constexpr size_t bytes_in_gb = 1000000000;
 
 TEST_SUITE("memory mapping alloc")
 {
+    TEST_CASE("get_page_size")
+    {
+        SUBCASE("page size seems reasonable")
+        {
+            REQUIRE(mm_get_page_size() > 32);
+            REQUIRE(mm_get_page_size() < bytes_in_gb);
+        }
+    }
     TEST_CASE("basic functionality")
     {
         SUBCASE(
