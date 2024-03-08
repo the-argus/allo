@@ -47,7 +47,7 @@ extern "C"
     //   - 12 == OOM (ENOMEM)
     inline int mm_realloc(void *address, size_t new_size)
     {
-        if (((uint64_t)address & 0b11111) != 0) {
+        if (((uint64_t)address & 0b11111) != 0 || (uint64_t)address < 32) {
             return -1;
         }
 

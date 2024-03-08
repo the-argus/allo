@@ -45,5 +45,25 @@ TEST_SUITE("memory mapping alloc")
             void *initial_allocation = mm_alloc(bytes_in_gb * 100UL);
             REQUIRE(initial_allocation == nullptr);
         }
+        SUBCASE("trying to allocate 0")
+        {
+            void *initial_allocation = mm_alloc(0);
+            REQUIRE(initial_allocation == nullptr);
+        }
+        SUBCASE("realloc a nullptr")
+        {
+            int res = mm_realloc(nullptr, 100);
+            REQUIRE(res != 0);
+        }
+        SUBCASE("realloc a modified pointer")
+        {
+            void *alloc = mm_alloc(1);
+            CHECK(alloc);
+            alloc = (uint8_t *)alloc + 1;
+            int res = mm_realloc(alloc, mm_get_page_size() / 2);
+            REQUIRE(res != 0);
+            int free_res = mm_free((uint8_t *)alloc - 1);
+            REQUIRE(free_res == 0);
+        }
     }
 }
