@@ -54,7 +54,7 @@ class allocator_common_t
               static_assert(
                   detail::can_upcast<Allocator,
                                      allocator_common_t>::type::value,
-                  "Given type cannot be converted to a DynamicAllocatorRef");
+                  "Given type cannot be converted to a AllocatorDynRef");
               if constexpr (std::is_base_of_v<allocator_common_t, Allocator>) {
                   return allocator.ref;
               } else {
@@ -104,7 +104,7 @@ class dynamic_stack_allocator_t : public allocator_common_t
               static_assert(detail::can_upcast<Allocator,
                                                dynamic_stack_allocator_t>::type,
                             "The give allocator type cannot be converted to a "
-                            "DynamicStackAllocatorRef.");
+                            "StackAllocatorDynRef.");
               if constexpr (std::is_base_of_v<allocator_common_t, Allocator>) {
                   return allocator.ref;
               } else {
@@ -135,7 +135,7 @@ class dynamic_heap_allocator_t : public dynamic_stack_allocator_t
                   detail::can_upcast<Allocator,
                                      dynamic_heap_allocator_t>::type::value,
                   "The give allocator type cannot be converted to a "
-                  "DynamicHeapAllocatorRef.");
+                  "HeapAllocatorDynRef.");
               if constexpr (std::is_base_of_v<allocator_common_t, Allocator>) {
                   return allocator.ref;
               } else {

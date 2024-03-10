@@ -6,7 +6,7 @@
 #include <allo/detail/abstracts.h>
 
 namespace allo {
-using DynamicAllocatorRef = detail::allocator_common_t;
-using DynamicStackAllocatorRef = detail::dynamic_stack_allocator_t;
-using DynamicHeapAllocatorRef = detail::dynamic_heap_allocator_t;
+using AllocatorDynRef = detail::allocator_common_t;
+using StackAllocatorDynRef = detail::dynamic_stack_allocator_t;
+using HeapAllocatorDynRef = detail::dynamic_heap_allocator_t;
 }

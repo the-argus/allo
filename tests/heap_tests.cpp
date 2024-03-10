@@ -22,7 +22,7 @@ struct Parent
         return zl::slice<Child>(*children, 0, num_children);
     }
 
-    static Parent &make_on_heap(DynamicHeapAllocatorRef allocator,
+    static Parent &make_on_heap(HeapAllocatorDynRef allocator,
                                 const char *name)
     {
         Parent &parent = allo::construct_one<Parent>(allocator).release();
@@ -35,7 +35,7 @@ struct Parent
 };
 
 namespace allo::tests {
-void allocate_480_bytes_related_objects(DynamicHeapAllocatorRef heap)
+void allocate_480_bytes_related_objects(HeapAllocatorDynRef heap)
 {
     Parent &parent1 = Parent::make_on_heap(heap, "Sharon");
     Parent &parent1_wife = Parent::make_on_heap(heap, "Leslie");

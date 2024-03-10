@@ -7,10 +7,10 @@ struct LinkedString
 {
     CharNode *first = nullptr;
     size_t length = 0;
-    allo::DynamicAllocatorRef parent;
+    allo::AllocatorDynRef parent;
     void append(char b);
     LinkedString() = delete;
-    LinkedString(allo::DynamicAllocatorRef _parent) : parent(_parent) {}
+    LinkedString(allo::AllocatorDynRef _parent) : parent(_parent) {}
 };
 
 struct CharNode
@@ -38,7 +38,7 @@ void LinkedString::append(char b)
 }
 
 namespace allo::tests {
-void allocate_object_with_linked_list(DynamicAllocatorRef ally)
+void allocate_object_with_linked_list(AllocatorDynRef ally)
 {
     constexpr std::array test_str{
         "hello",

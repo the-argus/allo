@@ -22,7 +22,7 @@ TEST_SUITE("allocator interfaces")
     {
         SUBCASE("upcast to single interface")
         {
-            auto makeint = [](DynamicAllocatorRef allocator)
+            auto makeint = [](AllocatorDynRef allocator)
                 -> zl::res<int *, AllocationStatusCode> {
                 auto mem_res = allo::alloc<uint8_t>(allocator, sizeof(int) * 2);
                 if (!mem_res.okay())
@@ -36,7 +36,7 @@ TEST_SUITE("allocator interfaces")
             stack_allocator_t stack =
                 stack_allocator_t::make(mem, oneshot).release();
 
-            auto maybe_int = makeint(DynamicAllocatorRef(stack));
+            auto maybe_int = makeint(AllocatorDynRef(stack));
             REQUIRE(maybe_int.okay());
 
             c_allocator_t heap;
@@ -48,13 +48,13 @@ TEST_SUITE("allocator interfaces")
         {
             std::array<uint8_t, 512> mem;
             auto oneshot = oneshot_allocator_t::make(mem).release();
-            DynamicAllocatorRef stackalloc = oneshot;
+            AllocatorDynRef stackalloc = oneshot;
             REQUIRE(oneshot.properties() == stackalloc.properties());
         }
 
         SUBCASE("upcast to single interface, use typed alloc")
         {
-            auto makeint = [](DynamicAllocatorRef allocator)
+            auto makeint = [](AllocatorDynRef allocator)
                 -> zl::res<int &, AllocationStatusCode> {
                 return allo::alloc_one<int>(allocator);
             };
