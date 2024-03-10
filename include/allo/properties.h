@@ -27,7 +27,7 @@ struct allocator_properties_t
         } else {
             if (requirements.maximum_contiguous_bytes.value() >
                 m_maximum_contiguous_bytes) {
-                return false;
+                return m_maximum_contiguous_bytes == 0;
             }
         }
 

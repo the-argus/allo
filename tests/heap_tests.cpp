@@ -1,5 +1,6 @@
 #include "heap_tests.h"
 #include "allo.h"
+#include "allo/rtti.h"
 #include "doctest.h"
 #include "ziglike/stdmem.h"
 using namespace allo;
@@ -63,8 +64,17 @@ void typed_alloc_realloc_free(HeapAllocatorDynRef heap)
         int id;
         bool active = false;
     };
+    if (!heap.properties().meets(allocator_requirements_t{
+            .maximum_contiguous_bytes = sizeof(Test) * 8,
+            .maximum_alignment = alignof(Test),
+        })) {
+        printf("[WARN] Skipping test %s for allocator of type %s\n",
+               __PRETTY_FUNCTION__, allocator_typename(heap));
+        // dont run the tests if the allocator is going to OOM
+        return;
+    }
     zl::slice<Test> first = allo::alloc<Test>(heap, 1).release();
-    first = allo::realloc(heap, first, 2).release();
+    first = allo::realloc(heap, first, 8).release();
     first = allo::realloc(heap, first, 1).release();
     allo::free(heap, first);
 }

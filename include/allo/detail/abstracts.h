@@ -5,8 +5,12 @@
 #include <type_traits>
 
 namespace allo {
+namespace detail {
+class allocator_common_t;
+};
 // used by allocator_common_t
 using destruction_callback_t = void (*)(void *user_data);
+const char *allocator_typename(detail::allocator_common_t) noexcept;
 } // namespace allo
 
 namespace allo::detail {
@@ -76,6 +80,9 @@ class allocator_common_t
     [[nodiscard]] allocation_status_t
     register_destruction_callback(destruction_callback_t callback,
                                   void *user_data) noexcept;
+
+    friend const char *
+        allo::allocator_typename(detail::allocator_common_t) noexcept;
 };
 
 class dynamic_stack_allocator_t : public allocator_common_t
