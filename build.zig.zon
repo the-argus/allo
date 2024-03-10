@@ -8,8 +8,8 @@
             .hash = "122016568d000bacabc11c876dbee168ca6c736a6d1925ee612a63b150cb22518a18",
         },
         .ziglike = .{
-            .url = "https://github.com/the-argus/ziglike/archive/bd040b75a0ce1cbd814c4414832027d2f2ff87c5.tar.gz",
-            .hash = "1220f478254ef0ee22b6a8df16a271ae1cfa7a25f26ebfba11dd61a5adc5e43a9e44",
+            .url = "https://github.com/the-argus/ziglike/archive/204df1d726e1cf9d7c92ba59b836095846c50032.tar.gz",
+            .hash = "122096e6553d657f580c78b028818fb23600951d8fd4af8828f3f5353e6656562c57",
         },
     }
 }

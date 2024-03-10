@@ -1,5 +1,6 @@
-#include "allo/abstracts.h"
+#include "allo.h"
 #include "allo/c_allocator.h"
+#include "allo/oneshot_allocator.h"
 #include "allo/stack_allocator.h"
 #include "allo/typed_allocation.h"
 #include "test_header.h"

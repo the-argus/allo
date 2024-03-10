@@ -1,6 +1,6 @@
 #pragma once
 
-#include "allo/abstracts.h"
+#include "allo/detail/abstracts.h"
 
 namespace allo {
 
@@ -16,9 +16,10 @@ class c_allocator_t : private detail::dynamic_allocator_base_t
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
 
-    [[nodiscard]] allocation_result_t
-    remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
-                  size_t new_typehash) noexcept;
+    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
+                                                  size_t old_typehash,
+                                                  size_t new_size,
+                                                  size_t new_typehash) noexcept;
 
     allocation_status_t free_bytes(zl::slice<uint8_t> mem,
                                    size_t typehash) noexcept;

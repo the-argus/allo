@@ -1,6 +1,6 @@
 #pragma once
 
-#include "allo/abstracts.h"
+#include "allo/detail/abstracts.h"
 
 namespace allo {
 
@@ -37,7 +37,7 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
 
     struct M
     {
-        zl::opt<DynamicHeapAllocatorRef> parent;
+        zl::opt<detail::dynamic_heap_allocator_t> parent;
         zl::slice<uint8_t> mem;
         allocator_properties_t properties;
         size_t num_nodes; // also == number of entries in free list data
@@ -46,9 +46,9 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
         free_node_t *free_list_head;
     } m;
 
-    static zl::res<heap_allocator_t, AllocationStatusCode>
-    make_inner(const zl::slice<uint8_t> &memory,
-               const zl::opt<DynamicHeapAllocatorRef> &parent) noexcept;
+    static zl::res<heap_allocator_t, AllocationStatusCode> make_inner(
+        const zl::slice<uint8_t> &memory,
+        const zl::opt<detail::dynamic_heap_allocator_t> &parent) noexcept;
 
   public:
     static constexpr detail::AllocatorType enum_value =
@@ -58,7 +58,7 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
     inline static zl::res<heap_allocator_t, AllocationStatusCode>
     make_owned(zl::slice<uint8_t> memory, Allocator &parent) noexcept
     {
-        return make_inner(memory, DynamicHeapAllocatorRef(parent));
+        return make_inner(memory, detail::dynamic_heap_allocator_t(parent));
     }
 
     inline static zl::res<heap_allocator_t, AllocationStatusCode>
@@ -67,9 +67,10 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
         return make_inner(memory, {});
     }
 
-    [[nodiscard]] allocation_result_t
-    remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
-                  size_t new_typehash) noexcept;
+    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
+                                                  size_t old_typehash,
+                                                  size_t new_size,
+                                                  size_t new_typehash) noexcept;
 
     allocation_status_t free_bytes(zl::slice<uint8_t> mem,
                                    size_t typehash) noexcept;

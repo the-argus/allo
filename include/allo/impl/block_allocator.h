@@ -66,7 +66,7 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
 
 ALLO_FUNC zl::res<block_allocator_t, AllocationStatusCode>
 block_allocator_t::make(zl::slice<uint8_t> &&memory,
-                        DynamicHeapAllocatorRef parent,
+                        detail::dynamic_heap_allocator_t parent,
                         size_t blocksize) noexcept
 {
     // blocksize must be at least 8 bytes
@@ -196,7 +196,7 @@ block_allocator_t::get_location_for_typehash(uint8_t *blockhead,
 
 ALLO_FUNC allocation_result_t
 block_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
-                                 size_t new_size, size_t new_typehash) noexcept
+                               size_t new_size, size_t new_typehash) noexcept
 {
     if (new_size > m.blocksize) {
         return AllocationStatusCode::AllocationTooAligned;

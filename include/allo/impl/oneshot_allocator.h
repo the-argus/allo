@@ -38,7 +38,7 @@ oneshot_allocator_t::oneshot_allocator_t(oneshot_allocator_t &&other) noexcept
 ALLO_FUNC zl::res<oneshot_allocator_t, AllocationStatusCode>
 oneshot_allocator_t::make_inner(
     const zl::slice<uint8_t> &memory,
-    zl::opt<DynamicHeapAllocatorRef> parent) noexcept
+    zl::opt<detail::dynamic_heap_allocator_t> parent) noexcept
 {
     if (memory.size() == 0) {
         return AllocationStatusCode::InvalidArgument;

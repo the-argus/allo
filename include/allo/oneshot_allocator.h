@@ -1,6 +1,6 @@
 #pragma once
 
-#include "allo/abstracts.h"
+#include "allo/detail/abstracts.h"
 
 namespace allo {
 
@@ -14,14 +14,14 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
   private:
     struct M
     {
-        zl::opt<DynamicHeapAllocatorRef> parent;
+        zl::opt<detail::dynamic_heap_allocator_t> parent;
         zl::slice<uint8_t> mem;
         allocator_properties_t properties;
     } m;
 
     static zl::res<oneshot_allocator_t, AllocationStatusCode>
     make_inner(const zl::slice<uint8_t> &memory,
-               zl::opt<DynamicHeapAllocatorRef> parent) noexcept;
+               zl::opt<detail::dynamic_heap_allocator_t> parent) noexcept;
 
   public:
     static constexpr detail::AllocatorType enum_value =
@@ -34,7 +34,7 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
     inline static zl::res<oneshot_allocator_t, AllocationStatusCode>
     make_owned(zl::slice<uint8_t> &&memory, Allocator &parent) noexcept
     {
-        return make_inner(memory, DynamicHeapAllocatorRef(parent));
+        return make_inner(memory, detail::dynamic_heap_allocator_t(parent));
     }
 
     /// Return a oneshot allocator that does not try to free its memory when
@@ -46,9 +46,10 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
     }
 
     /// Returns OOM or MemoryInvalid, always.
-    [[nodiscard]] allocation_result_t
-    remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
-                  size_t new_typehash) noexcept;
+    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
+                                                  size_t old_typehash,
+                                                  size_t new_size,
+                                                  size_t new_typehash) noexcept;
 
     /// Identical to free_status. There's no need for this allocator to do
     /// anything on free because it only keeps track of one allocation and you

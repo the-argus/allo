@@ -9,6 +9,7 @@
 #include "allo/stack_allocator.h"
 #include "ziglike/defer.h"
 #include "ziglike/slice.h"
+#include <cmath>
 #include <cstring>
 #include <memory>
 
@@ -222,7 +223,7 @@ stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
 
 ALLO_FUNC allocation_result_t
 stack_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
-                                 size_t new_size, size_t new_typehash) noexcept
+                               size_t new_size, size_t new_typehash) noexcept
 {
     if (old_typehash != m.last_type_hashcode)
         return AllocationStatusCode::InvalidArgument;
@@ -233,7 +234,8 @@ stack_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
 
 ALLO_FUNC zl::res<stack_allocator_t, AllocationStatusCode>
 stack_allocator_t::make_inner(zl::slice<uint8_t> memory,
-                              DynamicHeapAllocatorRef parent) ALLO_NOEXCEPT
+                              detail::dynamic_heap_allocator_t parent)
+    ALLO_NOEXCEPT
 {
     // make sure there is at least one byte of space to be allocated in memory
     if (memory.size() <= sizeof(previous_state_t)) {

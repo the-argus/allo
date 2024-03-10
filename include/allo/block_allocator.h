@@ -1,6 +1,6 @@
 #pragma once
 
-#include "allo/abstracts.h"
+#include "allo/detail/abstracts.h"
 
 namespace allo {
 
@@ -11,16 +11,17 @@ class block_allocator_t : private detail::dynamic_allocator_base_t
         detail::AllocatorType::BlockAllocator;
 
     static zl::res<block_allocator_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> &&memory, DynamicHeapAllocatorRef parent,
+    make(zl::slice<uint8_t> &&memory, detail::dynamic_heap_allocator_t parent,
          size_t blocksize) noexcept;
 
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
 
-    [[nodiscard]] allocation_result_t
-    remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
-                  size_t new_typehash) noexcept;
+    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
+                                                  size_t old_typehash,
+                                                  size_t new_size,
+                                                  size_t new_typehash) noexcept;
 
     allocation_status_t free_bytes(zl::slice<uint8_t> mem,
                                    size_t typehash) noexcept;
@@ -50,7 +51,7 @@ class block_allocator_t : private detail::dynamic_allocator_base_t
   private:
     struct M
     {
-        DynamicHeapAllocatorRef parent;
+        detail::dynamic_heap_allocator_t parent;
         zl::slice<uint8_t> mem;
         allocator_properties_t properties;
         size_t last_freed_index;

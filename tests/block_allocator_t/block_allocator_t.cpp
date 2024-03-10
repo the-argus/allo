@@ -1,6 +1,7 @@
+#include "allo.h"
 #include "allo/block_allocator.h"
 #include "allo/c_allocator.h"
-#include "allo/typed_allocation.h"
+#include "allo/oneshot_allocator.h"
 #include "allo/typed_freeing.h"
 #include "generic_allocator_tests.h"
 #include "heap_tests.h"

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #ifndef ALLO_HEADER_ONLY
 #ifndef ALLO_OVERRIDE_IMPL_INCLUSION_GUARD
 #error \
@@ -8,6 +9,7 @@
 #endif
 
 #include "allo/heap_allocator.h"
+#include <memory>
 
 #ifdef ALLO_HEADER_ONLY
 #ifndef ALLO_FUNC
@@ -28,7 +30,7 @@ struct heap_allocator_t::free_node_t
 ALLO_FUNC zl::res<heap_allocator_t, AllocationStatusCode>
 heap_allocator_t::make_inner(
     const zl::slice<uint8_t> &memory,
-    const zl::opt<DynamicHeapAllocatorRef> &parent) noexcept
+    const zl::opt<detail::dynamic_heap_allocator_t> &parent) noexcept
 {
     void *head = memory.data();
     size_t space = memory.size();
@@ -129,7 +131,7 @@ ALLO_FUNC allocation_status_t heap_allocator_t::register_destruction_callback(
 
 ALLO_FUNC allocation_result_t
 heap_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
-                                size_t new_size, size_t new_typehash) noexcept
+                              size_t new_size, size_t new_typehash) noexcept
 {
     return AllocationStatusCode::InvalidArgument;
 }

@@ -1,65 +1,15 @@
 #pragma once
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
+#include "allo/detail/forward_decls.h"
+#include "allo/properties.h"
+#include "allo/status.h"
 #include <type_traits>
-#include <ziglike/opt.h>
-#include <ziglike/res.h>
-#include <ziglike/slice.h>
-#include <ziglike/status.h>
 
 namespace allo {
-
-using allocation_type_t = uint16_t;
-
-enum class AllocationStatusCode : uint8_t
-{
-    Okay,
-    ResultReleased,
-    // the amount of contiguous memory requested is not available
-    OOM,
-    // private memory inside allocator (bookkeeping data) has been overwritten
-    // or it unexpected values
-    Corruption,
-    // invalid item trying to be freed, usually
-    InvalidArgument,
-    // you requested a greater alignment than the allocator can provide.
-    // guaranteed to not be produced if the allocators' properties meet
-    // requirements
-    AllocationTooAligned,
-    // memory passed in to an allocator function could not concievably be owned
-    // by that allocator, either by being outside its bounds or misaligned
-    MemoryInvalid,
-    // the memory passed in is not MemoryInvalid, but the allocator has some way
-    // of keeping track of whether memory has been freed or not, and the one
-    // passed in has been freed.
-    AlreadyFreed,
-    // when using type checking, this indicates that you tried to free as a
-    // different type that what was originally allocated
-    InvalidType,
-};
-
-using allocation_status_t = zl::status<AllocationStatusCode>;
-
-/// May either be a successfull allocation, or a status code failure. Check by
-/// calling okay(), and if okay, call release() to get the allocated memory.
-using allocation_result_t = zl::res<zl::slice<uint8_t>, AllocationStatusCode>;
-
-struct allocator_requirements_t
-{
-    // the largest single contiguous allocation you plan on making. null means
-    // unbounded, so you require an allocator like malloc which can map virtual
-    // memory.
-    zl::opt<size_t> maximum_contiguous_bytes;
-    // the largest alignment you will require from the allocator.
-    uint8_t maximum_alignment = 8;
-};
-
+// used by allocator_common_t
 using destruction_callback_t = void (*)(void *user_data);
+} // namespace allo
 
-namespace detail {
-class allocator_common_t;
-
+namespace allo::detail {
 enum class AllocatorType : uint8_t
 {
     CAllocator,
@@ -77,73 +27,7 @@ class dynamic_allocator_base_t
   public:
     AllocatorType type;
 };
-} // namespace detail
 
-class c_allocator_t;
-class stack_allocator_t;
-class block_allocator_t;
-class scratch_allocator_t;
-class oneshot_allocator_t;
-class heap_allocator_t;
-
-struct allocator_properties_t
-{
-  public:
-    /// Check if the allocator properties meet some given requirements
-    [[nodiscard]] inline constexpr bool
-    meets(const allocator_requirements_t &requirements) const
-    {
-        if (!requirements.maximum_contiguous_bytes.has_value()) {
-            if (m_maximum_contiguous_bytes != 0) {
-                return false;
-            }
-        } else {
-            if (requirements.maximum_contiguous_bytes.value() >
-                m_maximum_contiguous_bytes) {
-                return false;
-            }
-        }
-
-        return m_maximum_alignment >= requirements.maximum_alignment;
-    }
-
-    /// Useful for testing, as a way of asserting that properties()
-    /// getter works for a type and its upcasted reference
-    inline constexpr friend bool
-    operator==(const allocator_properties_t &a,
-               const allocator_properties_t &b) noexcept
-    {
-        return a.m_maximum_alignment == b.m_maximum_alignment &&
-               a.m_maximum_contiguous_bytes == b.m_maximum_contiguous_bytes;
-    }
-
-  private:
-    allocator_properties_t(const allocator_properties_t &other) = default;
-    allocator_properties_t &
-    operator=(const allocator_properties_t &other) = default;
-    allocator_properties_t(allocator_properties_t &&other) = default;
-    allocator_properties_t &operator=(allocator_properties_t &&other) = default;
-    // zero means theoretically limitless contiguous allocation is possible
-    size_t m_maximum_contiguous_bytes;
-    uint8_t m_maximum_alignment;
-
-    inline constexpr allocator_properties_t(size_t max_contiguous_bytes,
-                                            uint8_t max_alignment)
-        : m_maximum_contiguous_bytes(max_contiguous_bytes),
-          m_maximum_alignment(max_alignment)
-    {
-    }
-
-  public:
-    friend class allo::c_allocator_t;
-    friend class allo::stack_allocator_t;
-    friend class allo::block_allocator_t;
-    friend class allo::scratch_allocator_t;
-    friend class allo::oneshot_allocator_t;
-    friend class allo::heap_allocator_t;
-};
-
-namespace detail {
 template <typename From, typename To> struct can_upcast
 {
     using type = std::false_type;
@@ -203,9 +87,10 @@ class dynamic_stack_allocator_t : public allocator_common_t
     }
 
   public:
-    [[nodiscard]] allocation_result_t
-    remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
-                  size_t new_typehash) noexcept;
+    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
+                                                  size_t old_typehash,
+                                                  size_t new_size,
+                                                  size_t new_typehash) noexcept;
     allocation_status_t free_bytes(zl::slice<uint8_t> mem,
                                    size_t typehash) noexcept;
     /// Returns Okay if the free of the given memory would succeed, otherwise
@@ -345,12 +230,8 @@ inline constexpr uint8_t nearest_alignment_exponent(size_t num)
     return bits;
 }
 
-} // namespace detail
+} // namespace allo::detail
 
-using DynamicAllocatorRef = detail::allocator_common_t;
-using DynamicStackAllocatorRef = detail::dynamic_stack_allocator_t;
-using DynamicHeapAllocatorRef = detail::dynamic_heap_allocator_t;
-} // namespace allo
 #ifdef ALLO_HEADER_ONLY
 #include "allo/impl/abstracts.h"
 #endif

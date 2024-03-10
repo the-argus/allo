@@ -1,5 +1,5 @@
 #pragma once
-#include "allo/abstracts.h"
+#include "allo/detail/abstracts.h"
 
 #ifndef ALLO_NOEXCEPT
 #define ALLO_NOEXCEPT noexcept
@@ -12,7 +12,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
   private:
     struct M
     {
-        DynamicHeapAllocatorRef parent;
+        detail::dynamic_heap_allocator_t parent;
         zl::slice<uint8_t> memory;
         zl::slice<uint8_t> available_memory;
         size_t last_type_hashcode = 0;
@@ -32,7 +32,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
     inline static zl::res<stack_allocator_t, AllocationStatusCode>
     make(zl::slice<uint8_t> memory, Allocator &parent) ALLO_NOEXCEPT
     {
-        return make_inner(memory, DynamicHeapAllocatorRef(parent));
+        return make_inner(memory, detail::dynamic_heap_allocator_t(parent));
     }
 
     // can be moved
@@ -48,9 +48,10 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
 
-    [[nodiscard]] allocation_result_t
-    remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
-                  size_t new_typehash) noexcept;
+    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
+                                                  size_t old_typehash,
+                                                  size_t new_size,
+                                                  size_t new_typehash) noexcept;
 
     allocation_status_t free_bytes(zl::slice<uint8_t> mem,
                                    size_t typehash) noexcept;
@@ -78,7 +79,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
 
     static zl::res<stack_allocator_t, AllocationStatusCode>
     make_inner(zl::slice<uint8_t> memory,
-               DynamicHeapAllocatorRef parent) ALLO_NOEXCEPT;
+               detail::dynamic_heap_allocator_t parent) ALLO_NOEXCEPT;
 
     /// the information placed underneath every allocation in the stack
     struct previous_state_t

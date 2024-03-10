@@ -1,5 +1,5 @@
 #pragma once
-#include "allo/abstracts.h"
+#include "allo.h"
 
 namespace allo::tests {
 void allocate_480_bytes_related_objects(DynamicHeapAllocatorRef heap);

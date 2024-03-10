@@ -6,7 +6,7 @@
 #endif
 #endif
 
-#include "allo/abstracts.h"
+#include "allo/detail/abstracts.h"
 
 #include "allo/block_allocator.h"
 #include "allo/c_allocator.h"
@@ -141,7 +141,7 @@ ALLO_FUNC allocation_result_t dynamic_stack_allocator_t::remap_bytes(
 {
     auto *dyn_self = reinterpret_cast<dynamic_allocator_base_t *>(ref);
     return return_from<remap_bytes_generic>(dyn_self, mem, old_typehash,
-                                              new_size, new_typehash);
+                                            new_size, new_typehash);
 }
 
 ALLO_FUNC allocation_status_t dynamic_stack_allocator_t::free_bytes(
