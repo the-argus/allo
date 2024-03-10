@@ -55,10 +55,12 @@ TEST_SUITE("block_allocator_t")
                         global_allocator, 256)
                         .release();
                 tests::allocate_480_bytes_related_objects(ally);
+                tests::typed_alloc_realloc_free(ally);
             }
 
             // this memory will leak since we aren't using a real allocator
             tests::allocate_480_bytes_related_objects(global_allocator);
+            tests::typed_alloc_realloc_free(global_allocator);
         }
 
         SUBCASE("OOM when using oneshot allocator layer")

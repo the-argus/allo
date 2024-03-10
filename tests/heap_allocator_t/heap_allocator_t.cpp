@@ -52,6 +52,7 @@ TEST_SUITE("heap_allocator_t")
             heap_allocator_t heap =
                 heap_allocator_t::make_owned(mem, global_allocator).release();
             tests::allocate_480_bytes_related_objects(heap);
+            tests::typed_alloc_realloc_free(heap);
         }
     }
 }

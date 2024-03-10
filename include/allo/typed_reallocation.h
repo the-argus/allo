@@ -98,8 +98,9 @@ realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
                            detail::dynamic_stack_allocator_t>::type::value,
         "Cannot use given type to perform reallocations");
 
-    zl::slice<uint8_t> original_bytes = zl::raw_slice(
-        *reinterpret_cast<uint8_t *>(original), original.size() * sizeof(T));
+    zl::slice<uint8_t> original_bytes =
+        zl::raw_slice(*reinterpret_cast<uint8_t *>(original.data()),
+                      original.size() * sizeof(T));
 
 #if defined(ALLO_DISABLE_TYPEINFO)
     const size_t typehash = 0;
@@ -116,7 +117,7 @@ realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
     auto remap = allocator.remap_bytes(original_bytes, typehash, new_size_bytes,
                                        typehash);
     if (remap.okay())
-        return remap;
+        return zl::raw_slice(*original.data(), new_size);
 
     static_assert(sizeof(original.data()) == sizeof(size_t));
     auto new_allocation =

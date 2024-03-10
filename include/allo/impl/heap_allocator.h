@@ -175,7 +175,7 @@ ALLO_FUNC auto heap_allocator_t::free_common(zl::slice<uint8_t> mem,
     // memory returning an error and therefore not being freed because of a
     // typing mistake. maybe would be different if free_bytes was always
     // nodiscard? using an assert to alert in debug mode
-    assert(bk->typehash != typehash);
+    assert(bk->typehash == typehash);
 #endif
     return bk;
 }
