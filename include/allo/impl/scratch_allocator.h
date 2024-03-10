@@ -18,7 +18,7 @@
 
 namespace allo {
 
-ALLO_FUNC allocation_result_t scratch_allocator_t::realloc_bytes(
+ALLO_FUNC allocation_result_t scratch_allocator_t::remap_bytes(
     zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
     size_t new_typehash) noexcept
 {

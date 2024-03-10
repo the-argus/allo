@@ -52,7 +52,7 @@ oneshot_allocator_t::make_inner(
                        });
 }
 
-[[nodiscard]] ALLO_FUNC allocation_result_t oneshot_allocator_t::realloc_bytes(
+[[nodiscard]] ALLO_FUNC allocation_result_t oneshot_allocator_t::remap_bytes(
     zl::slice<uint8_t> mem, size_t /*old_typehash*/, size_t new_size,
     size_t /*new_typehash*/) noexcept
 {

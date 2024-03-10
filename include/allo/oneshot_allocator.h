@@ -47,7 +47,7 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
 
     /// Returns OOM or MemoryInvalid, always.
     [[nodiscard]] allocation_result_t
-    realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+    remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
                   size_t new_typehash) noexcept;
 
     /// Identical to free_status. There's no need for this allocator to do

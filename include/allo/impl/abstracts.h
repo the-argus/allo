@@ -41,11 +41,11 @@ template <typename T, typename... Args> struct alloc_bytes_generic
     }
 };
 
-template <typename T, typename... Args> struct realloc_bytes_generic
+template <typename T, typename... Args> struct remap_bytes_generic
 {
     inline allocation_result_t operator()(T *item, Args &&...args)
     {
-        return item->realloc_bytes(std::forward<Args>(args)...);
+        return item->remap_bytes(std::forward<Args>(args)...);
     }
 };
 
@@ -135,12 +135,12 @@ ALLO_FUNC allocation_result_t allocator_common_t::alloc_bytes(
                                             typehash);
 }
 
-ALLO_FUNC allocation_result_t dynamic_stack_allocator_t::realloc_bytes(
+ALLO_FUNC allocation_result_t dynamic_stack_allocator_t::remap_bytes(
     zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
     size_t new_typehash) noexcept
 {
     auto *dyn_self = reinterpret_cast<dynamic_allocator_base_t *>(ref);
-    return return_from<realloc_bytes_generic>(dyn_self, mem, old_typehash,
+    return return_from<remap_bytes_generic>(dyn_self, mem, old_typehash,
                                               new_size, new_typehash);
 }
 

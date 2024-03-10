@@ -195,7 +195,7 @@ block_allocator_t::get_location_for_typehash(uint8_t *blockhead,
 }
 
 ALLO_FUNC allocation_result_t
-block_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
+block_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
                                  size_t new_size, size_t new_typehash) noexcept
 {
     if (new_size > m.blocksize) {
@@ -317,7 +317,7 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
 
 ALLO_FUNC allocation_status_t block_allocator_t::realloc() noexcept
 {
-    auto res = m.parent.realloc_bytes(
+    auto res = m.parent.remap_bytes(
         m.mem, 0,
         std::ceil(reallocation_ratio * static_cast<double>(m.mem.size())), 0);
     if (!res.okay())

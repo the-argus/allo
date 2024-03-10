@@ -124,7 +124,7 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
 
 ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
 {
-    auto result = m.parent.realloc_bytes(
+    auto result = m.parent.remap_bytes(
         m.memory, 0,
         size_t(std::ceil(static_cast<double>(m.memory.size()) *
                          reallocation_ratio)),
@@ -221,7 +221,7 @@ stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
 }
 
 ALLO_FUNC allocation_result_t
-stack_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
+stack_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
                                  size_t new_size, size_t new_typehash) noexcept
 {
     if (old_typehash != m.last_type_hashcode)

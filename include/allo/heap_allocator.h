@@ -68,7 +68,7 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
     }
 
     [[nodiscard]] allocation_result_t
-    realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+    remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
                   size_t new_typehash) noexcept;
 
     allocation_status_t free_bytes(zl::slice<uint8_t> mem,

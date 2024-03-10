@@ -204,7 +204,7 @@ class dynamic_stack_allocator_t : public allocator_common_t
 
   public:
     [[nodiscard]] allocation_result_t
-    realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+    remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
                   size_t new_typehash) noexcept;
     allocation_status_t free_bytes(zl::slice<uint8_t> mem,
                                    size_t typehash) noexcept;

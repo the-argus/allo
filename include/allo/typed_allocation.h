@@ -18,6 +18,11 @@ alloc_one(Allocator &allocator) noexcept
         std::is_base_of_v<detail::allocator_common_t, Allocator>;
     constexpr bool is_valid_allocator =
         std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
+#ifndef ALLO_ALLOW_NONTRIVIAL_COPY
+    static_assert(std::is_trivially_copyable_v<T>,
+                  "Refusing to allocate non-trivially copyable type which "
+                  "could cause UB on reallocation.");
+#endif
     static_assert(is_valid_interface || is_valid_allocator,
                   "Cannot use given type to perform allocations");
     static_assert(!std::is_reference_v<T>, "Cannot allocate a reference type.");
@@ -37,6 +42,9 @@ alloc_one(Allocator &allocator) noexcept
 #else
         0;
 #endif
+    if constexpr (std::is_same_v<T, uint8_t>) {
+        typehash = 0;
+    }
     allocation_result_t result = allocator.alloc_bytes(
         sizeof(T), detail::alignment_exponent(alignment), typehash);
     if (!result.okay())
@@ -56,6 +64,11 @@ alloc(Allocator &allocator, size_t number) noexcept
         std::is_base_of_v<detail::allocator_common_t, Allocator>;
     constexpr bool is_valid_allocator =
         std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
+#ifndef ALLO_ALLOW_NONTRIVIAL_COPY
+    static_assert(std::is_trivially_copyable_v<T>,
+                  "Refusing to allocate non-trivially copyable type which "
+                  "could cause UB on reallocation.");
+#endif
     static_assert(is_valid_interface || is_valid_allocator,
                   "Cannot use given type to perform allocations");
     static_assert(!std::is_reference_v<T>, "Cannot allocate a reference type.");
@@ -65,6 +78,7 @@ alloc(Allocator &allocator, size_t number) noexcept
     // very large alignment (2^64) is an error pretty much always
     static_assert(detail::alignment_exponent(alignment) != 64,
                   "Invalid alignment provided. Make sure its a power of 2.");
+
     size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifdef ALLO_USE_RTTI
@@ -75,6 +89,9 @@ alloc(Allocator &allocator, size_t number) noexcept
 #else
         0;
 #endif
+    if constexpr (std::is_same_v<T, uint8_t>) {
+        typehash = 0;
+    }
     allocation_result_t res = allocator.alloc_bytes(
         sizeof(T) * number, detail::alignment_exponent(alignment), typehash);
     if (!res.okay())
