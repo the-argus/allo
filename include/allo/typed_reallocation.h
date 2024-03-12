@@ -16,6 +16,9 @@ template <typename T, typename Allocator>
 inline zl::res<zl::slice<T>, AllocationStatusCode>
 remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 {
+    static_assert(!std::is_same_v<Allocator, c_allocator_t>,
+                  "The c allocator does not provide remap functionality, you "
+                  "must use realloc.");
     static_assert(
         detail::can_upcast<Allocator,
                            detail::dynamic_stack_allocator_t>::type::value,
@@ -59,6 +62,31 @@ realloc_bytes(Allocator &allocator, zl::slice<uint8_t> original,
                            detail::dynamic_stack_allocator_t>::type::value,
         "Cannot use given type to perform reallocations");
 
+    // necessary to perform downcasting here in order to support the C allocator
+    // which breaks the abstraction
+    // NOTE: this could be achieved with a ternary operator but not doing that
+    // in favor of constexpr if. maybe a lambda could be okay too
+    if constexpr (std::is_base_of_v<detail::dynamic_allocator_base_t,
+                                    Allocator>) {
+        auto *type = reinterpret_cast<detail::AllocatorType *>(
+            std::addressof(allocator));
+        assert(*type < detail::AllocatorType::MAX_ALLOCATOR_TYPE);
+        if (*type == detail::AllocatorType::CAllocator) {
+            return reinterpret_cast<c_allocator_t *>(std::addressof(allocator))
+                ->realloc_bytes(original, 0, new_size, 0);
+        }
+    } else if constexpr (std::is_base_of_v<detail::allocator_common_t,
+                                           Allocator>) {
+        // NOTE: this relies on the layout of everything that an allocator
+        // dynref points at always having an AllocatorType at the beginning
+        auto *type = reinterpret_cast<detail::AllocatorType *>(allocator.ref);
+        assert(*type < detail::AllocatorType::MAX_ALLOCATOR_TYPE);
+        if (*type == detail::AllocatorType::CAllocator) {
+            return reinterpret_cast<c_allocator_t *>(std::addressof(allocator))
+                ->realloc_bytes(original, 0, new_size, 0);
+        }
+    }
+
     auto remap = allocator.remap_bytes(original, 0, new_size, 0);
     if (remap.okay())
         return remap;
@@ -80,8 +108,8 @@ realloc_bytes(Allocator &allocator, zl::slice<uint8_t> original,
         const bool status = zl::memcopy(dest, source);
         assert(status);
         allocator.free_bytes(original, 0);
-        // TODO: assert or something here maybe? should we allow failed frees?
-        // probably a warning log message would be good
+        // TODO: assert or something here maybe? should we allow failed
+        // frees? probably a warning log message would be good
         return dest;
     }
     return new_allocation.err();

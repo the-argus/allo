@@ -137,7 +137,7 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
     size_t bytes, uint8_t alignment_exponent, size_t typehash) noexcept
 {
     if (m.blocks_free == 0) {
-        this->realloc();
+        this->remap();
         if (m.blocks_free == 0) {
             return AllocationStatusCode::OOM;
         }
@@ -293,7 +293,7 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
         ++m.current_destruction_array_size;
     } else {
         if (m.blocks_free == 0) {
-            this->realloc();
+            this->remap();
             if (m.blocks_free == 0) {
                 return AllocationStatusCode::OOM;
             }
@@ -315,7 +315,7 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
     return AllocationStatusCode::Okay;
 }
 
-ALLO_FUNC allocation_status_t block_allocator_t::realloc() noexcept
+ALLO_FUNC allocation_status_t block_allocator_t::remap() noexcept
 {
     auto res = m.parent.remap_bytes(
         m.mem, 0,

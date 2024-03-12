@@ -5,6 +5,10 @@
 #include <type_traits>
 
 namespace allo {
+template <typename Allocator>
+zl::res<zl::slice<uint8_t>, AllocationStatusCode>
+realloc_bytes(Allocator &allocator, zl::slice<uint8_t> original,
+              size_t new_size) noexcept;
 namespace detail {
 class allocator_common_t;
 };
@@ -83,6 +87,11 @@ class allocator_common_t
 
     friend const char *
         allo::allocator_typename(detail::allocator_common_t) noexcept;
+
+    template <typename Allocator>
+    friend zl::res<zl::slice<uint8_t>, AllocationStatusCode>
+    allo::realloc_bytes(Allocator &allocator, zl::slice<uint8_t> original,
+                        size_t new_size) noexcept;
 };
 
 class dynamic_stack_allocator_t : public allocator_common_t

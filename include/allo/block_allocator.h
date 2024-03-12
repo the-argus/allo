@@ -66,7 +66,8 @@ class block_allocator_t : private detail::dynamic_allocator_base_t
     } m;
 
     static constexpr double reallocation_ratio = 1.5f;
-    allocation_status_t realloc() noexcept;
+    /// Remap our single allocation without moving it.
+    [[nodiscard]] allocation_status_t remap() noexcept;
 
     struct destruction_callback_entry_t
     {
