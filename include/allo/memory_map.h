@@ -96,6 +96,7 @@ extern "C"
     };
     if (res.data == MAP_FAILED) {
         res.code = errno;
+        res.data = NULL;
     }
     return res;
 #endif
@@ -107,6 +108,9 @@ extern "C"
     /// Returns -1 if it fails, or 1 otherwise.
     inline int8_t mm_commit_pages(void *address, size_t num_pages)
     {
+        if (!address) {
+            return -1;
+        }
         const mm_optional_uint64_t result = mm_get_page_size();
         if (!result.has_value) {
             return -1;
