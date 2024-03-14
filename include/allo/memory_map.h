@@ -89,7 +89,8 @@ extern "C"
         return res;
 #else
     mm_memory_map_result_t res = (mm_memory_map_result_t){
-        .data = mmap(address_hint, size, PROT_NONE, MAP_ANON, -1, 0),
+        .data =
+            mmap(address_hint, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0),
         .bytes = size,
         .code = 0,
     };
