@@ -100,8 +100,9 @@ block_allocator_t::make(zl::slice<uint8_t> &&memory,
     assert(max_destruction_entries_per_block >= 1);
 
     for (size_t i = 0; i < num_blocks; ++i) {
-        *reinterpret_cast<size_t *>(&memory.data()[i * actual_blocksize]) =
-            i + 1;
+        uint8_t *head = memory.data() + (i * actual_blocksize);
+        assert(detail::nearest_alignment_exponent((size_t)head) >= 3);
+        *reinterpret_cast<size_t *>(head) = i + 1;
     }
 
     return zl::res<block_allocator_t, AllocationStatusCode>(
