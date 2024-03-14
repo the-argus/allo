@@ -46,10 +46,10 @@ class reservation_allocator_t : private detail::dynamic_allocator_base_t
                                                   size_t new_typehash) noexcept;
 
     /// Always invalid to try and free anything from a reservation.
-    inline allocation_status_t free_bytes(zl::slice<uint8_t> /*mem*/, // NOLINT
+    inline allocation_status_t free_bytes(zl::slice<uint8_t> mem, // NOLINT
                                           size_t /*typehash*/) noexcept
     {
-        return AllocationStatusCode::InvalidArgument;
+        return free_status(mem, 0);
     }
 
     /// Always returns OOM. reservation allocator can only allocate once.
@@ -63,8 +63,10 @@ class reservation_allocator_t : private detail::dynamic_allocator_base_t
     /// Will return Okay if you pass in the slice of memory that this allocation
     /// owns (typehash is ignored). Otherwise, it returns MemoryInvalid.
     [[nodiscard]] inline allocation_status_t free_status( // NOLINT
-        zl::slice<uint8_t>, size_t) const noexcept
+        zl::slice<uint8_t> mem, size_t) const noexcept
     {
+        if (mem.data() == m.mem.data())
+            return AllocationStatusCode::Okay;
         return AllocationStatusCode::InvalidArgument;
     }
 
