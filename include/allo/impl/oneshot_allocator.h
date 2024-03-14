@@ -61,11 +61,6 @@ oneshot_allocator_t::make_inner(
     return AllocationStatusCode::MemoryInvalid;
 }
 
-ALLO_FUNC allocation_status_t oneshot_allocator_t::free_bytes(
-    zl::slice<uint8_t> mem, size_t typehash) noexcept
-{
-    return free_status(mem, typehash);
-}
 [[nodiscard]] ALLO_FUNC allocation_status_t oneshot_allocator_t::free_status(
     zl::slice<uint8_t> mem, size_t /*typehash*/) const noexcept
 {

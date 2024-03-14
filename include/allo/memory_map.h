@@ -22,6 +22,7 @@ extern "C"
     struct mm_memory_map_result_t
     {
         void *data;
+        size_t bytes;
         uint8_t code;
     };
 
@@ -32,29 +33,54 @@ extern "C"
         size_t new_size;
     };
 
+    struct mm_optional_uint64_t
+    {
+        uint64_t value : 63;
+        uint64_t has_value : 1;
+    };
+
     /// Get the system's memory page size in bytes.
-    inline size_t mm_get_page_size()
+    /// Can fail on linux, in which case the returned optional uint has its
+    /// has_value bit set to 0.
+    inline mm_optional_uint64_t mm_get_page_size()
     {
 #if defined(_WIN32)
         SYSTEM_INFO sys_info;
         GetSystemInfo(&sys_info);
         return sys_info.dwPageSize;
 #elif defined(__linux__)
-    return sysconf(_SC_PAGESIZE);
+    long result = sysconf(_SC_PAGESIZE);
+    if (result < 0) {
+        return (mm_optional_uint64_t){.value = 0, .has_value = 0};
+    }
+    return (mm_optional_uint64_t){.value = (uint64_t)result, .has_value = 1};
 #else
     return getpagesize();
 #endif
     }
 
-    inline mm_memory_map_result_t mm_memory_map(void *address_hint, size_t size)
+    /// Reserve a number of pages in virtual memory space. You cannot write to
+    /// memory allocated by this function. Call mm_commit_pages on each page
+    /// you want to write to first.
+    /// Address hint: a hint for where the OS should try to place the
+    /// reservation.
+    /// Num pages: the number of pages to reserve.
+    inline mm_memory_map_result_t mm_reserve_pages(void *address_hint,
+                                                   size_t num_pages)
     {
+        const mm_optional_uint64_t result = mm_get_page_size();
+        if (!result.has_value) {
+            // code 254 means unable to get page size... unlikely
+            return (mm_memory_map_result_t){.code = 254};
+        }
+        size_t size = num_pages * result.value;
 #if defined(_WIN32)
         mm_memory_map_result_t res = (mm_memory_map_result_t){
-            .data =
-                VirtualAlloc(address_hint, size, MEM_COMMIT | MEM_RESERVE, 0),
+            .data = VirtualAlloc(address_hint, size, MEM_RESERVE, 0),
+            .bytes = size,
             .code = 0,
         };
-        if (res.data == nullptr) {
+        if (res.data == NULL) {
             res.code = GetLastError();
             if (res.code == 0) {
                 res.code = 255;
@@ -63,8 +89,8 @@ extern "C"
         return res;
 #else
     mm_memory_map_result_t res = (mm_memory_map_result_t){
-        .data = mmap(address_hint, size, PROT_READ | PROT_WRITE,
-                     MAP_ANON | MAP_SHARED, -1, 0),
+        .data = mmap(address_hint, size, PROT_NONE, MAP_ANON, -1, 0),
+        .bytes = size,
         .code = 0,
     };
     if (res.data == MAP_FAILED) {
@@ -74,26 +100,42 @@ extern "C"
 #endif
     }
 
-    inline int
-    mm_memory_map_resize(const mm_memory_map_resize_options_t *options)
+    /// Takes a pointer to a set of memory pages which you want to make
+    /// readable and writable by your process, specifically ones allocated by
+    /// mm_reserve_pages().
+    /// Returns -1 if it fails, or 1 otherwise.
+    inline int8_t mm_commit_pages(void *address, size_t num_pages)
     {
+        const mm_optional_uint64_t result = mm_get_page_size();
+        if (!result.has_value) {
+            return -1;
+        }
+
+        size_t size = num_pages * result.value;
 #if defined(_WIN32)
-#error "currently unsupported"
-        // NOTE: use
-        // https://stackoverflow.com/questions/17197615/no-mremap-for-windows
-        // also see:
-        // https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapuserphysicalpages
+        mm_memory_map_result_t res = (mm_memory_map_result_t){
+            .data = VirtualAlloc(address_hint, size, MEM_RESERVE, 0),
+            .bytes = size,
+            .code = 0,
+        };
+        if (res.data == NULL) {
+            res.code = GetLastError();
+            if (res.code == 0) {
+                res.code = 255;
+            }
+        }
+        return res;
 #else
-    void *res =
-        mremap(options->address, options->old_size, options->new_size, 0);
-    if (res == MAP_FAILED) {
-        return errno;
+    if (mprotect(address, size, (PROT_READ | PROT_WRITE) == -1)) {
+        // failure case, you probably passed in an address that is not page
+        // aligned.
+        return -1;
     }
-    assert(res == options->address);
-    return 0;
+    return 1;
 #endif
     }
 
+    /// Unmap pages starting at address and continuing for "size" bytes.
     inline int mm_memory_unmap(void *address, size_t size)
     {
 #if defined(_WIN32)
@@ -109,6 +151,29 @@ extern "C"
     }
 #endif
     }
+
+    /*
+    inline int
+    mm_memory_map_resize(const mm_memory_map_resize_options_t *options)
+    {
+#if defined(_WIN32)
+#error "currently unsupported"
+        // NOTE: use
+        // https://stackoverflow.com/questions/17197615/no-mremap-for-windows
+        // also see:
+        //
+https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapuserphysicalpages
+#else
+    void *res =
+        mremap(options->address, options->old_size, options->new_size, 0);
+    if (res == MAP_FAILED) {
+        return errno;
+    }
+    assert(res == options->address);
+    return 0;
+#endif
+    }
+    */
 
 #ifdef __cplusplus
 }

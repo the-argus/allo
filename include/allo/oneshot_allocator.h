@@ -51,11 +51,12 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
                                                   size_t new_size,
                                                   size_t new_typehash) noexcept;
 
-    /// Identical to free_status. There's no need for this allocator to do
-    /// anything on free because it only keeps track of one allocation and you
-    /// can't do anything like realloc it anyways.
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem,
-                                   size_t typehash) noexcept;
+    /// It is never valid to free the contents of a oneshot allocator.
+    [[nodiscard]] inline allocation_status_t
+    free_bytes(zl::slice<uint8_t>, size_t) noexcept
+    {
+        return AllocationStatusCode::InvalidArgument;
+    }
 
     /// Always  returns OOM with a oneshot allocator, to simulate an actual
     /// heap OOM.

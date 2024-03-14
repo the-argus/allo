@@ -31,6 +31,8 @@ enum class AllocationStatusCode : uint8_t
     // when using type checking, this indicates that you tried to free as a
     // different type that what was originally allocated
     InvalidType,
+    // unknown OS failure returned from system call
+    OsErr,
 };
 
 using allocation_status_t = zl::status<AllocationStatusCode>;

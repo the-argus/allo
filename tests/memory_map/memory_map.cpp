@@ -1,4 +1,4 @@
-#include "allo/memory_map_alloc.h"
+#include "allo/memory_map.h"
 #include "test_header.h"
 
 constexpr size_t bytes_in_gb = 1000000000;
@@ -9,82 +9,67 @@ TEST_SUITE("memory mapping alloc")
     {
         SUBCASE("page size seems reasonable")
         {
-            REQUIRE(mm_get_page_size() > 32);
-            REQUIRE(mm_get_page_size() < bytes_in_gb);
+            auto res = mm_get_page_size();
+            REQUIRE((res.has_value == 1));
+            REQUIRE((res.value > 32));
+            REQUIRE((res.value < bytes_in_gb));
         }
     }
-    TEST_CASE("basic functionality")
+    TEST_CASE("functionality of commit and reserve")
     {
-        SUBCASE(
-            "allocating a small amount and reallocating within page boundary")
+        // this test fails on systems with less than a GB of free memory
+        SUBCASE("commit and then reserve the same amount")
         {
-            void *initial_allocation = mm_alloc(1);
-            REQUIRE(initial_allocation);
-            *(int *)initial_allocation = 42;
-            // NOTE: 32 is a implementation detail. that's now much space is
-            // left on allocations for tracking size.
-            int realloc_result =
-                mm_realloc(initial_allocation, mm_get_page_size() - 32);
-            REQUIRE(*(int *)initial_allocation == 42);
-            REQUIRE(realloc_result == 0);
-            int free_result = mm_free(initial_allocation);
-            REQUIRE(free_result == 0);
-        }
-        SUBCASE("reallocating a large amount and then shrinking the allocation")
-        {
-            // should take two pages
-            void *initial_allocation = mm_alloc(mm_get_page_size() * 10);
-            REQUIRE(initial_allocation);
-            *(int *)initial_allocation = 42;
-            int realloc_result =
-                mm_realloc(initial_allocation, mm_get_page_size() - 32);
-            REQUIRE(realloc_result == 0);
-            REQUIRE(*(int *)initial_allocation == 42);
-            int free_result = mm_free(initial_allocation);
-            REQUIRE(free_result == 0);
-        }
-        SUBCASE("reallocation which requires additional pages")
-        {
-            // should take two pages
-            void *initial_allocation = mm_alloc(mm_get_page_size() * 10);
-            REQUIRE(initial_allocation);
-            *(int *)initial_allocation = 42;
-            int realloc_result =
-                mm_realloc(initial_allocation, mm_get_page_size() * 11);
-            REQUIRE(realloc_result == 0);
-            REQUIRE(*(int *)initial_allocation == 42);
-            int free_result = mm_free(initial_allocation);
-            REQUIRE(free_result == 0);
+            auto pagesize_res = mm_get_page_size();
+            REQUIRE((pagesize_res.has_value == 1));
+            size_t pagesize = pagesize_res.value;
+            // allocate min 1GB
+            auto num_pages = (bytes_in_gb / pagesize) + 1;
+            auto res = mm_reserve_pages(nullptr, num_pages);
+            REQUIRE(res.code == 0);
+            REQUIRE(res.data != nullptr);
+            int8_t commit_res = mm_commit_pages(res.data, num_pages);
+            REQUIRE(commit_res == 1);
         }
     }
     TEST_CASE("errors returned")
     {
-        SUBCASE("overallocating")
+        SUBCASE("committing more than was reserved")
         {
-            // this test will create a false negative on systems
-            // with 100 GB of free ram. eat the rich
-            void *initial_allocation = mm_alloc(bytes_in_gb * 100UL);
-            REQUIRE(initial_allocation == nullptr);
+            auto res = mm_reserve_pages(nullptr, 1);
+            REQUIRE(res.code == 0);
+            REQUIRE(res.data != nullptr);
+            int8_t commit_res = mm_commit_pages(res.data, 2);
+            REQUIRE(commit_res == -1);
         }
-        SUBCASE("trying to allocate 0")
+        // this test creates a false negative on systems with 100GB of free
+        // memory
+        SUBCASE("over-committing but not over-reserving")
         {
-            void *initial_allocation = mm_alloc(0);
-            REQUIRE(initial_allocation == nullptr);
+            auto pagesize_res = mm_get_page_size();
+            REQUIRE((pagesize_res.has_value == 1));
+            size_t pagesize = pagesize_res.value;
+            // allocate min 10GB
+            auto num_pages = ((10UL * bytes_in_gb) / pagesize) + 1;
+            auto res = mm_reserve_pages(nullptr, num_pages);
+            REQUIRE(res.code == 0);
+            REQUIRE(res.data != nullptr);
+            int8_t commit_res = mm_commit_pages(res.data, num_pages);
+            REQUIRE(commit_res == -1);
         }
-        SUBCASE("realloc a nullptr")
+        SUBCASE("trying to reserve 0")
         {
-            int res = mm_realloc(nullptr, 100);
-            REQUIRE(res != 0);
+            auto res = mm_reserve_pages(nullptr, 0);
+            REQUIRE(res.code != 0);
+            REQUIRE(res.bytes == 0);
+            REQUIRE(res.data == nullptr);
         }
-        SUBCASE("realloc a modified pointer")
+        SUBCASE("commit a nullptr")
         {
-            void *alloc = mm_alloc(1);
-            CHECK(alloc);
-            alloc = (uint8_t *)alloc + 1;
-            int res = mm_realloc(alloc, mm_get_page_size() / 2);
-            REQUIRE(res != 0);
-            int free_res = mm_free((uint8_t *)alloc - 1);
-            REQUIRE(free_res == 0);
+            int8_t res = mm_commit_pages(nullptr, 1);
+            REQUIRE(res == -1);
+            res = mm_commit_pages(nullptr, 0);
+            REQUIRE(res == -1);
         }
     }
 }

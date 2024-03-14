@@ -9,7 +9,7 @@ namespace allo {
 /// requirement, you could just use malloc and free directly. To solve that,
 /// this allocator provides an allo wrapper around malloc and free. Also useful
 /// for passing to allocators. Note that the c allocator may not be capable of
-/// remapping upon calling realloc and you should use a oneshot remapping
+/// remapping upon calling realloc and you should use a reservation_allocator
 /// allocator if you plan for child allocators to be able to expand their
 /// allocations.
 /// The C allocator is abstraction-breaking:

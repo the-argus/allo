@@ -2,6 +2,7 @@
 #include "allo/block_allocator.h"
 #include "allo/c_allocator.h"
 #include "allo/oneshot_allocator.h"
+#include "allo/reservation_allocator.h"
 #include "allo/typed_freeing.h"
 #include "generic_allocator_tests.h"
 #include "heap_tests.h"
@@ -63,21 +64,21 @@ TEST_SUITE("block_allocator_t")
             tests::typed_alloc_realloc_free(global_allocator);
         }
 
-        SUBCASE("OOM when using oneshot allocator layer")
+        SUBCASE("no OOM with reservation allocator")
         {
             c_allocator_t global_allocator;
 
             {
-                auto oneshot =
-                    oneshot_allocator_t::make_owned(
-                        allo::alloc<uint8_t>(global_allocator, 32UL * 4)
-                            .release(),
-                        global_allocator)
+                // NOTE: have to allocate space for at least one block, because
+                // of te behavior of block_allocator_t::make at the moment
+                auto reservation =
+                    reservation_allocator_t::make(
+                        {.committed = 1, .additional_pages_reserved = 19})
                         .release();
                 // 256 bytes per block, 32 byte aligned blocks
-                auto ally =
-                    block_allocator_t::make(oneshot.shoot(), oneshot, 32)
-                        .release();
+                auto ally = block_allocator_t::make(
+                                reservation.current_memory(), reservation, 32)
+                                .release();
                 auto one = alloc_one<int>(ally);
                 REQUIRE(one.okay());
                 auto two = alloc_one<int>(ally);
@@ -87,7 +88,7 @@ TEST_SUITE("block_allocator_t")
                 auto four = alloc_one<int>(ally);
                 REQUIRE(four.okay());
                 auto five = alloc_one<int>(ally);
-                REQUIRE(five.err() == AllocationStatusCode::OOM);
+                REQUIRE(five.okay());
             }
         }
 
