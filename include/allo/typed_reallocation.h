@@ -1,4 +1,7 @@
 #pragma once
+// c allocator is needed because it breaks abstraction so we need access to its
+// impl details
+#include "allo/c_allocator.h"
 #include "allo/detail/abstracts.h"
 #include <ziglike/stdmem.h>
 
