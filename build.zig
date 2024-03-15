@@ -68,6 +68,9 @@ pub fn build(b: *std.Build) !void {
         .install_subdir = "allo/",
     });
 
+    const main_header_install = b.addInstallHeaderFile("include/allo.h", "allo.h");
+    b.getInstallStep().dependOn(&main_header_install.step);
+
     {
         ziglike = b.dependency("ziglike", .{ .target = target, .optimize = optimize });
         const ziglike_include_path = b.pathJoin(&.{ ziglike.?.builder.install_path, "include" });
