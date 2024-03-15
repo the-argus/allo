@@ -92,7 +92,7 @@ TEST_SUITE("block_allocator_t")
             }
         }
 
-        SUBCASE("No OOM when using global allocator directly")
+        SUBCASE("OOM when using global allocator directly")
         {
             c_allocator_t global_allocator;
 
@@ -112,7 +112,7 @@ TEST_SUITE("block_allocator_t")
                 auto four = alloc_one<int>(ally);
                 REQUIRE(four.okay());
                 auto five = alloc_one<int>(ally);
-                REQUIRE(five.okay());
+                REQUIRE(five.err() == AllocationStatusCode::OOM);
             }
         }
 
