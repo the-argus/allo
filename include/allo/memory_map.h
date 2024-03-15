@@ -105,8 +105,8 @@ extern "C"
     /// Takes a pointer to a set of memory pages which you want to make
     /// readable and writable by your process, specifically ones allocated by
     /// mm_reserve_pages().
-    /// Returns -1 if it fails, or 1 otherwise.
-    inline int8_t mm_commit_pages(void *address, size_t num_pages)
+    /// Returns 0 on success, otherwise an errcode.
+    inline int32_t mm_commit_pages(void *address, size_t num_pages)
     {
         if (!address) {
             return -1;
@@ -125,18 +125,18 @@ extern "C"
         };
         if (res.data == NULL) {
             res.code = GetLastError();
-            if (res.code == 0) {
-                res.code = 255;
-            }
+            assert(res.code != 0);
         }
         return res;
 #else
-    if (mprotect(address, size, (PROT_READ | PROT_WRITE) == -1)) {
+    if (mprotect(address, size, PROT_READ | PROT_WRITE) != 0) {
         // failure case, you probably passed in an address that is not page
         // aligned.
-        return -1;
+        int32_t res = errno;
+        assert(res != 0);
+        return res;
     }
-    return 1;
+    return 0;
 #endif
     }
 

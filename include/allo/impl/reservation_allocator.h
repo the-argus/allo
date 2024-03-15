@@ -43,8 +43,8 @@ ALLO_FUNC allocation_result_t reservation_allocator_t::remap_bytes(
     if (new_size > m.mem.size()) {
         size_t pages_needed = ((new_size - m.mem.size()) / m.pagesize) + 1;
         // add some read/write pages to this allocation
-        int8_t res = mm_commit_pages(m.mem.end().ptr(), pages_needed);
-        if (res != 1)
+        int32_t res = mm_commit_pages(m.mem.end().ptr(), pages_needed);
+        if (res != 0)
             return AllocationStatusCode::OOM;
         m.mem = zl::raw_slice(*m.mem.data(),
                               m.mem.size() + (pages_needed * m.pagesize));
@@ -61,15 +61,15 @@ reservation_allocator_t::make(const options_t &options) noexcept
         return AllocationStatusCode::OsErr;
     }
     size_t max_pages = options.committed + options.additional_pages_reserved;
-    auto reserve_res = mm_reserve_pages((void *)0x04000000, max_pages);
+    auto reserve_res = mm_reserve_pages(nullptr, max_pages);
     if (reserve_res.code != 0) {
         return AllocationStatusCode::OOM;
     }
     defer unmap([&reserve_res]() {
         mm_memory_unmap(reserve_res.data, reserve_res.bytes);
     });
-    int8_t commit_res = mm_commit_pages(reserve_res.data, options.committed);
-    if (commit_res != 1) {
+    int32_t commit_res = mm_commit_pages(reserve_res.data, options.committed);
+    if (commit_res != 0) {
         return AllocationStatusCode::OOM;
     }
     unmap.cancel();

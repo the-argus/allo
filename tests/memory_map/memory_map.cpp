@@ -28,8 +28,8 @@ TEST_SUITE("memory mapping alloc")
             auto res = mm_reserve_pages(nullptr, num_pages);
             REQUIRE(res.code == 0);
             REQUIRE(res.data != nullptr);
-            int8_t commit_res = mm_commit_pages(res.data, num_pages);
-            REQUIRE(commit_res == 1);
+            int32_t commit_res = mm_commit_pages(res.data, num_pages);
+            REQUIRE(commit_res == 0);
         }
         // you can commit more than you reserved, it will just overwrite the
         // reservation
@@ -38,8 +38,22 @@ TEST_SUITE("memory mapping alloc")
             auto res = mm_reserve_pages(nullptr, 1);
             REQUIRE(res.code == 0);
             REQUIRE(res.data != nullptr);
-            int8_t commit_res = mm_commit_pages(res.data, 2);
-            REQUIRE(commit_res == 1);
+            int32_t commit_res = mm_commit_pages(res.data, 2);
+            REQUIRE(commit_res == 0);
+        }
+        SUBCASE("writing to comitted memory")
+        {
+            auto res = mm_reserve_pages(nullptr, 2);
+            REQUIRE(res.code == 0);
+            int32_t commit_res = mm_commit_pages(res.data, 2);
+            REQUIRE(commit_res == 0);
+            auto *data = (uint8_t *)res.data;
+            auto pagesize_res = mm_get_page_size();
+            REQUIRE((pagesize_res.has_value == 1));
+            size_t pagesize = pagesize_res.value;
+            for (size_t i = 0; i < pagesize_res.value; ++i) {
+                data[i] = (uint8_t)i;
+            }
         }
     }
     TEST_CASE("errors returned")
@@ -62,7 +76,7 @@ TEST_SUITE("memory mapping alloc")
             auto res = mm_reserve_pages(nullptr, num_pages);
             REQUIRE(res.code == 0);
             REQUIRE(res.data != nullptr);
-            int8_t commit_res = mm_commit_pages(res.data, num_pages);
+           int32_t commit_res = mm_commit_pages(res.data, num_pages);
             REQUIRE(commit_res == -1);
         }
         */
@@ -75,10 +89,10 @@ TEST_SUITE("memory mapping alloc")
         }
         SUBCASE("commit a nullptr")
         {
-            int8_t res = mm_commit_pages(nullptr, 1);
+            int32_t res = mm_commit_pages(nullptr, 1);
             REQUIRE(res == -1);
             res = mm_commit_pages(nullptr, 0);
-            REQUIRE(res == -1);
+            REQUIRE(res != 0);
         }
     }
 }
