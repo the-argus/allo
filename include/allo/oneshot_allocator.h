@@ -32,7 +32,7 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
     /// destroyed.
     template <typename Allocator>
     inline static zl::res<oneshot_allocator_t, AllocationStatusCode>
-    make_owned(zl::slice<uint8_t> &&memory, Allocator &parent) noexcept
+    make_owned(const zl::slice<uint8_t> &memory, Allocator &parent) noexcept
     {
         return make_inner(memory, detail::dynamic_heap_allocator_t(parent));
     }
@@ -40,7 +40,7 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
     /// Return a oneshot allocator that does not try to free its memory when
     /// it is destroyed.
     inline static zl::res<oneshot_allocator_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> memory) noexcept
+    make(const zl::slice<uint8_t> &memory) noexcept
     {
         return make_inner(memory, {});
     }
@@ -52,8 +52,8 @@ class oneshot_allocator_t : private detail::dynamic_allocator_base_t
                                                   size_t new_typehash) noexcept;
 
     /// It is never valid to free the contents of a oneshot allocator.
-    [[nodiscard]] inline allocation_status_t
-    free_bytes(zl::slice<uint8_t>, size_t) noexcept
+    [[nodiscard]] inline allocation_status_t free_bytes(zl::slice<uint8_t>,
+                                                        size_t) noexcept
     {
         return AllocationStatusCode::InvalidArgument;
     }
