@@ -61,7 +61,7 @@ reservation_allocator_t::make(const options_t &options) noexcept
         return AllocationStatusCode::OsErr;
     }
     size_t max_pages = options.committed + options.additional_pages_reserved;
-    auto reserve_res = mm_reserve_pages(nullptr, max_pages);
+    auto reserve_res = mm_reserve_pages(options.hint, max_pages);
     if (reserve_res.code != 0) {
         return AllocationStatusCode::OOM;
     }

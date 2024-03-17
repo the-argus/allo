@@ -30,6 +30,7 @@ class reservation_allocator_t : private detail::dynamic_allocator_base_t
         // extra pages past the end of the committed memory that we can expand
         // the allocation into
         size_t additional_pages_reserved;
+        void *hint = (void *)0x800000000000;
     };
 
     /// Create a new reservation of a given size, with a number of additional
