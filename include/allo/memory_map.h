@@ -1,12 +1,13 @@
 #pragma once
+#include <assert.h>
 #include <stdint.h>
+
 #if defined(_WIN32)
 #include <errhandlingapi.h>
 #include <windows.h>
 // LPVOID WINAPI VirtualAlloc(LPVOID lpaddress, SIZE_T size, DWORD
 // flAllocationType, DWORD flProtect);
 #elif defined(__linux__) || defined(__APPLE__)
-#include <assert.h>
 #include <errno.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -23,14 +24,10 @@ extern "C"
     {
         void *data;
         size_t bytes;
-        uint8_t code;
-    };
-
-    struct mm_memory_map_resize_options_t
-    {
-        void *address;
-        size_t old_size;
-        size_t new_size;
+        /// Error-code. This will be 0 on success: check that before reading bytes and data.
+        /// There is no compatibility of error codes between OSes. The only guaranteed is
+        /// that it will be 0 on success on all platforms.
+        int64_t code;
     };
 
     struct mm_optional_uint64_t
@@ -47,7 +44,8 @@ extern "C"
 #if defined(_WIN32)
         SYSTEM_INFO sys_info;
         GetSystemInfo(&sys_info);
-        return sys_info.dwPageSize;
+        return (mm_optional_uint64_t){.value = sys_info.dwPageSize,
+                                      .has_value = 1};
 #elif defined(__linux__)
     long result = sysconf(_SC_PAGESIZE);
     if (result < 0) {
@@ -55,7 +53,7 @@ extern "C"
     }
     return (mm_optional_uint64_t){.value = (uint64_t)result, .has_value = 1};
 #else
-    return getpagesize();
+    return (mm_optional_uint64_t){.value = getpagesize(), .has_value = 1};
 #endif
     }
 
@@ -63,7 +61,10 @@ extern "C"
     /// memory allocated by this function. Call mm_commit_pages on each page
     /// you want to write to first.
     /// Address hint: a hint for where the OS should try to place the
-    /// reservation.
+    /// reservation. May be ignored if there is not space there. nullptr
+    /// can be provided to let the OS choose where to place the reservation.
+    /// Note that it's possible to map memory directly after the stack and
+    /// cause horrible memory bugs when the stack overruns your allocation.
     /// Num pages: the number of pages to reserve.
     inline mm_memory_map_result_t mm_reserve_pages(void *address_hint,
                                                    size_t num_pages)
@@ -82,9 +83,7 @@ extern "C"
         };
         if (res.data == NULL) {
             res.code = GetLastError();
-            if (res.code == 0) {
-                res.code = 255;
-            }
+            assert(res.code != 0);
         }
         return res;
 #else
@@ -106,7 +105,7 @@ extern "C"
     /// readable and writable by your process, specifically ones allocated by
     /// mm_reserve_pages().
     /// Returns 0 on success, otherwise an errcode.
-    inline int32_t mm_commit_pages(void *address, size_t num_pages)
+    inline int64_t mm_commit_pages(void *address, size_t num_pages)
     {
         if (!address) {
             return -1;
@@ -118,16 +117,12 @@ extern "C"
 
         size_t size = num_pages * result.value;
 #if defined(_WIN32)
-        mm_memory_map_result_t res = (mm_memory_map_result_t){
-            .data = VirtualAlloc(address_hint, size, MEM_RESERVE, 0),
-            .bytes = size,
-            .code = 0,
-        };
-        if (res.data == NULL) {
-            res.code = GetLastError();
-            assert(res.code != 0);
+        int64_t err = 0;
+        if (!VirtualAlloc(address, size, MEM_RESERVE | MEM_COMMIT, 0)) {
+            err = GetLastError();
+            assert(err != 0);
         }
-        return res;
+        return err;
 #else
     if (mprotect(address, size, PROT_READ | PROT_WRITE) != 0) {
         // failure case, you probably passed in an address that is not page
@@ -141,13 +136,14 @@ extern "C"
     }
 
     /// Unmap pages starting at address and continuing for "size" bytes.
-    inline int mm_memory_unmap(void *address, size_t size)
+    inline int64_t mm_memory_unmap(void *address, size_t size)
     {
 #if defined(_WIN32)
-        if (VirtualFree(address, size, MEM_DECOMMIT | MEM_RELEASE) == 0) {
-            return GetLastError();
+        int64_t err = 0;
+        if (!VirtualFree(address, size, MEM_DECOMMIT | MEM_RELEASE)) {
+            err = GetLastError();
         }
-        return 0;
+        return err;
 #else
     if (munmap(address, size) == 0) {
         return 0;
