@@ -14,7 +14,6 @@ const debug_flags = &[_][]const u8{
 
 const testing_flags = &[_][]const u8{
     "-DALLO_HEADER_TESTING",
-    "-DALLO_NOEXCEPT=", // allow exceptions for testing
     "-DALLO_HEADER_ONLY",
 
     // use ctti (default behavior)

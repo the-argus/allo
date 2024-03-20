@@ -1,10 +1,6 @@
 #pragma once
 #include "allo/detail/abstracts.h"
 
-#ifndef ALLO_NOEXCEPT
-#define ALLO_NOEXCEPT noexcept
-#endif
-
 namespace allo {
 
 class stack_allocator_t : private detail::dynamic_allocator_base_t
@@ -30,14 +26,14 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
 
     inline static zl::res<stack_allocator_t, AllocationStatusCode>
     make_owned(zl::slice<uint8_t> memory,
-               detail::dynamic_heap_allocator_t parent) ALLO_NOEXCEPT
+               detail::dynamic_heap_allocator_t parent) noexcept
     {
         return make_inner(memory, parent);
     }
 
     // create a stack allocator which allocates into a given block of memory.
     inline static zl::res<stack_allocator_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> memory) ALLO_NOEXCEPT
+    make(zl::slice<uint8_t> memory) noexcept
     {
         return make_inner(memory, {});
     }
@@ -86,7 +82,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
 
     static zl::res<stack_allocator_t, AllocationStatusCode>
     make_inner(zl::slice<uint8_t> memory,
-               zl::opt<detail::dynamic_heap_allocator_t> parent) ALLO_NOEXCEPT;
+               zl::opt<detail::dynamic_heap_allocator_t> parent) noexcept;
 
     /// the information placed underneath every allocation in the stack
     struct previous_state_t

@@ -1,10 +1,6 @@
 #pragma once
 #include "allo/detail/abstracts.h"
 
-#ifndef ALLO_NOEXCEPT
-#define ALLO_NOEXCEPT noexcept
-#endif
-
 namespace allo {
 
 /// A very simple allocator which takes in a fixed buffer of memory and

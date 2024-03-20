@@ -239,9 +239,9 @@ stack_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
 }
 
 ALLO_FUNC zl::res<stack_allocator_t, AllocationStatusCode>
-stack_allocator_t::make_inner(zl::slice<uint8_t> memory,
-                              zl::opt<detail::dynamic_heap_allocator_t> parent)
-    ALLO_NOEXCEPT
+stack_allocator_t::make_inner(
+    zl::slice<uint8_t> memory,
+    zl::opt<detail::dynamic_heap_allocator_t> parent) noexcept
 {
     // make sure there is at least one byte of space to be allocated in memory
     if (memory.size() <= sizeof(previous_state_t)) {
