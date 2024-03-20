@@ -48,17 +48,18 @@ class scratch_allocator_t : private detail::dynamic_allocator_base_t
     make_inner(zl::slice<uint8_t> memory,
                zl::opt<detail::dynamic_heap_allocator_t> parent) noexcept;
 
-    [[nodiscard]] inline uint8_t *top() const noexcept
+    struct destruction_callback_entry_t
     {
-        return m.memory.data() + m.top;
-    }
+        destruction_callback_t callback;
+        void *user_data;
+    };
 
     struct M
     {
         zl::slice<uint8_t> memory;
+        zl::slice<uint8_t> available_memory;
         zl::opt<detail::dynamic_heap_allocator_t> parent;
         allo::allocator_properties_t properties;
-        size_t top;
     } m;
 
     scratch_allocator_t(M &&members) noexcept : m(members)
