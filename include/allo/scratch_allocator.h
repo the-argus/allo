@@ -12,39 +12,30 @@ class scratch_allocator_t : private detail::dynamic_allocator_base_t
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::ScratchAllocator;
 
-    // can be explicitly constructed from a buffer of existing memory.
-    // it will modify this memory, but not free it on destruction.
-    inline explicit scratch_allocator_t(zl::slice<uint8_t> memory) noexcept
-        : m_memory(memory)
+    scratch_allocator_t() = delete;
+    scratch_allocator_t(const scratch_allocator_t &) = delete;
+    scratch_allocator_t &operator=(const scratch_allocator_t &) = delete;
+    scratch_allocator_t(scratch_allocator_t &&) noexcept;
+    scratch_allocator_t &operator=(scratch_allocator_t &&) = delete;
+
+    inline static zl::res<scratch_allocator_t, AllocationStatusCode>
+    make(zl::slice<uint8_t> memory) noexcept
     {
-        type = enum_value;
+        return make_inner(memory, {});
     }
 
-    // no need to do anything upon destruction since this is non-owning
-    ~scratch_allocator_t() = default;
+    inline static zl::res<scratch_allocator_t, AllocationStatusCode>
+    make_owned(zl::slice<uint8_t> memory,
+               detail::dynamic_heap_allocator_t parent) noexcept
+    {
+        return make_inner(memory, parent);
+    }
+
+    ~scratch_allocator_t() noexcept;
 
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
-
-    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
-                                                  size_t old_typehash,
-                                                  size_t new_size,
-                                                  size_t new_typehash) noexcept;
-
-    /// Freeing with a scratch allocator is a no-op
-    inline constexpr allocation_status_t
-    free_bytes(zl::slice<uint8_t> /*mem*/, // NOLINT
-               size_t /*typehash*/) noexcept
-    {
-        return AllocationStatusCode::Okay;
-    }
-
-    [[nodiscard]] inline constexpr allocation_status_t
-    free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept
-    {
-        return AllocationStatusCode::Okay;
-    }
 
     [[nodiscard]] const allocator_properties_t &properties() const;
 
@@ -53,7 +44,27 @@ class scratch_allocator_t : private detail::dynamic_allocator_base_t
                                   void *user_data) noexcept;
 
   private:
-    zl::slice<uint8_t> m_memory;
+    static zl::res<scratch_allocator_t, AllocationStatusCode>
+    make_inner(zl::slice<uint8_t> memory,
+               zl::opt<detail::dynamic_heap_allocator_t> parent) noexcept;
+
+    [[nodiscard]] inline uint8_t *top() const noexcept
+    {
+        return m.memory.data() + m.top;
+    }
+
+    struct M
+    {
+        zl::slice<uint8_t> memory;
+        zl::opt<detail::dynamic_heap_allocator_t> parent;
+        allo::allocator_properties_t properties;
+        size_t top;
+    } m;
+
+    scratch_allocator_t(M &&members) noexcept : m(members)
+    {
+        type = enum_value;
+    }
 };
 } // namespace allo
 

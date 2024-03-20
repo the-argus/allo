@@ -34,6 +34,7 @@ const testing_flags = &[_][]const u8{
 
 const test_source_files = &[_][]const u8{
     "stack_allocator_t/stack_allocator_t.cpp",
+    "scratch_allocator_t/scratch_allocator_t.cpp",
     "block_allocator_t/block_allocator_t.cpp",
     "nonvirtual_inheritance/nonvirtual_inheritance.cpp",
     "heap_allocator_t/heap_allocator_t.cpp",

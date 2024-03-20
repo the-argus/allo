@@ -45,7 +45,11 @@ template <typename T, typename... Args> struct remap_bytes_generic
 {
     inline allocation_result_t operator()(T *item, Args &&...args)
     {
-        return item->remap_bytes(std::forward<Args>(args)...);
+        if constexpr (!std::is_same_v<T, scratch_allocator_t>) {
+            return item->remap_bytes(std::forward<Args>(args)...);
+        } else {
+            std::abort();
+        }
     }
 };
 
@@ -53,7 +57,11 @@ template <typename T, typename... Args> struct free_bytes_generic
 {
     inline allocation_status_t operator()(T *item, Args &&...args)
     {
-        return item->free_bytes(std::forward<Args>(args)...);
+        if constexpr (!std::is_same_v<T, scratch_allocator_t>) {
+            return item->free_bytes(std::forward<Args>(args)...);
+        } else {
+            std::abort();
+        }
     }
 };
 
@@ -61,7 +69,11 @@ template <typename T, typename... Args> struct free_status_generic
 {
     inline allocation_status_t operator()(T *item, Args &&...args)
     {
-        return item->free_status(std::forward<Args>(args)...);
+        if constexpr (!std::is_same_v<T, scratch_allocator_t>) {
+            return item->free_status(std::forward<Args>(args)...);
+        } else {
+            std::abort();
+        }
     }
 };
 
