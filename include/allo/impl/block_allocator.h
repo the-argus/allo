@@ -23,20 +23,20 @@ namespace allo {
 
 ALLO_FUNC block_allocator_t::~block_allocator_t() noexcept
 {
-    if (m.owning) {
+    if (m.parent) {
         call_all_destruction_callbacks();
-        m.parent.free_bytes(m.mem, 0);
+        m.parent.value().free_bytes(m.mem, 0);
         m.blocks_free = 0;
-        m.owning = false;
+        m.parent.reset();
     }
 }
 
 ALLO_FUNC
 block_allocator_t::block_allocator_t(block_allocator_t &&other) noexcept
-    : m(other.m)
+    : m(std::move(other.m))
 {
     type = other.type;
-    other.m.owning = false;
+    other.m.parent.reset();
     other.m.blocks_free = 0;
 }
 
@@ -65,9 +65,9 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
 }
 
 ALLO_FUNC zl::res<block_allocator_t, AllocationStatusCode>
-block_allocator_t::make(zl::slice<uint8_t> &&memory,
-                        detail::dynamic_heap_allocator_t parent,
-                        size_t blocksize) noexcept
+block_allocator_t::make_inner(zl::slice<uint8_t> memory,
+                              zl::opt<detail::dynamic_heap_allocator_t> parent,
+                              size_t blocksize) noexcept
 {
     // blocksize must be at least 8 bytes
     size_t actual_blocksize =
@@ -83,7 +83,11 @@ block_allocator_t::make(zl::slice<uint8_t> &&memory,
                                  ? blocksize_alignment
                                  : parent_alignment;
 
-    assert(parent.free_status(memory, 0).okay());
+#ifndef NDEBUG
+    if (parent) {
+        assert(parent.value().free_status(memory, 0).okay());
+    }
+#endif
 
     auto num_blocks =
         static_cast<size_t>(std::floor(static_cast<double>(memory.size()) /
@@ -108,7 +112,7 @@ block_allocator_t::make(zl::slice<uint8_t> &&memory,
     return zl::res<block_allocator_t, AllocationStatusCode>(
         std::in_place,
         M{
-            // parent allocator
+            // parent allocator. if null, we don't own the allocation
             .parent = parent,
             // block of memory
             .mem = memory,
@@ -129,8 +133,6 @@ block_allocator_t::make(zl::slice<uint8_t> &&memory,
             .current_destruction_array_index = 0,
             // size of current destruction array
             .current_destruction_array_size = 0,
-            // whether we own our allocation
-            .owning = true,
         });
 }
 
@@ -318,7 +320,7 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
 
 ALLO_FUNC allocation_status_t block_allocator_t::remap() noexcept
 {
-    auto res = m.parent.remap_bytes(
+    auto res = m.parent.value().remap_bytes(
         m.mem, 0,
         std::ceil(reallocation_ratio * static_cast<double>(m.mem.size())), 0);
     if (!res.okay())

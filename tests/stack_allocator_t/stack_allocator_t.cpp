@@ -1,4 +1,3 @@
-#include "allo/oneshot_allocator.h"
 #include "allo/stack_allocator.h"
 #define ALLO_ALLOW_DESTRUCTORS
 #define ALLO_ALLOW_NONTRIVIAL_COPY // we allocate a std::set and std::vector
@@ -22,11 +21,7 @@ TEST_SUITE("stack_allocator_t")
         {
             std::array<uint8_t, 512> mem;
 
-            auto maybe_oneshot = oneshot_allocator_t::make(mem);
-            REQUIRE(maybe_oneshot.okay());
-            oneshot_allocator_t oneshot = maybe_oneshot.release();
-
-            auto maybe_ally = stack_allocator_t::make(mem, oneshot);
+            auto maybe_ally = stack_allocator_t::make(mem);
             REQUIRE(maybe_ally.okay());
             stack_allocator_t ally = maybe_ally.release();
         }
@@ -35,11 +30,7 @@ TEST_SUITE("stack_allocator_t")
         {
             std::array<uint8_t, 512> mem;
 
-            auto maybe_oneshot = oneshot_allocator_t::make(mem);
-            REQUIRE(maybe_oneshot.okay());
-            oneshot_allocator_t oneshot = maybe_oneshot.release();
-
-            auto maybe_ally = stack_allocator_t::make(mem, oneshot);
+            auto maybe_ally = stack_allocator_t::make(mem);
             REQUIRE(maybe_ally.okay());
             stack_allocator_t ally = maybe_ally.release();
 
@@ -73,10 +64,7 @@ TEST_SUITE("stack_allocator_t")
             std::fill(mem.begin(), mem.end(), 1);
             REQUIRE(mem[0] == 1);
 
-            oneshot_allocator_t oneshot =
-                oneshot_allocator_t::make(subslice).release();
-
-            auto ally = stack_allocator_t::make(subslice, oneshot).release();
+            auto ally = stack_allocator_t::make(subslice).release();
 
             uint8_t &a_byte = allo::alloc_one<uint8_t>(ally).release();
             REQUIRE(a_byte == 1); // alloc one does not zero-initialize memory,
@@ -89,9 +77,7 @@ TEST_SUITE("stack_allocator_t")
         SUBCASE("alloc array")
         {
             std::array<uint8_t, 512> mem;
-            oneshot_allocator_t oneshot =
-                oneshot_allocator_t::make(mem).release();
-            auto ally = stack_allocator_t::make(mem, oneshot).release();
+            auto ally = stack_allocator_t::make(mem).release();
 
             auto maybe_my_ints = allo::alloc_one<std::array<int, 88>>(ally);
             REQUIRE(maybe_my_ints.okay());
@@ -118,18 +104,14 @@ TEST_SUITE("stack_allocator_t")
             // only alloc about 830.
             std::array<uint8_t, 1875> mem; // just barely enough memory for the
                                            // linked list of strings
-            oneshot_allocator_t oneshot =
-                oneshot_allocator_t::make(mem).release();
-            auto ally = stack_allocator_t::make(mem, oneshot).release();
+            auto ally = stack_allocator_t::make(mem).release();
             tests::allocate_object_with_linked_list(ally);
         }
 
         SUBCASE("OOM")
         {
             std::array<uint8_t, 512> mem;
-            oneshot_allocator_t oneshot =
-                oneshot_allocator_t::make(mem).release();
-            auto ally = stack_allocator_t::make(mem, oneshot).release();
+            auto ally = stack_allocator_t::make(mem).release();
 
             auto arr_res = allo::alloc_one<std::array<uint8_t, 494>>(ally);
             REQUIRE(arr_res.okay());
@@ -141,9 +123,7 @@ TEST_SUITE("stack_allocator_t")
         SUBCASE("Cant free a different type than the last one")
         {
             std::array<uint8_t, 512> mem;
-            oneshot_allocator_t oneshot =
-                oneshot_allocator_t::make(mem).release();
-            auto ally = stack_allocator_t::make(mem, oneshot).release();
+            auto ally = stack_allocator_t::make(mem).release();
 
             auto guy_res = allo::alloc_one<int>(ally);
             size_t fake;
@@ -154,9 +134,7 @@ TEST_SUITE("stack_allocator_t")
                 "in reverse order")
         {
             std::array<uint8_t, 512> mem;
-            oneshot_allocator_t oneshot =
-                oneshot_allocator_t::make(mem).release();
-            auto ally = stack_allocator_t::make(mem, oneshot).release();
+            auto ally = stack_allocator_t::make(mem).release();
 
             auto set_res = allo::construct_one<std::set<const char *>>(ally);
             REQUIRE(set_res.okay());
@@ -188,9 +166,8 @@ TEST_SUITE("stack_allocator_t")
         {
             std::array<uint8_t, 512> mem;
             int test = 0;
-            auto oneshot = oneshot_allocator_t::make(mem).release();
             {
-                auto stack = stack_allocator_t::make(mem, oneshot).release();
+                auto stack = stack_allocator_t::make(mem).release();
                 auto status = stack.register_destruction_callback(
                     [](void *test_int) { *((int *)test_int) = 1; }, &test);
                 REQUIRE(status.okay());

@@ -12,7 +12,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
   private:
     struct M
     {
-        detail::dynamic_heap_allocator_t parent;
+        zl::opt<detail::dynamic_heap_allocator_t> parent;
         zl::slice<uint8_t> memory;
         zl::slice<uint8_t> available_memory;
         size_t last_type_hashcode = 0;
@@ -28,11 +28,18 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
     stack_allocator_t(const stack_allocator_t &) = delete;
     stack_allocator_t &operator=(const stack_allocator_t &) = delete;
 
-    template <typename Allocator>
     inline static zl::res<stack_allocator_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> memory, Allocator &parent) ALLO_NOEXCEPT
+    make_owned(zl::slice<uint8_t> memory,
+               detail::dynamic_heap_allocator_t parent) ALLO_NOEXCEPT
     {
-        return make_inner(memory, detail::dynamic_heap_allocator_t(parent));
+        return make_inner(memory, parent);
+    }
+
+    // create a stack allocator which allocates into a given block of memory.
+    inline static zl::res<stack_allocator_t, AllocationStatusCode>
+    make(zl::slice<uint8_t> memory) ALLO_NOEXCEPT
+    {
+        return make_inner(memory, {});
     }
 
     // can be moved
@@ -79,7 +86,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
 
     static zl::res<stack_allocator_t, AllocationStatusCode>
     make_inner(zl::slice<uint8_t> memory,
-               detail::dynamic_heap_allocator_t parent) ALLO_NOEXCEPT;
+               zl::opt<detail::dynamic_heap_allocator_t> parent) ALLO_NOEXCEPT;
 
     /// the information placed underneath every allocation in the stack
     struct previous_state_t

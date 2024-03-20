@@ -15,8 +15,6 @@ inline const char *allocator_typename(AllocatorDynRef allocator) noexcept
         return "stack_allocator_t";
     case Type::ScratchAllocator:
         return "scratch_allocator_t";
-    case Type::OneshotAllocator:
-        return "oneshot_allocator_t";
     case Type::ReservationAllocator:
         return "reservation_allocator_t";
     case Type::HeapAllocator:

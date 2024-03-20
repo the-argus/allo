@@ -32,7 +32,9 @@ ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
         ++entry;
     }
     // now that callbacks are called, free memory
-    m.parent.free_bytes(m.memory, 0);
+    if (m.parent) {
+        m.parent.value().free_bytes(m.memory, 0);
+    }
 }
 
 ALLO_FUNC
@@ -125,7 +127,11 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
 
 ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
 {
-    auto result = m.parent.remap_bytes(
+    // if we don't own, we can't realloc
+    if (!m.parent)
+        return AllocationStatusCode::OOM;
+
+    auto result = m.parent.value().remap_bytes(
         m.memory, 0,
         size_t(std::ceil(static_cast<double>(m.memory.size()) *
                          reallocation_ratio)),
@@ -234,7 +240,7 @@ stack_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
 
 ALLO_FUNC zl::res<stack_allocator_t, AllocationStatusCode>
 stack_allocator_t::make_inner(zl::slice<uint8_t> memory,
-                              detail::dynamic_heap_allocator_t parent)
+                              zl::opt<detail::dynamic_heap_allocator_t> parent)
     ALLO_NOEXCEPT
 {
     // make sure there is at least one byte of space to be allocated in memory
@@ -242,17 +248,21 @@ stack_allocator_t::make_inner(zl::slice<uint8_t> memory,
         return AllocationStatusCode::InvalidArgument;
     }
 
-    assert(parent.free_status(memory, 0).okay());
+#ifndef NDEBUG
+    if (parent) {
+        assert(parent.value().free_status(memory, 0).okay());
+    }
+#endif
 
     return zl::res<stack_allocator_t, AllocationStatusCode>{
-        std::in_place,
-        M{
-            parent,
-            memory,
-            memory,
-            0,
-            allocator_properties_t(memory.size(), alignof(previous_state_t)),
-        }};
+        std::in_place, M{
+                           .parent = parent,
+                           .memory = memory,
+                           .available_memory = memory,
+                           .last_type_hashcode = 0,
+                           .properties = allocator_properties_t(
+                               memory.size(), alignof(previous_state_t)),
+                       }};
 }
 
 ALLO_FUNC const allocator_properties_t &

@@ -24,7 +24,6 @@ enum class AllocatorType : uint8_t
     BlockAllocator,
     StackAllocator,
     ScratchAllocator,
-    OneshotAllocator,
     ReservationAllocator,
     HeapAllocator,
     MAX_ALLOCATOR_TYPE
@@ -208,9 +207,6 @@ ALLO_DETAIL_ALLOW_UPCAST(block_allocator_t, dynamic_stack_allocator_t)
 ALLO_DETAIL_ALLOW_UPCAST(block_allocator_t, dynamic_heap_allocator_t)
 // stack allocator
 ALLO_DETAIL_ALLOW_UPCAST(stack_allocator_t, dynamic_stack_allocator_t)
-// oneshot allocator
-ALLO_DETAIL_ALLOW_UPCAST(oneshot_allocator_t, dynamic_stack_allocator_t)
-ALLO_DETAIL_ALLOW_UPCAST(oneshot_allocator_t, dynamic_heap_allocator_t)
 // reservation allocator
 ALLO_DETAIL_ALLOW_UPCAST(reservation_allocator_t, dynamic_stack_allocator_t)
 ALLO_DETAIL_ALLOW_UPCAST(reservation_allocator_t, dynamic_heap_allocator_t)

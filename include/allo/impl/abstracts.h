@@ -11,7 +11,6 @@
 #include "allo/block_allocator.h"
 #include "allo/c_allocator.h"
 #include "allo/heap_allocator.h"
-#include "allo/oneshot_allocator.h"
 #include "allo/reservation_allocator.h"
 #include "allo/scratch_allocator.h"
 #include "allo/stack_allocator.h"
@@ -105,11 +104,6 @@ auto return_from(dynamic_allocator_base_t *self, Args &&...args)
         auto *heap = reinterpret_cast<heap_allocator_t *>(self);
         return Callable<heap_allocator_t, Args...>{}(
             heap, std::forward<Args>(args)...);
-    }
-    case AllocatorType::OneshotAllocator: {
-        auto *oneshot = reinterpret_cast<oneshot_allocator_t *>(self);
-        return Callable<oneshot_allocator_t, Args...>{}(
-            oneshot, std::forward<Args>(args)...);
     }
     case AllocatorType::ReservationAllocator: {
         auto *reservation = reinterpret_cast<reservation_allocator_t *>(self);
