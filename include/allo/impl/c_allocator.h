@@ -31,9 +31,6 @@ ALLO_FUNC allocation_result_t
 c_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
                              size_t new_size, size_t new_typehash) noexcept
 {
-    // BUG: c allocator is not really capable of remapping, this should probably
-    // always OOM, even if the remapping technically succeeds?
-    //
     void *newmem = ::realloc(mem.data(), new_size);
     if (newmem != nullptr && newmem != mem.data()) {
         assert(false);

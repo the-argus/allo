@@ -53,6 +53,7 @@ class c_allocator_t : private detail::dynamic_allocator_base_t
 
     [[nodiscard]] const allocator_properties_t &properties() const noexcept;
 
+    /// Always returns invalid argument
     allocation_status_t
     register_destruction_callback(destruction_callback_t callback,
                                   void *user_data) noexcept;
