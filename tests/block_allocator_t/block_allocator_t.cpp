@@ -1,6 +1,7 @@
 #include "allo.h"
 #include "allo/block_allocator.h"
 #include "allo/c_allocator.h"
+#include "allo/make_into.h"
 #include "allo/reservation_allocator.h"
 #include "allo/typed_freeing.h"
 #include "generic_allocator_tests.h"
@@ -39,7 +40,34 @@ TEST_SUITE("block_allocator_t")
             auto status = allo::free_one(ally, my_int);
             REQUIRE(status.okay());
         }
+
+        SUBCASE("make_into")
+        {
+            c_allocator_t global_allocator;
+
+            zl::slice<uint8_t> mem =
+                allo::alloc<uint8_t>(global_allocator, 2000).release();
+
+            {
+                block_allocator_t &block = allo::make_into<block_allocator_t>(
+                                               global_allocator, mem, 200)
+                                               .release();
+
+                auto mint = allo::alloc_one<int>(block);
+                REQUIRE(mint.okay());
+            }
+
+            {
+                block_allocator_t &block =
+                    allo::make_into<block_allocator_t, MakeType::Owned>(
+                        global_allocator, mem, global_allocator, 200)
+                        .release();
+                auto mint = allo::alloc_one<int>(block);
+                REQUIRE(mint.okay());
+            }
+        }
     }
+
     TEST_CASE("functionality")
     {
         SUBCASE("related objects, similar structure to linked list")

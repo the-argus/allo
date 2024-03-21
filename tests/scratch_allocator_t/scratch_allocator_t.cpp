@@ -1,3 +1,4 @@
+#include "allo/make_into.h"
 #include "allo/scratch_allocator.h"
 #include "allo/typed_allocation.h"
 #include "generic_allocator_tests.h"
@@ -60,6 +61,32 @@ TEST_SUITE("scratch_allocator_t")
             uint8_t &a_byte = allo::alloc_one<uint8_t>(ally).release();
             REQUIRE(a_byte == 1); // alloc one does not zero-initialize memory,
                                   // and the whole buffer was ones
+        }
+
+        SUBCASE("make_into")
+        {
+            c_allocator_t global_allocator;
+
+            zl::slice<uint8_t> mem =
+                allo::alloc<uint8_t>(global_allocator, 2000).release();
+
+            {
+                scratch_allocator_t &scratch =
+                    allo::make_into<scratch_allocator_t>(global_allocator, mem)
+                        .release();
+
+                auto mint = allo::alloc_one<int>(scratch);
+                REQUIRE(mint.okay());
+            }
+
+            {
+                scratch_allocator_t &scratch =
+                    allo::make_into<scratch_allocator_t, MakeType::Owned>(
+                        global_allocator, mem, global_allocator)
+                        .release();
+                auto mint = allo::alloc_one<int>(scratch);
+                REQUIRE(mint.okay());
+            }
         }
     }
 

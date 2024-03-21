@@ -1,3 +1,4 @@
+#include "allo/make_into.h"
 #include "allo/stack_allocator.h"
 #define ALLO_ALLOW_DESTRUCTORS
 #define ALLO_ALLOW_NONTRIVIAL_COPY // we allocate a std::set and std::vector
@@ -69,6 +70,31 @@ TEST_SUITE("stack_allocator_t")
             uint8_t &a_byte = allo::alloc_one<uint8_t>(ally).release();
             REQUIRE(a_byte == 1); // alloc one does not zero-initialize memory,
                                   // and the whole buffer was ones
+        }
+
+        SUBCASE("make_into")
+        {
+            c_allocator_t global_allocator;
+
+            zl::slice<uint8_t> mem =
+                allo::alloc<uint8_t>(global_allocator, 2000).release();
+
+            {
+                stack_allocator_t &stack =
+                    allo::make_into<stack_allocator_t>(global_allocator, mem)
+                        .release();
+                auto mint = allo::alloc_one<int>(stack);
+                REQUIRE(mint.okay());
+            }
+
+            {
+                stack_allocator_t &stack =
+                    allo::make_into<stack_allocator_t, MakeType::Owned>(
+                        global_allocator, mem, global_allocator)
+                        .release();
+                auto mint = allo::alloc_one<int>(stack);
+                REQUIRE(mint.okay());
+            }
         }
     }
 
