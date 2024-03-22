@@ -231,6 +231,10 @@ inline constexpr uint8_t alignment_exponent(size_t alignment)
 /// Take a memory address as a unsigned long and return the nearest power of 2
 /// that it is divisible by. Useful for figuring out what the alignment is of
 /// all items in an array of things of a given size (ie in the block allocator)
+///
+/// If you pass in a pointer cast to a size_t, then the nearest alignment
+/// exponent will be as big as the alignment exponent of the allocation that
+/// originally created that pointer, *or bigger*.
 inline constexpr uint8_t nearest_alignment_exponent(size_t num)
 {
     constexpr auto bits = sizeof(size_t) * 8;

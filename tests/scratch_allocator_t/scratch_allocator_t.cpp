@@ -1,3 +1,5 @@
+#define ALLO_ALLOW_DESTRUCTORS
+#define ALLO_ALLOW_NONTRIVIAL_COPY
 #include "allo/make_into.h"
 #include "allo/scratch_allocator.h"
 #include "allo/typed_allocation.h"
@@ -136,6 +138,56 @@ TEST_SUITE("scratch_allocator_t")
                 REQUIRE(test == 0);
             }
             REQUIRE(test == 1);
+        }
+
+        SUBCASE("callbacks passed as rvalue or as lvalue")
+        {
+            std::array<uint8_t, 100> real_mem;
+
+            static size_t destructions = 0;
+            static size_t constructions = 0;
+            struct DestroyCounter
+            {
+                std::unique_ptr<int> cleanup;
+                DestroyCounter() : cleanup(std::make_unique<int>(10))
+                {
+                    ++constructions;
+                }
+                ~DestroyCounter() { ++destructions; }
+            };
+
+            {
+                scratch_allocator_t scratch =
+                    scratch_allocator_t::make(real_mem).release();
+
+                auto &counter_1 =
+                    allo::construct_one<DestroyCounter>(scratch).release();
+                auto &counter_2 =
+                    allo::construct_one<DestroyCounter>(scratch).release();
+                auto &counter_3 =
+                    allo::construct_one<DestroyCounter>(scratch).release();
+
+                auto status = scratch.register_destruction_callback(
+                    [](void *d) -> void {
+                        ((DestroyCounter *)d)->~DestroyCounter();
+                    },
+                    &counter_1);
+                REQUIRE(status.okay());
+
+                static size_t meaningless = 0;
+                auto test = [](void *d) -> void {
+                    ((DestroyCounter *)d)->~DestroyCounter();
+                    ++meaningless;
+                };
+                status =
+                    scratch.register_destruction_callback(test, &counter_2);
+                REQUIRE(status.okay());
+                status =
+                    scratch.register_destruction_callback(test, &counter_3);
+                REQUIRE(status.okay());
+            }
+            REQUIRE(destructions == 3);
+            REQUIRE(constructions == 3);
         }
     }
 }

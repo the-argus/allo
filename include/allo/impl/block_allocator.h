@@ -77,6 +77,9 @@ block_allocator_t::make_inner(zl::slice<uint8_t> memory,
     // array will have.
     const auto blocksize_alignment = static_cast<size_t>(
         std::pow(2, detail::nearest_alignment_exponent(actual_blocksize)));
+    // NOTE: here we are getting the nearest alignment exponent of a pointer,
+    // which is generally a bad idea but in this case we are accounting for the
+    // fact that it could be far bigger than expected
     const auto parent_alignment = static_cast<size_t>(
         std::pow(2, detail::nearest_alignment_exponent((size_t)memory.data())));
     const size_t alignment = parent_alignment > blocksize_alignment

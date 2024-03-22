@@ -58,7 +58,7 @@ remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 template <typename Allocator>
 inline zl::res<zl::slice<uint8_t>, AllocationStatusCode>
 realloc_bytes(Allocator &allocator, zl::slice<uint8_t> original,
-              size_t new_size) noexcept
+              size_t new_size, uint8_t new_alignment_exponent) noexcept
 {
     static_assert(
         detail::can_upcast<Allocator,
@@ -96,10 +96,7 @@ realloc_bytes(Allocator &allocator, zl::slice<uint8_t> original,
 
     static_assert(sizeof(original.data()) == sizeof(size_t));
     auto new_allocation =
-        allocator.alloc_bytes(new_size,
-                              detail::nearest_alignment_exponent(
-                                  reinterpret_cast<size_t>(original.data())),
-                              0);
+        allocator.alloc_bytes(new_size, new_alignment_exponent, 0);
     if (new_allocation.okay()) {
         const bool enlarging = original.size() < new_size;
         const zl::slice<uint8_t> source =
@@ -120,7 +117,9 @@ realloc_bytes(Allocator &allocator, zl::slice<uint8_t> original,
 
 /// Remap, or if remap fails, create an entirely new, differently sized
 /// allocation and copy the contents of the first allocation to that one.
-template <typename T, typename Allocator>
+/// NOTE: if the allocation needs to be aligned you must pass its original
+/// alignment to reallocation as well.
+template <typename T, typename Allocator, size_t alignment = alignof(T)>
 inline zl::res<zl::slice<T>, AllocationStatusCode>
 realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 {
@@ -150,12 +149,12 @@ realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
     if (remap.okay())
         return zl::raw_slice(*original.data(), new_size);
 
+    static constexpr size_t aexponent =
+        detail::nearest_alignment_exponent(alignment);
+
     static_assert(sizeof(original.data()) == sizeof(size_t));
     auto new_allocation =
-        allocator.alloc_bytes(new_size_bytes,
-                              detail::nearest_alignment_exponent(
-                                  reinterpret_cast<size_t>(original.data())),
-                              typehash);
+        allocator.alloc_bytes(new_size_bytes, aexponent, typehash);
     if (new_allocation.okay()) {
         const bool enlarging = original.size() < new_size;
         const zl::slice<T> source =

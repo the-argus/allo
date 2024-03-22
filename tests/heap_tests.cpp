@@ -73,6 +73,7 @@ void typed_alloc_realloc_free(HeapAllocatorDynRef heap)
         // dont run the tests if the allocator is going to OOM
         return;
     }
+    static_assert(detail::nearest_alignment_exponent(alignof(Test)) <= 5);
     zl::slice<Test> first = allo::alloc<Test>(heap, 1).release();
     first = allo::realloc(heap, first, 8).release();
     first = allo::realloc(heap, first, 1).release();
