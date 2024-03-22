@@ -1,9 +1,11 @@
+#define ALLO_ALLOW_DESTRUCTORS
+#define ALLO_ALLOW_NONTRIVIAL_COPY
 #include "allo.h"
 #include "allo/block_allocator.h"
 #include "allo/c_allocator.h"
 #include "allo/make_into.h"
+#include "allo/on_destroy.h"
 #include "allo/reservation_allocator.h"
-#include "allo/typed_freeing.h"
 #include "generic_allocator_tests.h"
 #include "heap_tests.h"
 #include "test_header.h"
@@ -211,6 +213,49 @@ TEST_SUITE("block_allocator_t")
                 }
             }
             REQUIRE(called == expected_called);
+        }
+
+        SUBCASE("destruction callback with on_destroy")
+        {
+            std::array<uint8_t, 16> real_mem;
+
+            static size_t destructions = 0;
+            static size_t constructions = 0;
+            struct DestroyCounter
+            {
+                std::unique_ptr<int> cleanup;
+                DestroyCounter() : cleanup(std::make_unique<int>(10))
+                {
+                    ++constructions;
+                }
+                ~DestroyCounter() { ++destructions; }
+            };
+
+            {
+                scratch_allocator_t scratch =
+                    scratch_allocator_t::make(real_mem).release();
+
+                auto &counter_1 =
+                    allo::construct_one<DestroyCounter>(scratch).release();
+                auto &counter_2 =
+                    allo::construct_one<DestroyCounter>(scratch).release();
+                auto &counter_3 =
+                    allo::construct_one<DestroyCounter>(scratch).release();
+
+                allo::on_destroy(scratch, counter_1, [](void *d) -> void {
+                    ((DestroyCounter *)d)->~DestroyCounter();
+                });
+
+                static size_t meaningless = 0;
+                auto test = [](void *d) -> void {
+                    ((DestroyCounter *)d)->~DestroyCounter();
+                    ++meaningless;
+                };
+                allo::on_destroy(scratch, counter_2, test);
+                allo::on_destroy(scratch, counter_3, test);
+            }
+            REQUIRE(destructions == 3);
+            REQUIRE(constructions == 3);
         }
     }
 }
