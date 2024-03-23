@@ -32,26 +32,16 @@ enum class MakeType
 /// args: additional arguments to pass to the make function
 template <typename Allocator, MakeType maketype = MakeType::Unowned,
           typename ParentAllocator, typename... Args>
-zl::res<Allocator &, AllocationStatusCode> make_into(ParentAllocator allocator,
-                                                     zl::slice<uint8_t> mem,
-                                                     Args &&...args) noexcept
+zl::res<Allocator &, AllocationStatusCode>
+make_into(ParentAllocator &allocator, bytes_t mem, Args &&...args) noexcept
 {
     static_assert(!std::is_reference_v<Allocator> &&
                       !std::is_pointer_v<Allocator>,
                   "Cannot construct a reference or pointer type using make.");
-    constexpr bool parent_is_valid_interface =
-        std::is_base_of_v<detail::allocator_common_t, ParentAllocator>;
-    constexpr bool parent_is_valid_allocator =
-        std::is_base_of_v<detail::dynamic_allocator_base_t, ParentAllocator>;
-    constexpr bool is_valid_interface =
-        std::is_base_of_v<detail::allocator_common_t, Allocator>;
-    constexpr bool is_valid_allocator =
-        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
-    static_assert(!is_valid_interface,
-                  "Cannot construct a dynamic reference to an allocator using "
-                  "make. Use allo::construct_one instead.");
-    static_assert(is_valid_allocator, "The given type is not an allocator");
-    static_assert(parent_is_valid_allocator || parent_is_valid_interface);
+    static_assert(detail::is_real_allocator<Allocator>,
+                  "The given allocator type cannot be constructed.");
+    static_assert(detail::is_allocator<ParentAllocator>,
+                  "The provided parent allocator is not a real allocator.");
 
     const size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
@@ -87,7 +77,7 @@ zl::res<Allocator &, AllocationStatusCode> make_into(ParentAllocator allocator,
         return alloc_res.err();
     }
 
-    zl::slice<uint8_t> allocation = alloc_res.release();
+    bytes_t allocation = alloc_res.release();
 
     auto *ally = reinterpret_cast<Allocator *>(allocation.data());
     new (ally) Allocator(std::move(construct_res.release()));
@@ -97,9 +87,8 @@ zl::res<Allocator &, AllocationStatusCode> make_into(ParentAllocator allocator,
 
     if (!callback_status.okay()) {
         // if this type can free, then free the allocator
-        if constexpr (detail::can_upcast<
-                          ParentAllocator,
-                          detail::dynamic_stack_allocator_t>::type::value) {
+        if constexpr (std::is_base_of_v<detail::abstract_stack_allocator_t,
+                                        ParentAllocator>) {
             allocator.free_bytes(allocation, typehash);
         }
         return callback_status.err();

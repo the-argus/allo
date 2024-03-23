@@ -1,5 +1,4 @@
 #pragma once
-#include "allo/detail/abort.h"
 /// Header to be included in tests and tests only. Must be included first in the
 /// file
 #ifndef ALLO_HEADER_TESTING
@@ -8,14 +7,3 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
-
-#define REQUIREABORTS(operation)                       \
-    {                                                  \
-        bool status = false;                           \
-        try {                                          \
-            operation;                                 \
-        } catch (const reserve::_abort_exception &e) { \
-            status = true;                             \
-        }                                              \
-        REQUIRE(status);                               \
-    }

@@ -6,7 +6,7 @@ namespace allo {
 /// A very simple allocator which takes in a fixed buffer of memory and
 /// allocates randomly sized items within that buffer. It has free available as
 /// an operation but it does nothing.
-class scratch_allocator_t : private detail::dynamic_allocator_base_t
+class scratch_allocator_t : public detail::abstract_allocator_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =
@@ -19,14 +19,14 @@ class scratch_allocator_t : private detail::dynamic_allocator_base_t
     scratch_allocator_t &operator=(scratch_allocator_t &&) = delete;
 
     inline static zl::res<scratch_allocator_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> memory) noexcept
+    make(bytes_t memory) noexcept
     {
         return make_inner(memory, {});
     }
 
     inline static zl::res<scratch_allocator_t, AllocationStatusCode>
-    make_owned(zl::slice<uint8_t> memory,
-               detail::dynamic_heap_allocator_t parent) noexcept
+    make_owned(bytes_t memory,
+               detail::abstract_heap_allocator_t &parent) noexcept
     {
         return make_inner(memory, parent);
     }
@@ -45,8 +45,8 @@ class scratch_allocator_t : private detail::dynamic_allocator_base_t
 
   private:
     static zl::res<scratch_allocator_t, AllocationStatusCode>
-    make_inner(zl::slice<uint8_t> memory,
-               zl::opt<detail::dynamic_heap_allocator_t> parent) noexcept;
+    make_inner(bytes_t memory,
+               zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept;
 
     struct destruction_callback_entry_t
     {
@@ -56,15 +56,15 @@ class scratch_allocator_t : private detail::dynamic_allocator_base_t
 
     struct M
     {
-        zl::slice<uint8_t> memory;
-        zl::slice<uint8_t> available_memory;
-        zl::opt<detail::dynamic_heap_allocator_t> parent;
+        bytes_t memory;
+        bytes_t available_memory;
+        zl::opt<detail::abstract_heap_allocator_t &> parent;
         allo::allocator_properties_t properties;
     } m;
 
     scratch_allocator_t(M &&members) noexcept : m(members)
     {
-        type = enum_value;
+        m_type = enum_value;
     }
 };
 } // namespace allo

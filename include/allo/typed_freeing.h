@@ -1,6 +1,5 @@
 #pragma once
 #include "allo/detail/abstracts.h"
-#include "allo/detail/forward_decls.h"
 #include "allo/status.h"
 
 #ifndef ALLO_DISABLE_TYPEINFO
@@ -10,21 +9,13 @@
 #endif
 
 namespace allo {
-#define ALLO_FREE_VALIDITY_CHECKS                                    \
-    constexpr bool is_valid_interface =                              \
-        std::is_base_of_v<detail::dynamic_stack_allocator_t, Freer>; \
-    constexpr bool is_valid_allocator =                              \
-        std::is_base_of_v<detail::dynamic_allocator_base_t, Freer>;  \
-    static_assert(!std::is_same_v<Freer, scratch_allocator_t>,       \
-                  "Cannot free with a scratch allocator.");          \
-    static_assert(is_valid_interface || is_valid_allocator,          \
-                  "Cannot use given type to perform a free");
-
 template <typename T, typename Freer>
 inline allocation_status_t free_one(Freer &allocator, T &item) noexcept
 {
-    ALLO_FREE_VALIDITY_CHECKS
     static_assert(!std::is_reference_v<T>, "Can't free a reference type");
+    static_assert(
+        detail::is_freer<Freer>,
+        "The type given as the freer cannot be used to free the item.");
     const size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifdef ALLO_USE_RTTI
@@ -45,7 +36,9 @@ template <typename T, typename Freer>
 inline allocation_status_t free(Freer &allocator,
                                 const zl::slice<T> items) noexcept
 {
-    ALLO_FREE_VALIDITY_CHECKS
+    static_assert(
+        detail::is_freer<Freer>,
+        "The type given as the freer cannot be used to free the item.");
     static_assert(!std::is_reference_v<T>, "Can't free a reference type");
     const size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
@@ -63,11 +56,15 @@ inline allocation_status_t free(Freer &allocator,
         typehash);
 }
 
+#define ALLO_ALLOW_DESTRUCTORS
+
 #ifdef ALLO_ALLOW_DESTRUCTORS
 template <typename T, typename Freer>
 inline allocation_status_t destroy_one(Freer &allocator, T &item) noexcept
 {
-    ALLO_FREE_VALIDITY_CHECKS
+    static_assert(
+        detail::is_freer<Freer>,
+        "The type given as the freer cannot be used to free the item.");
     static_assert(!std::is_reference_v<T>, "Can't free a reference type");
     const size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
@@ -86,12 +83,10 @@ inline allocation_status_t destroy_one(Freer &allocator, T &item) noexcept
         return status;
     item.~T();
     status = allocator.free_bytes(bytes, typehash);
-    if (!status.okay()) {
-        // BUG: EVIL:
-        // horrible error possible if multithreading. need way to get ownership
-        // of allocator
-        std::abort();
-    }
+    // BUG: EVIL:
+    // horrible error possible if multithreading. need way to get ownership
+    // of allocator
+    assert(status.okay());
     return status;
 }
 
@@ -99,7 +94,9 @@ template <typename T, typename Freer>
 allocation_status_t destroy_many(Freer &allocator,
                                  const zl::slice<T> items) noexcept
 {
-    ALLO_FREE_VALIDITY_CHECKS
+    static_assert(
+        detail::is_freer<Freer>,
+        "The type given as the freer cannot be used to free the item.");
     static_assert(!std::is_reference_v<T>, "Can't free a reference type");
     const size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
@@ -120,12 +117,10 @@ allocation_status_t destroy_many(Freer &allocator,
         item.~T();
     }
     status = allocator.free_bytes(bytes, typehash);
-    if (!status.okay()) {
-        // BUG: EVIL:
-        // horrible error possible if multithreading. need way to get ownership
-        // of allocator
-        std::abort();
-    }
+    // BUG: EVIL:
+    // horrible error possible if multithreading. need way to get ownership
+    // of allocator
+    assert(status.okay());
     return status;
 }
 #endif

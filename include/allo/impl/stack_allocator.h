@@ -39,9 +39,9 @@ ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
 
 ALLO_FUNC
 stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
-    : m(other.m)
+    : m(std::move(other.m))
 {
-    type = enum_value;
+    m_type = enum_value;
 }
 
 [[nodiscard]] ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
@@ -55,7 +55,7 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
     if (alignment > properties().m_maximum_alignment) {
         return AllocationStatusCode::AllocationTooAligned;
     }
-    zl::slice<uint8_t> original_available = m.available_memory;
+    bytes_t original_available = m.available_memory;
 
     previous_state_t *bookkeeping = nullptr;
 
@@ -115,10 +115,10 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
         if (new_available_start >= (m.memory.end().ptr() - typesize)) {
             return nullptr;
         }
-        m.available_memory = zl::slice<uint8_t>(m.available_memory,
-                                                m.available_memory.size() -
-                                                    (new_size - typesize),
-                                                m.available_memory.size());
+        m.available_memory =
+            bytes_t(m.available_memory,
+                    m.available_memory.size() - (new_size - typesize),
+                    m.available_memory.size());
 
         return new_available_start;
     }
@@ -140,7 +140,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
     if (!result.okay())
         return result.err();
 
-    const zl::slice<uint8_t> &newmem = result.release_ref();
+    const bytes_t &newmem = result.release_ref();
 #ifndef NDEBUG
     if (newmem.data() != m.memory.data()) {
         // this shouldnt happen, reallocation is supposed to be stable
@@ -152,15 +152,14 @@ ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
     return AllocationStatusCode::Okay;
 }
 
-ALLO_FUNC allocation_status_t stack_allocator_t::free_status(
-    zl::slice<uint8_t> mem, size_t typehash) const noexcept
+ALLO_FUNC allocation_status_t
+stack_allocator_t::free_status(bytes_t mem, size_t typehash) const noexcept
 {
     return free_common(mem, typehash).err();
 }
 
 ALLO_FUNC zl::res<stack_allocator_t::previous_state_t &, AllocationStatusCode>
-stack_allocator_t::free_common(zl::slice<uint8_t> mem,
-                               size_t typehash) const noexcept
+stack_allocator_t::free_common(bytes_t mem, size_t typehash) const noexcept
 {
     if (m.last_type_hashcode != typehash)
         return AllocationStatusCode::InvalidType;
@@ -213,7 +212,7 @@ stack_allocator_t::free_common(zl::slice<uint8_t> mem,
 }
 
 ALLO_FUNC allocation_status_t
-stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
+stack_allocator_t::free_bytes(bytes_t mem, size_t typehash) noexcept
 {
     auto mbookkeeping = free_common(mem, typehash);
     if (!mbookkeeping.okay())
@@ -221,14 +220,14 @@ stack_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
     // actually modify the container
     auto &bookkeeping = mbookkeeping.release();
     m.available_memory =
-        zl::slice<uint8_t>(m.memory, bookkeeping.stack_top,
-                           m.available_memory.end().ptr() - m.memory.data());
+        bytes_t(m.memory, bookkeeping.stack_top,
+                m.available_memory.end().ptr() - m.memory.data());
     m.last_type_hashcode = bookkeeping.type_hashcode;
     return AllocationStatusCode::Okay;
 }
 
 ALLO_FUNC allocation_result_t
-stack_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
+stack_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash,
                                size_t new_size, size_t new_typehash) noexcept
 {
     if (old_typehash != m.last_type_hashcode)
@@ -240,8 +239,8 @@ stack_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
 
 ALLO_FUNC zl::res<stack_allocator_t, AllocationStatusCode>
 stack_allocator_t::make_inner(
-    zl::slice<uint8_t> memory,
-    zl::opt<detail::dynamic_heap_allocator_t> parent) noexcept
+    bytes_t memory,
+    zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept
 {
     // make sure there is at least one byte of space to be allocated in memory
     if (memory.size() <= sizeof(previous_state_t)) {
@@ -291,7 +290,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(
                 return AllocationStatusCode::OOM;
             }
 
-            m.available_memory = zl::slice<uint8_t>(
+            m.available_memory = bytes_t(
                 m.available_memory, 0,
                 (uint8_t *)aligned - (uint8_t *)m.available_memory.data());
 

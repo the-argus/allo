@@ -3,12 +3,12 @@
 #include "allo/detail/abstracts.h"
 
 namespace allo {
-class reservation_allocator_t : private detail::dynamic_allocator_base_t
+class reservation_allocator_t : public detail::abstract_heap_allocator_t
 {
   private:
     struct M
     {
-        zl::slice<uint8_t> mem; // committed memory
+        bytes_t mem; // committed memory
         size_t pagesize;
         // num_pages_reserved is the maximum number of pages that this
         // allocation can be remapped t
@@ -41,13 +41,13 @@ class reservation_allocator_t : private detail::dynamic_allocator_base_t
 
     /// Increase the size of the memory owned by this allocation without
     /// invalidating addresses.
-    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
+    [[nodiscard]] allocation_result_t remap_bytes(bytes_t mem,
                                                   size_t old_typehash,
                                                   size_t new_size,
                                                   size_t new_typehash) noexcept;
 
     /// Always invalid to try and free anything from a reservation.
-    inline allocation_status_t free_bytes(zl::slice<uint8_t> mem, // NOLINT
+    inline allocation_status_t free_bytes(bytes_t mem, // NOLINT
                                           size_t /*typehash*/) noexcept
     {
         return free_status(mem, 0);
@@ -64,7 +64,7 @@ class reservation_allocator_t : private detail::dynamic_allocator_base_t
     /// Will return Okay if you pass in the slice of memory that this allocation
     /// owns (typehash is ignored). Otherwise, it returns MemoryInvalid.
     [[nodiscard]] inline allocation_status_t free_status( // NOLINT
-        zl::slice<uint8_t> mem, size_t) const noexcept
+        bytes_t mem, size_t) const noexcept
     {
         if (mem.data() == m.mem.data())
             return AllocationStatusCode::Okay;
@@ -87,8 +87,7 @@ class reservation_allocator_t : private detail::dynamic_allocator_base_t
     }
 
     // return a slice to the memory currently allocated by this allocator.
-    [[nodiscard]] inline constexpr zl::slice<uint8_t>
-    current_memory() const noexcept
+    [[nodiscard]] inline constexpr bytes_t current_memory() const noexcept
     {
         return m.mem;
     }
@@ -106,7 +105,7 @@ class reservation_allocator_t : private detail::dynamic_allocator_base_t
 
     inline reservation_allocator_t(M &&members) noexcept : m(members)
     {
-        type = enum_value;
+        m_type = enum_value;
     }
 };
 } // namespace allo

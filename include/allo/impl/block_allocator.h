@@ -8,8 +8,8 @@
 #endif
 
 #include "allo/block_allocator.h"
+#include "allo/detail/alignment.h"
 #include <cmath>
-#include <memory>
 
 #ifdef ALLO_HEADER_ONLY
 #ifndef ALLO_FUNC
@@ -35,7 +35,7 @@ ALLO_FUNC
 block_allocator_t::block_allocator_t(block_allocator_t &&other) noexcept
     : m(std::move(other.m))
 {
-    type = other.type;
+    m_type = other.m_type;
     other.m.parent.reset();
     other.m.blocks_free = 0;
 }
@@ -65,9 +65,9 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
 }
 
 ALLO_FUNC zl::res<block_allocator_t, AllocationStatusCode>
-block_allocator_t::make_inner(zl::slice<uint8_t> memory,
-                              zl::opt<detail::dynamic_heap_allocator_t> parent,
-                              size_t blocksize) noexcept
+block_allocator_t::make_inner(
+    bytes_t memory, zl::opt<detail::abstract_heap_allocator_t &> parent,
+    size_t blocksize) noexcept
 {
     // blocksize must be at least 8 bytes
     size_t actual_blocksize =
@@ -164,8 +164,8 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
         return AllocationStatusCode::Corruption;
     }
 
-    zl::slice<uint8_t> chosen_block(m.mem, m.last_freed_index * m.blocksize,
-                                    (m.last_freed_index + 1) * m.blocksize);
+    bytes_t chosen_block(m.mem, m.last_freed_index * m.blocksize,
+                         (m.last_freed_index + 1) * m.blocksize);
 
     m.last_freed_index = next_to_last_freed;
     --m.blocks_free;
@@ -201,7 +201,7 @@ block_allocator_t::get_location_for_typehash(uint8_t *blockhead,
 }
 
 ALLO_FUNC allocation_result_t
-block_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
+block_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash,
                                size_t new_size, size_t new_typehash) noexcept
 {
     if (new_size > m.blocksize) {
@@ -225,7 +225,7 @@ block_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
 }
 
 ALLO_FUNC allocation_status_t
-block_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
+block_allocator_t::free_bytes(bytes_t mem, size_t typehash) noexcept
 {
     auto manalysis = try_analyze_block(mem, typehash);
     if (!manalysis.okay()) {
@@ -241,7 +241,7 @@ block_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
 }
 
 ALLO_FUNC zl::res<block_allocator_t::block_analysis_t, AllocationStatusCode>
-block_allocator_t::try_analyze_block(zl::slice<uint8_t> mem,
+block_allocator_t::try_analyze_block(bytes_t mem,
                                      size_t typehash) const noexcept
 {
     // memory outside of allocator, or impossible to have allocated with this
@@ -273,8 +273,8 @@ block_allocator_t::try_analyze_block(zl::slice<uint8_t> mem,
     return result;
 }
 
-ALLO_FUNC allocation_status_t block_allocator_t::free_status(
-    zl::slice<uint8_t> mem, size_t typehash) const noexcept
+ALLO_FUNC allocation_status_t
+block_allocator_t::free_status(bytes_t mem, size_t typehash) const noexcept
 {
     return try_analyze_block(mem, typehash).err();
 }

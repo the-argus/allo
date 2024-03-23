@@ -29,8 +29,8 @@ struct heap_allocator_t::free_node_t
 
 ALLO_FUNC zl::res<heap_allocator_t, AllocationStatusCode>
 heap_allocator_t::make_inner(
-    const zl::slice<uint8_t> &memory,
-    const zl::opt<detail::dynamic_heap_allocator_t> &parent) noexcept
+    const bytes_t &memory,
+    zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept
 {
     void *head = memory.data();
     size_t space = memory.size();
@@ -69,13 +69,13 @@ heap_allocator_t::make_inner(
 ALLO_FUNC heap_allocator_t::heap_allocator_t(M &&members) noexcept
     : m(std::move(members))
 {
-    type = enum_value;
+    m_type = enum_value;
 }
 
 ALLO_FUNC heap_allocator_t::heap_allocator_t(heap_allocator_t &&other) noexcept
     : m(std::move(other.m))
 {
-    type = enum_value;
+    m_type = enum_value;
 }
 
 ALLO_FUNC heap_allocator_t::~heap_allocator_t() noexcept
@@ -130,14 +130,14 @@ ALLO_FUNC allocation_status_t heap_allocator_t::register_destruction_callback(
 }
 
 ALLO_FUNC allocation_result_t
-heap_allocator_t::remap_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
-                              size_t new_size, size_t new_typehash) noexcept
+heap_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash, size_t new_size,
+                              size_t new_typehash) noexcept
 {
     return AllocationStatusCode::InvalidArgument;
 }
 
 ALLO_FUNC allocation_status_t
-heap_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
+heap_allocator_t::free_bytes(bytes_t mem, size_t typehash) noexcept
 {
     auto res = free_common(mem, typehash);
     if (!res.okay())
@@ -151,7 +151,7 @@ heap_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
     return AllocationStatusCode::Okay;
 }
 
-ALLO_FUNC auto heap_allocator_t::free_common(zl::slice<uint8_t> mem,
+ALLO_FUNC auto heap_allocator_t::free_common(bytes_t mem,
                                              size_t typehash) const noexcept
     -> zl::res<allocation_bookkeeping_t *, AllocationStatusCode>
 {
@@ -282,8 +282,8 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
     return AllocationStatusCode::OOM;
 }
 
-ALLO_FUNC allocation_status_t heap_allocator_t::free_status(
-    zl::slice<uint8_t> mem, size_t typehash) const noexcept
+ALLO_FUNC allocation_status_t
+heap_allocator_t::free_status(bytes_t mem, size_t typehash) const noexcept
 {
     return free_common(mem, typehash).err();
 }

@@ -3,14 +3,14 @@
 
 namespace allo {
 
-class stack_allocator_t : private detail::dynamic_allocator_base_t
+class stack_allocator_t : public detail::abstract_stack_allocator_t
 {
   private:
     struct M
     {
-        zl::opt<detail::dynamic_heap_allocator_t> parent;
-        zl::slice<uint8_t> memory;
-        zl::slice<uint8_t> available_memory;
+        zl::opt<detail::abstract_heap_allocator_t &> parent;
+        bytes_t memory;
+        bytes_t available_memory;
         size_t last_type_hashcode = 0;
         allocator_properties_t properties;
     } m;
@@ -25,15 +25,15 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
     stack_allocator_t &operator=(const stack_allocator_t &) = delete;
 
     inline static zl::res<stack_allocator_t, AllocationStatusCode>
-    make_owned(zl::slice<uint8_t> memory,
-               detail::dynamic_heap_allocator_t parent) noexcept
+    make_owned(bytes_t memory,
+               detail::abstract_heap_allocator_t& parent) noexcept
     {
         return make_inner(memory, parent);
     }
 
     // create a stack allocator which allocates into a given block of memory.
     inline static zl::res<stack_allocator_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> memory) noexcept
+    make(bytes_t memory) noexcept
     {
         return make_inner(memory, {});
     }
@@ -51,16 +51,15 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
 
-    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
+    [[nodiscard]] allocation_result_t remap_bytes(bytes_t mem,
                                                   size_t old_typehash,
                                                   size_t new_size,
                                                   size_t new_typehash) noexcept;
 
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem,
-                                   size_t typehash) noexcept;
+    allocation_status_t free_bytes(bytes_t mem, size_t typehash) noexcept;
 
     [[nodiscard]] allocation_status_t
-    free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
+    free_status(bytes_t mem, size_t typehash) const noexcept;
 
     [[nodiscard]] const allocator_properties_t &properties() const noexcept;
 
@@ -70,7 +69,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
 
     inline explicit stack_allocator_t(M &&members) noexcept : m(members)
     {
-        type = enum_value;
+        m_type = enum_value;
     }
 
   private:
@@ -81,8 +80,8 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
     allocation_status_t realloc() noexcept;
 
     static zl::res<stack_allocator_t, AllocationStatusCode>
-    make_inner(zl::slice<uint8_t> memory,
-               zl::opt<detail::dynamic_heap_allocator_t> parent) noexcept;
+    make_inner(bytes_t memory,
+               zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept;
 
     /// the information placed underneath every allocation in the stack
     struct previous_state_t
@@ -99,7 +98,7 @@ class stack_allocator_t : private detail::dynamic_allocator_base_t
 
     /// Common logic shared between freeing functions
     [[nodiscard]] zl::res<previous_state_t &, AllocationStatusCode>
-    free_common(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
+    free_common(bytes_t mem, size_t typehash) const noexcept;
 };
 } // namespace allo
 

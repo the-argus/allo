@@ -22,10 +22,8 @@ remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
     static_assert(!std::is_same_v<Allocator, c_allocator_t>,
                   "The c allocator does not provide remap functionality, you "
                   "must use realloc.");
-    static_assert(
-        detail::can_upcast<Allocator,
-                           detail::dynamic_stack_allocator_t>::type::value,
-        "Cannot use given type to perform reallocations");
+    static_assert(detail::is_reallocator<Allocator>,
+                  "Cannot use given type to perform reallocations");
 
 #if defined(ALLO_DISABLE_TYPEINFO)
     const size_t typehash = 0;
@@ -47,7 +45,7 @@ remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
     if (!remapped.okay())
         return remapped.err();
 
-    zl::slice<uint8_t> &newmem = remapped.release_ref();
+    bytes_t &newmem = remapped.release_ref();
     assert(newmem.data() == (uint8_t *)original.data());
 
     return zl::raw_slice(*original.data(), new_size);
@@ -56,38 +54,18 @@ remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 /// Remap, or if remap fails, create an entirely new, differently sized
 /// allocation and copy the contents of the first allocation to that one.
 template <typename Allocator>
-inline zl::res<zl::slice<uint8_t>, AllocationStatusCode>
-realloc_bytes(Allocator &allocator, zl::slice<uint8_t> original,
-              size_t new_size, uint8_t new_alignment_exponent) noexcept
+inline zl::res<bytes_t, AllocationStatusCode>
+realloc_bytes(Allocator &allocator, bytes_t original, size_t new_size,
+              uint8_t new_alignment_exponent) noexcept
 {
-    static_assert(
-        detail::can_upcast<Allocator,
-                           detail::dynamic_stack_allocator_t>::type::value,
-        "Cannot use given type to perform reallocations");
+    static_assert(detail::is_reallocator<Allocator>,
+                  "Cannot use given type to perform reallocations");
 
     // necessary to perform downcasting here in order to support the C allocator
     // which breaks the abstraction
-    // NOTE: this could be achieved with a ternary operator but not doing that
-    // in favor of constexpr if. maybe a lambda could be okay too
-    if constexpr (std::is_base_of_v<detail::dynamic_allocator_base_t,
-                                    Allocator>) {
-        auto *type = reinterpret_cast<detail::AllocatorType *>(
-            std::addressof(allocator));
-        assert(*type < detail::AllocatorType::MAX_ALLOCATOR_TYPE);
-        if (*type == detail::AllocatorType::CAllocator) {
-            return reinterpret_cast<c_allocator_t *>(std::addressof(allocator))
-                ->realloc_bytes(original, 0, new_size, 0);
-        }
-    } else if constexpr (std::is_base_of_v<detail::allocator_common_t,
-                                           Allocator>) {
-        // NOTE: this relies on the layout of everything that an allocator
-        // dynref points at always having an AllocatorType at the beginning
-        auto *type = reinterpret_cast<detail::AllocatorType *>(allocator.ref);
-        assert(*type < detail::AllocatorType::MAX_ALLOCATOR_TYPE);
-        if (*type == detail::AllocatorType::CAllocator) {
-            return reinterpret_cast<c_allocator_t *>(std::addressof(allocator))
-                ->realloc_bytes(original, 0, new_size, 0);
-        }
+    if (allocator.type() == detail::AllocatorType::CAllocator) {
+        return reinterpret_cast<c_allocator_t *>(std::addressof(allocator))
+            ->realloc_bytes(original, 0, new_size, 0);
     }
 
     auto remap = allocator.remap_bytes(original, 0, new_size, 0);
@@ -99,12 +77,11 @@ realloc_bytes(Allocator &allocator, zl::slice<uint8_t> original,
         allocator.alloc_bytes(new_size, new_alignment_exponent, 0);
     if (new_allocation.okay()) {
         const bool enlarging = original.size() < new_size;
-        const zl::slice<uint8_t> source =
-            enlarging ? original : zl::slice<uint8_t>(original, 0, new_size);
-        zl::slice<uint8_t> dest =
-            enlarging ? zl::slice<uint8_t>(new_allocation.release_ref(), 0,
+        const bytes_t source =
+            enlarging ? original : bytes_t(original, 0, new_size);
+        bytes_t dest = enlarging ? bytes_t(new_allocation.release_ref(), 0,
                                            original.size())
-                      : new_allocation.release_ref();
+                                 : new_allocation.release_ref();
         const bool status = zl::memcopy(dest, source);
         assert(status);
         allocator.free_bytes(original, 0);
@@ -123,12 +100,10 @@ template <typename T, typename Allocator, size_t alignment = alignof(T)>
 inline zl::res<zl::slice<T>, AllocationStatusCode>
 realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 {
-    static_assert(
-        detail::can_upcast<Allocator,
-                           detail::dynamic_stack_allocator_t>::type::value,
-        "Cannot use given type to perform reallocations");
+    static_assert(detail::is_reallocator<Allocator>,
+                  "Cannot use given type to perform reallocations");
 
-    zl::slice<uint8_t> original_bytes =
+    bytes_t original_bytes =
         zl::raw_slice(*reinterpret_cast<uint8_t *>(original.data()),
                       original.size() * sizeof(T));
 
@@ -174,9 +149,8 @@ realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 
 /// When calling realloc with T = uint8_t, it just calls realloc_bytes.
 template <typename Allocator>
-inline zl::res<zl::slice<uint8_t>, AllocationStatusCode>
-realloc(Allocator &allocator, zl::slice<uint8_t> original,
-        size_t new_size) noexcept
+inline zl::res<bytes_t, AllocationStatusCode>
+realloc(Allocator &allocator, bytes_t original, size_t new_size) noexcept
 {
     return realloc_bytes(allocator, original, new_size);
 }

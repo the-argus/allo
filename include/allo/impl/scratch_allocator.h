@@ -62,9 +62,9 @@ scratch_allocator_t::register_destruction_callback(
             return AllocationStatusCode::OOM;
         }
 
-        m.available_memory = zl::slice<uint8_t>(
-            m.available_memory, 0,
-            (uint8_t *)aligned - (uint8_t *)m.available_memory.data());
+        m.available_memory =
+            bytes_t(m.available_memory, 0,
+                    (uint8_t *)aligned - (uint8_t *)m.available_memory.data());
 
         *aligned = {callback, user_data};
         return AllocationStatusCode::Okay;
@@ -79,8 +79,8 @@ ALLO_FUNC const allocator_properties_t &scratch_allocator_t::properties() const
 
 ALLO_FUNC zl::res<scratch_allocator_t, AllocationStatusCode>
 scratch_allocator_t::make_inner(
-    zl::slice<uint8_t> memory,
-    zl::opt<detail::dynamic_heap_allocator_t> parent) noexcept
+    bytes_t memory,
+    zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept
 {
     return scratch_allocator_t{M{
         .memory = memory,
@@ -110,7 +110,7 @@ ALLO_FUNC
 scratch_allocator_t::scratch_allocator_t(scratch_allocator_t &&other) noexcept
     : m(std::move(other.m))
 {
-    type = other.type;
+    m_type = other.m_type;
     other.m.parent.reset();
 }
 } // namespace allo

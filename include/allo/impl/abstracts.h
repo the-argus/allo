@@ -87,11 +87,11 @@ struct register_destruction_callback_generic
 };
 
 template <template <typename, typename...> typename Callable, typename... Args>
-auto return_from(dynamic_allocator_base_t *self, Args &&...args)
+auto return_from(detail::abstract_allocator_t *self, Args &&...args)
     -> decltype(Callable<c_allocator_t, Args...>{}(nullptr,
                                                    std::forward<Args>(args)...))
 {
-    switch (self->type) {
+    switch (self->type()) {
     case AllocatorType::CAllocator: {
         auto *c_alloc = reinterpret_cast<c_allocator_t *>(self);
         return Callable<c_allocator_t, Args...>{}(c_alloc,
@@ -129,53 +129,45 @@ auto return_from(dynamic_allocator_base_t *self, Args &&...args)
 }
 
 ALLO_FUNC const allocator_properties_t &
-allocator_common_t::properties() const noexcept
+abstract_allocator_t::properties() const noexcept
 {
-    // the only thing that should inherit from this interface should also
-    // inherit dynamic allocator base
-    const auto *dyn_self =
-        reinterpret_cast<const dynamic_allocator_base_t *>(ref);
-    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(dyn_self);
+    auto *mutable_self = const_cast<abstract_allocator_t *>(this);
     return return_from<get_properties_generic>(mutable_self);
 }
 
-ALLO_FUNC allocation_result_t allocator_common_t::alloc_bytes(
+ALLO_FUNC allocation_result_t abstract_allocator_t::alloc_bytes(
     size_t bytes, uint8_t alignment_exponent, size_t typehash) noexcept
 {
-    auto *dyn_self = reinterpret_cast<dynamic_allocator_base_t *>(ref);
-    return return_from<alloc_bytes_generic>(dyn_self, bytes, alignment_exponent,
+    return return_from<alloc_bytes_generic>(this, bytes, alignment_exponent,
                                             typehash);
 }
 
-ALLO_FUNC allocation_result_t dynamic_stack_allocator_t::remap_bytes(
-    zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
+ALLO_FUNC allocation_result_t abstract_stack_allocator_t::remap_bytes(
+    bytes_t mem, size_t old_typehash, size_t new_size,
     size_t new_typehash) noexcept
 {
-    auto *dyn_self = reinterpret_cast<dynamic_allocator_base_t *>(ref);
-    return return_from<remap_bytes_generic>(dyn_self, mem, old_typehash,
-                                            new_size, new_typehash);
+    return return_from<remap_bytes_generic>(this, mem, old_typehash, new_size,
+                                            new_typehash);
 }
 
-ALLO_FUNC allocation_status_t dynamic_stack_allocator_t::free_bytes(
-    zl::slice<uint8_t> mem, size_t typehash) noexcept
+ALLO_FUNC allocation_status_t
+abstract_stack_allocator_t::free_bytes(bytes_t mem, size_t typehash) noexcept
 {
-    auto *dyn_self = reinterpret_cast<dynamic_allocator_base_t *>(ref);
-    return return_from<free_bytes_generic>(dyn_self, mem, typehash);
+    return return_from<free_bytes_generic>(this, mem, typehash);
 }
 
-ALLO_FUNC allocation_status_t dynamic_stack_allocator_t::free_status(
-    zl::slice<uint8_t> mem, size_t typehash) noexcept
+ALLO_FUNC allocation_status_t
+abstract_stack_allocator_t::free_status(bytes_t mem, size_t typehash) noexcept
 {
-    auto *dyn_self = reinterpret_cast<const dynamic_allocator_base_t *>(ref);
-    auto *mutable_self = const_cast<dynamic_allocator_base_t *>(dyn_self);
+    auto *mutable_self = const_cast<abstract_stack_allocator_t *>(this);
     return return_from<free_status_generic>(mutable_self, mem, typehash);
 }
 
-ALLO_FUNC allocation_status_t allocator_common_t::register_destruction_callback(
+ALLO_FUNC allocation_status_t
+abstract_allocator_t::register_destruction_callback(
     destruction_callback_t callback, void *user_data) noexcept
 {
-    auto *dyn_self = reinterpret_cast<dynamic_allocator_base_t *>(ref);
-    return return_from<register_destruction_callback_generic>(
-        dyn_self, callback, user_data);
+    return return_from<register_destruction_callback_generic>(this, callback,
+                                                              user_data);
 }
 } // namespace allo::detail
