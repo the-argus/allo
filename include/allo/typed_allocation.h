@@ -1,5 +1,6 @@
 #pragma once
 #include "allo/detail/abstracts.h"
+#include "allo/detail/alignment.h"
 
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifndef ALLO_USE_RTTI

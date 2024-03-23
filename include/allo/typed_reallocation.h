@@ -3,6 +3,7 @@
 // impl details
 #include "allo/c_allocator.h"
 #include "allo/detail/abstracts.h"
+#include "allo/detail/alignment.h"
 #include <ziglike/stdmem.h>
 
 #ifndef ALLO_DISABLE_TYPEINFO
