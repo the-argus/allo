@@ -10,6 +10,7 @@
 #include "allo/block_allocator.h"
 #include "allo/detail/alignment.h"
 #include <cmath>
+#include <memory>
 
 #ifdef ALLO_HEADER_ONLY
 #ifndef ALLO_FUNC

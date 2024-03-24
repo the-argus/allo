@@ -20,9 +20,11 @@ template <typename T, typename Allocator>
 inline zl::res<zl::slice<T>, AllocationStatusCode>
 remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 {
+    // static assert to help catch the abstraction-breaking problem with
+    // c_allocator_t
     static_assert(!std::is_same_v<Allocator, c_allocator_t>,
                   "The c allocator does not provide remap functionality, you "
-                  "must use realloc.");
+                  "must use allo::realloc.");
     static_assert(detail::is_reallocator<Allocator>,
                   "Cannot use given type to perform reallocations");
 
@@ -56,47 +58,49 @@ remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 /// allocation and copy the contents of the first allocation to that one.
 template <typename Allocator>
 inline zl::res<bytes_t, AllocationStatusCode>
-realloc_bytes(Allocator &allocator, bytes_t original, size_t new_size,
-              uint8_t new_alignment_exponent) noexcept
+realloc_bytes(Allocator &allocator, bytes_t original, size_t old_typehash,
+              size_t new_size, uint8_t new_alignment_exponent,
+              size_t typehash) noexcept
 {
     static_assert(detail::is_reallocator<Allocator>,
                   "Cannot use given type to perform reallocations");
 
-    // necessary to perform downcasting here in order to support the C allocator
-    // which breaks the abstraction
-    if (allocator.type() == detail::AllocatorType::CAllocator) {
-        return reinterpret_cast<c_allocator_t *>(std::addressof(allocator))
-            ->realloc_bytes(original, 0, new_size, 0);
-    }
+    // threadsafe heap allocators are already required to supply an atomic
+    // realloc operation, so just use that if its available
+    if constexpr (std::is_base_of_v<
+                      detail::abstract_threadsafe_heap_allocator_t,
+                      Allocator>) {
+        return allocator.threadsafe_realloc_bytes(original, old_typehash,
+                                                  new_size, typehash);
+    } else {
+        // allocators that aren't threadsafe heap allocators:
+        auto remap =
+            allocator.remap_bytes(original, old_typehash, new_size, typehash);
+        if (remap.okay())
+            return remap;
 
-    auto remap = allocator.remap_bytes(original, 0, new_size, 0);
-    if (remap.okay())
-        return remap;
-
-    static_assert(sizeof(original.data()) == sizeof(size_t));
-    auto new_allocation =
-        allocator.alloc_bytes(new_size, new_alignment_exponent, 0);
-    if (new_allocation.okay()) {
-        const bool enlarging = original.size() < new_size;
-        const bytes_t source =
-            enlarging ? original : bytes_t(original, 0, new_size);
-        bytes_t dest = enlarging ? bytes_t(new_allocation.release_ref(), 0,
-                                           original.size())
-                                 : new_allocation.release_ref();
-        const bool status = zl::memcopy(dest, source);
-        assert(status);
-        allocator.free_bytes(original, 0);
-        // TODO: assert or something here maybe? should we allow failed
-        // frees? probably a warning log message would be good
-        return dest;
+        static_assert(sizeof(original.data()) == sizeof(size_t));
+        auto new_allocation =
+            allocator.alloc_bytes(new_size, new_alignment_exponent, typehash);
+        if (new_allocation.okay()) {
+            const bool enlarging = original.size() < new_size;
+            const bytes_t source =
+                enlarging ? original : bytes_t(original, 0, new_size);
+            bytes_t dest = enlarging ? bytes_t(new_allocation.release_ref(), 0,
+                                               original.size())
+                                     : new_allocation.release_ref();
+            const bool status = zl::memcopy(dest, source);
+            assert(status);
+            allocator.free_bytes(original, old_typehash);
+            // TODO: assert or something here maybe? should we allow failed
+            // frees? probably a warning log message would be good
+            return dest;
+        }
+        return new_allocation.err();
     }
-    return new_allocation.err();
 }
 
-/// Remap, or if remap fails, create an entirely new, differently sized
-/// allocation and copy the contents of the first allocation to that one.
-/// NOTE: if the allocation needs to be aligned you must pass its original
-/// alignment to reallocation as well.
+// Simple wrapper around realloc_bytes for trivially copyable types
 template <typename T, typename Allocator, size_t alignment = alignof(T)>
 inline zl::res<zl::slice<T>, AllocationStatusCode>
 realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
@@ -120,39 +124,23 @@ realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 
     const size_t new_size_bytes = new_size * sizeof(T);
 
-    auto remap = allocator.remap_bytes(original_bytes, typehash, new_size_bytes,
-                                       typehash);
-    if (remap.okay())
-        return zl::raw_slice(*original.data(), new_size);
+    constexpr uint8_t aex = detail::nearest_alignment_exponent(alignment);
 
-    static constexpr size_t aexponent =
-        detail::nearest_alignment_exponent(alignment);
+    auto realloc_res = realloc_bytes(allocator, original_bytes, typehash,
+                                     new_size_bytes, aex, typehash);
+    if (!realloc_res.okay())
+        return realloc_res.err();
 
-    static_assert(sizeof(original.data()) == sizeof(size_t));
-    auto new_allocation =
-        allocator.alloc_bytes(new_size_bytes, aexponent, typehash);
-    if (new_allocation.okay()) {
-        const bool enlarging = original.size() < new_size;
-        const zl::slice<T> source =
-            enlarging ? original : zl::slice<T>(original, 0, new_size);
-        zl::slice<T> dest = zl::raw_slice<T>(
-            *reinterpret_cast<T *>(new_allocation.release_ref().data()),
-            enlarging ? original.size() : new_size);
-        const bool status = zl::memcopy(dest, source);
-        assert(status);
-        allocator.free_bytes(original_bytes, typehash);
-        // TODO: assert or something here maybe? should we allow failed frees?
-        // probably a warning log message would be good
-        return dest;
-    }
-    return new_allocation.err();
+    return zl::raw_slice(*reinterpret_cast<T *>(realloc_res.release().data()),
+                         new_size);
 }
 
 /// When calling realloc with T = uint8_t, it just calls realloc_bytes.
-template <typename Allocator>
+template <typename Allocator, size_t alignment = 32>
 inline zl::res<bytes_t, AllocationStatusCode>
 realloc(Allocator &allocator, bytes_t original, size_t new_size) noexcept
 {
-    return realloc_bytes(allocator, original, new_size);
+    constexpr uint8_t aex = detail::nearest_alignment_exponent(alignment);
+    return realloc_bytes(allocator, original, 0, new_size, aex, 0);
 }
 } // namespace allo

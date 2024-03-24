@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <ziglike/stdmem.h>
 #ifndef ALLO_HEADER_ONLY
 #ifndef ALLO_OVERRIDE_IMPL_INCLUSION_GUARD

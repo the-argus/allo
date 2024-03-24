@@ -97,6 +97,7 @@ class abstract_heap_allocator_t : public abstract_stack_allocator_t
 // A heap allocator which is also threadsafe.
 class abstract_threadsafe_heap_allocator_t : public abstract_heap_allocator_t
 {
+  public:
     [[nodiscard]] allocation_result_t
     threadsafe_realloc_bytes(bytes_t mem, size_t old_typehash, size_t new_size,
                              size_t new_typehash) noexcept;

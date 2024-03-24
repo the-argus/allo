@@ -28,12 +28,9 @@ class c_allocator_t : public detail::abstract_threadsafe_heap_allocator_t
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
 
-    /// NOTE: the c allocator does not have a remap_bytes. this is abstraction
-    /// breaking and means that calling remap_bytes on a c allocator will cause
-    /// InvalidArgument.
     [[nodiscard]] allocation_result_t
-    realloc_bytes(bytes_t mem, size_t old_typehash, size_t new_size,
-                  size_t new_typehash) noexcept;
+    threadsafe_realloc_bytes(bytes_t mem, size_t old_typehash, size_t new_size,
+                             size_t new_typehash) noexcept;
 
     allocation_status_t free_bytes(bytes_t mem, size_t typehash) noexcept;
 

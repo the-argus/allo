@@ -27,9 +27,8 @@ ALLO_FUNC allocation_result_t c_allocator_t::alloc_bytes(
     return zl::raw_slice(*reinterpret_cast<uint8_t *>(newmem), bytes);
 }
 
-ALLO_FUNC allocation_result_t c_allocator_t::realloc_bytes(bytes_t mem, size_t,
-                                                           size_t new_size,
-                                                           size_t) noexcept
+ALLO_FUNC allocation_result_t c_allocator_t::threadsafe_realloc_bytes(
+    bytes_t mem, size_t, size_t new_size, size_t) noexcept
 {
     void *newmem = ::realloc(mem.data(), new_size);
     if (newmem == nullptr) {

@@ -33,6 +33,19 @@ template <typename T, typename... Args> struct get_properties_generic
     }
 };
 
+template <typename T, typename... Args> struct threadsafe_realloc_bytes_generic
+{
+    inline allocation_result_t operator()(T *item, Args &&...args)
+    {
+        if constexpr (std::is_base_of_v<abstract_threadsafe_heap_allocator_t,
+                                        T>) {
+            return item->threadsafe_realloc_bytes(std::forward<Args>(args)...);
+        } else {
+            std::abort();
+        }
+    }
+};
+
 template <typename T, typename... Args> struct alloc_bytes_generic
 {
     inline allocation_result_t operator()(T *item, Args &&...args)
@@ -140,6 +153,15 @@ ALLO_FUNC allocation_result_t abstract_allocator_t::alloc_bytes(
 {
     return return_from<alloc_bytes_generic>(this, bytes, alignment_exponent,
                                             typehash);
+}
+
+ALLO_FUNC allocation_result_t
+abstract_threadsafe_heap_allocator_t::threadsafe_realloc_bytes(
+    bytes_t mem, size_t old_typehash, size_t new_size,
+    size_t new_typehash) noexcept
+{
+    return return_from<threadsafe_realloc_bytes_generic>(
+        this, mem, old_typehash, new_size, new_typehash);
 }
 
 ALLO_FUNC allocation_result_t abstract_stack_allocator_t::remap_bytes(
