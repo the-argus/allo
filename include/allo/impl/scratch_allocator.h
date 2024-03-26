@@ -20,6 +20,31 @@
 
 namespace allo {
 
+ALLO_FUNC allocation_status_t
+scratch_allocator_t::try_make_space_for_at_least(size_t bytes) noexcept
+{
+    if (!m.parent)
+        return AllocationStatusCode::OOM;
+
+    size_t new_size = m.memory.size() + bytes;
+    // round up to be an even integer exponential of the original allocation
+    // size
+    size_t new_size_rounded = std::ceil(std::log10(new_size) * m.remap_divisor);
+    assert(new_size_rounded > new_size);
+    auto res = m.parent.value().remap_bytes(m.memory, 0, new_size_rounded, 0);
+    if (!res.okay())
+        return res.err();
+    m.memory = res.release();
+    if (m.available_memory.end().ptr() == m.memory.end().ptr())
+        return AllocationStatusCode::Okay;
+    // copy the stuff at the end of memory to the NEW end of memory
+    assert(m.memory.size() > m.available_memory.size());
+    bytes_t new_destruction_callbacks_mem = bytes_t(
+        m.memory, m.memory.size() - m.available_memory.size(), m.memory.size());
+    zl::memcopy(new_destruction_callbacks_mem, m.available_memory);
+    return AllocationStatusCode::Okay;
+}
+
 ALLO_FUNC allocation_result_t scratch_allocator_t::alloc_bytes(
     size_t bytes, uint8_t alignment_exponent, size_t) noexcept
 {
@@ -88,6 +113,7 @@ scratch_allocator_t::make_inner(
         .available_memory = memory,
         .parent = parent,
         .properties = allocator_properties_t(memory.size(), 0),
+        .remap_divisor = static_cast<float>(1.0 / std::log10(memory.size())),
     }};
 }
 

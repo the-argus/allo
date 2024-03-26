@@ -48,6 +48,9 @@ class scratch_allocator_t : public detail::abstract_allocator_t
     make_inner(bytes_t memory,
                zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept;
 
+    /// Add additional bytes to whatever is already available
+    allocation_status_t try_make_space_for_at_least(size_t bytes) noexcept;
+
     struct destruction_callback_entry_t
     {
         destruction_callback_t callback;
@@ -60,6 +63,10 @@ class scratch_allocator_t : public detail::abstract_allocator_t
         bytes_t available_memory;
         zl::opt<detail::abstract_heap_allocator_t &> parent;
         allo::allocator_properties_t properties;
+        /// 1/log10(original_allocation_size). Used to make sure the size of
+        /// memory is always an even integer exponential of the original
+        /// allocation size
+        const float remap_divisor;
     } m;
 
     scratch_allocator_t(M &&members) noexcept : m(members)
