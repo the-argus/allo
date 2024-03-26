@@ -105,6 +105,11 @@ TEST_SUITE("scratch_allocator_t")
             std::array<int, 88> &my_ints = maybe_my_ints.release();
         }
 
+        SUBCASE("generic ref, large allocation")
+        {
+            tests::make_large_allocation_with<scratch_allocator_t>();
+        }
+
         SUBCASE("generic ref, allocate linked list")
         {
             // TODO: this test is only supposed to need something like 830

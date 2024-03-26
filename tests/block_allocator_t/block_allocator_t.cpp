@@ -70,6 +70,11 @@ TEST_SUITE("block_allocator_t")
 
     TEST_CASE("functionality")
     {
+        SUBCASE("generic ref, large allocation")
+        {
+            tests::make_large_allocation_with<heap_allocator_t>();
+        }
+
         SUBCASE("related objects, similar structure to linked list")
         {
             c_allocator_t global_allocator;

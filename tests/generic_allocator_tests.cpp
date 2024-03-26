@@ -58,4 +58,13 @@ void allocate_object_with_linked_list(abstract_allocator_t &ally)
             linked.append(c);
     }
 }
+
+bytes_t large_allocation(abstract_allocator_t &ally, size_t maxpages)
+{
+    auto psres = mm_get_page_size();
+    REQUIRE((psres.has_value != 0));
+    auto res = allo::alloc<uint8_t>(ally, psres.value * (maxpages - 1));
+    REQUIRE(res.okay());
+    return res.release();
+}
 } // namespace allo::tests

@@ -119,6 +119,11 @@ TEST_SUITE("stack_allocator_t")
             REQUIRE((my_new_ints.release().data() == original_int_location));
         }
 
+        SUBCASE("generic ref, large allocation")
+        {
+            tests::make_large_allocation_with<stack_allocator_t>();
+        }
+
         SUBCASE("generic ref, allocate linked list")
         {
             // TODO: this test is only supposed to need something like 830

@@ -71,6 +71,11 @@ TEST_SUITE("heap_allocator_t")
             tests::allocate_object_with_linked_list(heap);
         }
 
+        SUBCASE("generic ref, large allocation")
+        {
+            tests::make_large_allocation_with<heap_allocator_t>();
+        }
+
         SUBCASE("heap allocator_test - allocate and free one thing")
         {
             c_allocator_t global_allocator;
