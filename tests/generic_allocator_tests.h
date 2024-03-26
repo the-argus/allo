@@ -1,6 +1,7 @@
 #pragma once
 #include "allo.h"
 #include "allo/reservation_allocator.h"
+#include <cassert>
 
 namespace allo::tests {
 void allocate_object_with_linked_list(abstract_allocator_t &ally);
@@ -14,9 +15,19 @@ void make_large_allocation_with(Args &&...args)
         reservation_allocator_t::make(
             {.committed = 1, .additional_pages_reserved = maxpages})
             .release();
-    auto ally = Allocator::make_owned(reserve.current_memory(), reserve,
-                                      std::forward<Args>(args)...)
-                    .release();
-    bytes_t result = allo::tests::large_allocation(ally, maxpages);
+    static int count = 0;
+    {
+        auto ally = Allocator::make_owned(reserve.current_memory(), reserve,
+                                          std::forward<Args>(args)...)
+                        .release();
+        ally.register_destruction_callback(
+            [](void *data) {
+                auto *d = ((int *)data);
+                ++(*d);
+            },
+            &count);
+        bytes_t result = allo::tests::large_allocation(ally, maxpages);
+    }
+    assert(count == 1);
 }
 } // namespace allo::tests
