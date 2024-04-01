@@ -49,10 +49,11 @@ if (ALLO_SYSTEM_HEADERS)
     set(ALLO_SYSTEM_HEADERS_ATTRIBUTE SYSTEM)
 endif()
 
-add_library(allo::allo INTERFACE)
-target_compile_definitions(allo::allo INTERFACE ALLO_HEADER_ONLY=1)
-target_compile_features(allo::allo INTERFACE cxx_std_17)
+add_library(allo-header-only INTERFACE)
+add_library(allo::allo-header-only ALIAS allo-header-only)
+target_compile_definitions(allo-header-only INTERFACE ALLO_HEADER_ONLY=1)
+target_compile_features(allo-header-only INTERFACE cxx_std_17)
 
-target_include_directories(allo::allo ${ALLO_SYSTEM_HEADERS_ATTRIBUTE} INTERFACE
+target_include_directories(allo-header-only ${ALLO_SYSTEM_HEADERS_ATTRIBUTE} INTERFACE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${ALLO_INC_DIR}>)
