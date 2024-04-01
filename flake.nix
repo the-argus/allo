@@ -29,6 +29,7 @@
               gdb
               valgrind
               zig_0_11
+              cmake
             ]);
         };
 
