@@ -156,8 +156,8 @@ ALLO_FUNC auto heap_allocator_t::free_common(bytes_t mem,
     -> zl::res<allocation_bookkeeping_t *, AllocationStatusCode>
 {
 
-#ifndef NDEBUG
     void *head = mem.data();
+#ifndef NDEBUG
     size_t dummyspace = sizeof(allocation_bookkeeping_t) * 2;
     assert(std::align(alignof(allocation_bookkeeping_t),
                       sizeof(allocation_bookkeeping_t), head,
