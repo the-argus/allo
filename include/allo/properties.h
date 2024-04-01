@@ -17,7 +17,7 @@ struct allocator_properties_t
 {
   public:
     /// Check if the allocator properties meet some given requirements
-    [[nodiscard]] inline constexpr bool
+    [[nodiscard]] inline bool
     meets(const allocator_requirements_t &requirements) const
     {
         if (!requirements.maximum_contiguous_bytes.has_value()) {
