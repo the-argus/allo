@@ -89,6 +89,8 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
 
         actual = raw_alloc(alignment, bytes);
 
+        // BUG: if requested item is 2x or more larger than the size of memory,
+        // this doesn't work. we should allow realloc to compound.
         assert(actual);
         if (!actual) [[unlikely]]
             return AllocationStatusCode::OOM;
