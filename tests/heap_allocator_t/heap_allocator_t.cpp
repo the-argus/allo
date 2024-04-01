@@ -1,6 +1,7 @@
 #include "allo.h"
 #include "allo/c_allocator.h"
 #include "allo/heap_allocator.h"
+#include "allo/make_into.h"
 #include "generic_allocator_tests.h"
 #include "heap_tests.h"
 #include "test_header.h"
@@ -27,6 +28,31 @@ TEST_SUITE("heap_allocator_t")
             heap_allocator_t heap =
                 heap_allocator_t::make_owned(mem, global_allocator).release();
         }
+        SUBCASE("make_into")
+        {
+            c_allocator_t global_allocator;
+
+            zl::slice<uint8_t> mem =
+                allo::alloc<uint8_t>(global_allocator, 2000).release();
+
+            {
+                heap_allocator_t &heap =
+                    allo::make_into<heap_allocator_t>(global_allocator, mem)
+                        .release();
+
+                auto mint = allo::alloc_one<int>(heap);
+                REQUIRE(mint.okay());
+            }
+
+            {
+                heap_allocator_t &heap =
+                    allo::make_into<heap_allocator_t, MakeType::Owned>(
+                        global_allocator, mem, global_allocator)
+                        .release();
+                auto mint = allo::alloc_one<int>(heap);
+                REQUIRE(mint.okay());
+            }
+        }
     }
 
     TEST_CASE("functionality")
@@ -43,6 +69,11 @@ TEST_SUITE("heap_allocator_t")
             heap_allocator_t heap =
                 heap_allocator_t::make_owned(mem, global_allocator).release();
             tests::allocate_object_with_linked_list(heap);
+        }
+
+        SUBCASE("generic ref, large allocation")
+        {
+            tests::make_large_allocation_with<heap_allocator_t>();
         }
 
         SUBCASE("heap allocator_test - allocate and free one thing")

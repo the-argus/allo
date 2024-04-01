@@ -1,6 +1,5 @@
 #include "heap_tests.h"
 #include "allo.h"
-#include "allo/rtti.h"
 #include "doctest.h"
 #include "ziglike/stdmem.h"
 using namespace allo;
@@ -23,7 +22,8 @@ struct Parent
         return zl::slice<Child>(*children, 0, num_children);
     }
 
-    static Parent &make_on_heap(HeapAllocatorDynRef allocator, const char *name)
+    static Parent &make_on_heap(abstract_heap_allocator_t &allocator,
+                                const char *name)
     {
         Parent &parent = allo::construct_one<Parent>(allocator).release();
         parent.children =
@@ -35,7 +35,7 @@ struct Parent
 };
 
 namespace allo::tests {
-void allocate_480_bytes_related_objects(HeapAllocatorDynRef heap)
+void allocate_480_bytes_related_objects(abstract_heap_allocator_t &heap)
 {
     Parent &parent1 = Parent::make_on_heap(heap, "Sharon");
     Parent &parent1_wife = Parent::make_on_heap(heap, "Leslie");
@@ -57,7 +57,7 @@ void allocate_480_bytes_related_objects(HeapAllocatorDynRef heap)
         zl::raw_slice<const char>(*((char *)"Sharon"), 6)));
 }
 
-void typed_alloc_realloc_free(HeapAllocatorDynRef heap)
+void typed_alloc_realloc_free(abstract_heap_allocator_t &heap)
 {
     struct Test
     {
@@ -69,10 +69,11 @@ void typed_alloc_realloc_free(HeapAllocatorDynRef heap)
             .maximum_alignment = alignof(Test),
         })) {
         printf("[WARN] Skipping test %s for allocator of type %s\n",
-               __PRETTY_FUNCTION__, allocator_typename(heap));
+               __PRETTY_FUNCTION__, heap.name());
         // dont run the tests if the allocator is going to OOM
         return;
     }
+    static_assert(detail::nearest_alignment_exponent(alignof(Test)) <= 5);
     zl::slice<Test> first = allo::alloc<Test>(heap, 1).release();
     first = allo::realloc(heap, first, 8).release();
     first = allo::realloc(heap, first, 1).release();

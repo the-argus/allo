@@ -67,7 +67,6 @@ struct allocator_properties_t
     friend class allo::stack_allocator_t;
     friend class allo::block_allocator_t;
     friend class allo::scratch_allocator_t;
-    friend class allo::oneshot_allocator_t;
     friend class allo::heap_allocator_t;
     friend class allo::reservation_allocator_t;
 };

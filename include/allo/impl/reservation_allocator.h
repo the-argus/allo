@@ -29,11 +29,11 @@ ALLO_FUNC reservation_allocator_t::reservation_allocator_t(
     reservation_allocator_t &&other) noexcept
     : m(other.m)
 {
-    type = enum_value;
+    m_type = enum_value;
 }
 
 ALLO_FUNC allocation_result_t reservation_allocator_t::remap_bytes(
-    zl::slice<uint8_t> mem, size_t, size_t new_size, size_t) noexcept
+    bytes_t mem, size_t, size_t new_size, size_t) noexcept
 {
     if (mem.data() != m.mem.data()) {
         return AllocationStatusCode::MemoryInvalid;
@@ -43,13 +43,13 @@ ALLO_FUNC allocation_result_t reservation_allocator_t::remap_bytes(
     if (new_size > m.mem.size()) {
         size_t pages_needed = ((new_size - m.mem.size()) / m.pagesize) + 1;
         // add some read/write pages to this allocation
-        int32_t res = mm_commit_pages(m.mem.end().ptr(), pages_needed);
+        int64_t res = mm_commit_pages(m.mem.end().ptr(), pages_needed);
         if (res != 0)
             return AllocationStatusCode::OOM;
         m.mem = zl::raw_slice(*m.mem.data(),
                               m.mem.size() + (pages_needed * m.pagesize));
     }
-    return zl::slice<uint8_t>(m.mem, 0, new_size);
+    return bytes_t(m.mem, 0, new_size);
 }
 
 ALLO_FUNC zl::res<reservation_allocator_t, AllocationStatusCode>

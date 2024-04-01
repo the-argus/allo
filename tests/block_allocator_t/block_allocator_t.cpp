@@ -1,7 +1,7 @@
 #include "allo.h"
 #include "allo/block_allocator.h"
 #include "allo/c_allocator.h"
-#include "allo/oneshot_allocator.h"
+#include "allo/make_into.h"
 #include "allo/reservation_allocator.h"
 #include "allo/typed_freeing.h"
 #include "generic_allocator_tests.h"
@@ -28,7 +28,7 @@ TEST_SUITE("block_allocator_t")
         SUBCASE("Default construction")
         {
             c_allocator_t global_allocator;
-            auto mally = block_allocator_t::make(
+            auto mally = block_allocator_t::make_owned(
                 allo::alloc<uint8_t>(global_allocator, 2000).release(),
                 global_allocator, 200);
             REQUIRE(mally.okay());
@@ -40,9 +40,41 @@ TEST_SUITE("block_allocator_t")
             auto status = allo::free_one(ally, my_int);
             REQUIRE(status.okay());
         }
+
+        SUBCASE("make_into")
+        {
+            c_allocator_t global_allocator;
+
+            zl::slice<uint8_t> mem =
+                allo::alloc<uint8_t>(global_allocator, 2000).release();
+
+            {
+                block_allocator_t &block = allo::make_into<block_allocator_t>(
+                                               global_allocator, mem, 200)
+                                               .release();
+
+                auto mint = allo::alloc_one<int>(block);
+                REQUIRE(mint.okay());
+            }
+
+            {
+                block_allocator_t &block =
+                    allo::make_into<block_allocator_t, MakeType::Owned>(
+                        global_allocator, mem, global_allocator, 200)
+                        .release();
+                auto mint = allo::alloc_one<int>(block);
+                REQUIRE(mint.okay());
+            }
+        }
     }
+
     TEST_CASE("functionality")
     {
+        SUBCASE("generic ref, large allocation")
+        {
+            tests::make_large_allocation_with<heap_allocator_t>();
+        }
+
         SUBCASE("related objects, similar structure to linked list")
         {
             c_allocator_t global_allocator;
@@ -50,7 +82,7 @@ TEST_SUITE("block_allocator_t")
             {
                 // 256 bytes per block, 32 byte aligned blocks
                 auto ally =
-                    block_allocator_t::make(
+                    block_allocator_t::make_owned(
                         // this memory will be cleaned up by the allocator
                         allo::alloc<uint8_t>(global_allocator, 2000).release(),
                         global_allocator, 256)
@@ -76,7 +108,7 @@ TEST_SUITE("block_allocator_t")
                         {.committed = 1, .additional_pages_reserved = 19})
                         .release();
                 // 256 bytes per block, 32 byte aligned blocks
-                auto ally = block_allocator_t::make(
+                auto ally = block_allocator_t::make_owned(
                                 reservation.current_memory(), reservation, 32)
                                 .release();
                 auto one = alloc_one<int>(ally);
@@ -98,7 +130,7 @@ TEST_SUITE("block_allocator_t")
 
             {
                 // 256 bytes per block, 32 byte aligned blocks
-                auto ally = block_allocator_t::make(
+                auto ally = block_allocator_t::make_owned(
                                 allo::alloc<uint8_t>(global_allocator, 32UL * 4)
                                     .release(),
                                 global_allocator, 32)
@@ -122,7 +154,7 @@ TEST_SUITE("block_allocator_t")
 
             // 256 bytes per block, 32 byte aligned blocks
             auto ally =
-                block_allocator_t::make(
+                block_allocator_t::make_owned(
                     // this memory will be cleaned up by the allocator
                     // TODO: optimize this... similar memory usage to stack
                     // allocator, although linked list nodes should be a perfect
@@ -149,17 +181,12 @@ TEST_SUITE("block_allocator_t")
             for (size_t i = 0; i < 5; ++i) {
                 const auto blocksize = static_cast<size_t>(32 * std::pow(2, i));
 
-                // oneshot allocator so that we OOM instead of realloc-ing
-                auto oneshot =
-                    oneshot_allocator_t::make_owned(
-                        allo::alloc<uint8_t>(global_allocator, blocksize * 4)
-                            .release(),
-                        global_allocator)
-                        .release();
+                auto mem = allo::alloc<uint8_t>(global_allocator, blocksize * 4)
+                               .release();
                 // 256 bytes per block, 32 byte aligned blocks
-                auto ally =
-                    block_allocator_t::make(oneshot.shoot(), oneshot, blocksize)
-                        .release();
+                auto ally = block_allocator_t::make_owned(mem, global_allocator,
+                                                          blocksize)
+                                .release();
 
                 auto callback = [](void *data) {
                     ++(*reinterpret_cast<uint8_t *>(data));

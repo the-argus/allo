@@ -7,10 +7,10 @@ struct LinkedString
 {
     CharNode *first = nullptr;
     size_t length = 0;
-    allo::AllocatorDynRef parent;
+    allo::abstract_allocator_t &parent;
     void append(char b);
     LinkedString() = delete;
-    LinkedString(allo::AllocatorDynRef _parent) : parent(_parent) {}
+    LinkedString(allo::abstract_allocator_t &_parent) : parent(_parent) {}
 };
 
 struct CharNode
@@ -38,7 +38,7 @@ void LinkedString::append(char b)
 }
 
 namespace allo::tests {
-void allocate_object_with_linked_list(AllocatorDynRef ally)
+void allocate_object_with_linked_list(abstract_allocator_t &ally)
 {
     constexpr std::array test_str{
         "hello",
@@ -57,5 +57,14 @@ void allocate_object_with_linked_list(AllocatorDynRef ally)
         for (char c : slice)
             linked.append(c);
     }
+}
+
+bytes_t large_allocation(abstract_allocator_t &ally, size_t maxpages)
+{
+    auto psres = mm_get_page_size();
+    REQUIRE((psres.has_value != 0));
+    auto res = allo::alloc<uint8_t>(ally, psres.value * (maxpages - 1));
+    REQUIRE(res.okay());
+    return res.release();
 }
 } // namespace allo::tests

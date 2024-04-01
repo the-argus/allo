@@ -19,7 +19,7 @@
 
 namespace allo {
 ALLO_FUNC allocation_result_t c_allocator_t::alloc_bytes(
-    size_t bytes, uint8_t alignment_exponent, size_t typehash) noexcept
+    size_t bytes, uint8_t alignment_exponent, size_t) noexcept
 {
     if (alignment_exponent > 5)
         return AllocationStatusCode::AllocationTooAligned;
@@ -27,23 +27,18 @@ ALLO_FUNC allocation_result_t c_allocator_t::alloc_bytes(
     return zl::raw_slice(*reinterpret_cast<uint8_t *>(newmem), bytes);
 }
 
-ALLO_FUNC allocation_result_t
-c_allocator_t::realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash,
-                             size_t new_size, size_t new_typehash) noexcept
+ALLO_FUNC allocation_result_t c_allocator_t::threadsafe_realloc_bytes(
+    bytes_t mem, size_t, size_t new_size, size_t) noexcept
 {
-    // BUG: c allocator is not really capable of remapping, this should probably
-    // always OOM, even if the remapping technically succeeds?
-    //
     void *newmem = ::realloc(mem.data(), new_size);
-    if (newmem != nullptr && newmem != mem.data()) {
-        assert(false);
+    if (newmem == nullptr) {
         return AllocationStatusCode::OOM;
     }
     return zl::raw_slice(*reinterpret_cast<uint8_t *>(newmem), new_size);
 }
 
-ALLO_FUNC allocation_status_t
-c_allocator_t::free_bytes(zl::slice<uint8_t> mem, size_t typehash) noexcept
+ALLO_FUNC allocation_status_t c_allocator_t::free_bytes(bytes_t mem,
+                                                        size_t) noexcept
 {
     ::free(mem.data());
     return AllocationStatusCode::Okay;
@@ -56,10 +51,5 @@ c_allocator_t::properties() const noexcept
         allocator_properties_t(0, 32);
 
     return c_allocator_properties;
-}
-ALLO_FUNC allocation_status_t c_allocator_t::register_destruction_callback(
-    destruction_callback_t callback, void *user_data) noexcept
-{
-    return AllocationStatusCode::InvalidArgument;
 }
 }; // namespace allo

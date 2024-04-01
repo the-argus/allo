@@ -4,30 +4,42 @@
 
 namespace allo {
 
-class block_allocator_t : private detail::dynamic_allocator_base_t
+class block_allocator_t : public detail::abstract_heap_allocator_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::BlockAllocator;
 
-    static zl::res<block_allocator_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> &&memory, detail::dynamic_heap_allocator_t parent,
-         size_t blocksize) noexcept;
+    /// Create a block allocator which will attempt to free its memory when it
+    /// is destroyed, and will try to remap the memory should it run out of
+    /// space.
+    inline static zl::res<block_allocator_t, AllocationStatusCode>
+    make_owned(bytes_t memory, detail::abstract_heap_allocator_t &parent,
+               size_t blocksize) noexcept
+    {
+        return make_inner(memory, parent, blocksize);
+    }
+
+    /// Create a block allocator which allocates into a given block of memory.
+    inline static zl::res<block_allocator_t, AllocationStatusCode>
+    make(bytes_t memory, size_t blocksize) noexcept
+    {
+        return make_inner(memory, {}, blocksize);
+    }
 
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
 
-    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
+    [[nodiscard]] allocation_result_t remap_bytes(bytes_t mem,
                                                   size_t old_typehash,
                                                   size_t new_size,
                                                   size_t new_typehash) noexcept;
 
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem,
-                                   size_t typehash) noexcept;
+    allocation_status_t free_bytes(bytes_t mem, size_t typehash) noexcept;
 
     [[nodiscard]] allocation_status_t
-    free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
+    free_status(bytes_t mem, size_t typehash) const noexcept;
 
     [[nodiscard]] inline constexpr const allocator_properties_t &
     properties() const noexcept
@@ -51,8 +63,8 @@ class block_allocator_t : private detail::dynamic_allocator_base_t
   private:
     struct M
     {
-        detail::dynamic_heap_allocator_t parent;
-        zl::slice<uint8_t> mem;
+        zl::opt<detail::abstract_heap_allocator_t &> parent;
+        bytes_t mem;
         allocator_properties_t properties;
         size_t last_freed_index;
         size_t blocks_free;
@@ -61,9 +73,12 @@ class block_allocator_t : private detail::dynamic_allocator_base_t
         size_t num_destruction_array_blocks;
         size_t current_destruction_array_index;
         size_t current_destruction_array_size;
-        // whether to free memory in destructor
-        bool owning = true;
     } m;
+
+    static zl::res<block_allocator_t, AllocationStatusCode>
+    make_inner(bytes_t memory,
+               zl::opt<detail::abstract_heap_allocator_t &> parent,
+               size_t blocksize) noexcept;
 
     static constexpr double reallocation_ratio = 1.5f;
     /// Remap our single allocation without moving it.
@@ -98,7 +113,7 @@ class block_allocator_t : private detail::dynamic_allocator_base_t
   public:
     inline block_allocator_t(M &&members) noexcept : m(members)
     {
-        type = enum_value;
+        m_type = enum_value;
     }
 
   private:
@@ -106,7 +121,7 @@ class block_allocator_t : private detail::dynamic_allocator_base_t
     size_t *get_location_for_typehash(uint8_t *blockhead,
                                       size_t allocsize) const noexcept;
     [[nodiscard]] zl::res<block_analysis_t, AllocationStatusCode>
-    try_analyze_block(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
+    try_analyze_block(bytes_t mem, size_t typehash) const noexcept;
 };
 } // namespace allo
 

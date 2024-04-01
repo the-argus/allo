@@ -1,6 +1,5 @@
 #include "allo.h"
 #include "allo/c_allocator.h"
-#include "allo/oneshot_allocator.h"
 #include "allo/stack_allocator.h"
 #include "allo/typed_allocation.h"
 #include "test_header.h"
@@ -22,7 +21,7 @@ TEST_SUITE("allocator interfaces")
     {
         SUBCASE("upcast to single interface")
         {
-            auto makeint = [](AllocatorDynRef allocator)
+            auto makeint = [](abstract_allocator_t &allocator)
                 -> zl::res<int *, AllocationStatusCode> {
                 auto mem_res = allo::alloc<uint8_t>(allocator, sizeof(int) * 2);
                 if (!mem_res.okay())
@@ -32,11 +31,9 @@ TEST_SUITE("allocator interfaces")
             };
 
             std::array<uint8_t, 512> mem;
-            auto oneshot = oneshot_allocator_t::make(mem).release();
-            stack_allocator_t stack =
-                stack_allocator_t::make(mem, oneshot).release();
+            stack_allocator_t stack = stack_allocator_t::make(mem).release();
 
-            auto maybe_int = makeint(AllocatorDynRef(stack));
+            auto maybe_int = makeint(stack);
             REQUIRE(maybe_int.okay());
 
             c_allocator_t heap;
@@ -47,22 +44,20 @@ TEST_SUITE("allocator interfaces")
         SUBCASE("upcast interface")
         {
             std::array<uint8_t, 512> mem;
-            auto oneshot = oneshot_allocator_t::make(mem).release();
-            AllocatorDynRef stackalloc = oneshot;
-            REQUIRE(oneshot.properties() == stackalloc.properties());
+            auto stack = stack_allocator_t::make(mem).release();
+            abstract_allocator_t &stackalloc = stack;
+            REQUIRE(stack.properties() == stackalloc.properties());
         }
 
         SUBCASE("upcast to single interface, use typed alloc")
         {
-            auto makeint = [](AllocatorDynRef allocator)
+            auto makeint = [](abstract_allocator_t &allocator)
                 -> zl::res<int &, AllocationStatusCode> {
                 return allo::alloc_one<int>(allocator);
             };
 
             std::array<uint8_t, 512> mem;
-            auto oneshot = oneshot_allocator_t::make(mem).release();
-            stack_allocator_t stack =
-                stack_allocator_t::make(mem, oneshot).release();
+            stack_allocator_t stack = stack_allocator_t::make(mem).release();
 
             auto maybe_int = makeint(stack);
             REQUIRE(maybe_int.okay());

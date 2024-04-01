@@ -6,7 +6,6 @@
 #include "allo/impl/block_allocator.h"
 #include "allo/impl/c_allocator.h"
 #include "allo/impl/heap_allocator.h"
-#include "allo/impl/oneshot_allocator.h"
 #include "allo/impl/reservation_allocator.h"
 #include "allo/impl/scratch_allocator.h"
 #include "allo/impl/stack_allocator.h"

@@ -16,36 +16,26 @@ namespace allo {
 ///  - it provides a remap_bytes, which doesnt make sense for malloc and always
 ///  fails
 ///  - it does not have a mechanism to free all of its allocations.
-class c_allocator_t : private detail::dynamic_allocator_base_t
+class c_allocator_t : public detail::abstract_threadsafe_heap_allocator_t
 {
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::CAllocator;
 
-    inline explicit c_allocator_t() noexcept { type = enum_value; }
+    inline explicit c_allocator_t() noexcept { m_type = enum_value; }
 
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
 
-    [[nodiscard]] inline allocation_result_t
-    remap_bytes(zl::slice<uint8_t>, size_t, size_t, size_t) noexcept
-    {
-        return AllocationStatusCode::InvalidArgument;
-    }
-
-    /// NOTE: the c allocator does not have a remap_bytes. this is abstraction
-    /// breaking and means that calling remap_bytes on a c allocator will cause
-    /// InvalidArgument.
     [[nodiscard]] allocation_result_t
-    realloc_bytes(zl::slice<uint8_t> mem, size_t old_typehash, size_t new_size,
-                  size_t new_typehash) noexcept;
+    threadsafe_realloc_bytes(bytes_t mem, size_t old_typehash, size_t new_size,
+                             size_t new_typehash) noexcept;
 
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem,
-                                   size_t typehash) noexcept;
+    allocation_status_t free_bytes(bytes_t mem, size_t typehash) noexcept;
 
     [[nodiscard]] inline constexpr allocation_status_t
-    free_status(zl::slice<uint8_t> /*mem*/, // NOLINT
+    free_status(bytes_t /*mem*/, // NOLINT
                 size_t /*typehash*/) const noexcept
     {
         return AllocationStatusCode::Okay;
@@ -53,9 +43,19 @@ class c_allocator_t : private detail::dynamic_allocator_base_t
 
     [[nodiscard]] const allocator_properties_t &properties() const noexcept;
 
-    allocation_status_t
-    register_destruction_callback(destruction_callback_t callback,
-                                  void *user_data) noexcept;
+    /// Always returns invalid argument
+    inline constexpr allocation_status_t
+    register_destruction_callback(destruction_callback_t, void *) noexcept
+    {
+        return AllocationStatusCode::InvalidArgument;
+    }
+
+    /// Always returns invalid argument
+    [[nodiscard]] inline allocation_result_t
+    remap_bytes(bytes_t, size_t, size_t, size_t) noexcept
+    {
+        return AllocationStatusCode::InvalidArgument;
+    }
 };
 } // namespace allo
 

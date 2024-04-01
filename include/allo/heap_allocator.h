@@ -4,7 +4,7 @@
 
 namespace allo {
 
-class heap_allocator_t : private detail::dynamic_allocator_base_t
+class heap_allocator_t : public detail::abstract_heap_allocator_t
 {
   public:
     struct destruction_callback_entry_t
@@ -37,8 +37,8 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
 
     struct M
     {
-        zl::opt<detail::dynamic_heap_allocator_t> parent;
-        zl::slice<uint8_t> mem;
+        zl::opt<detail::abstract_heap_allocator_t &> parent;
+        bytes_t mem;
         allocator_properties_t properties;
         size_t num_nodes; // also == number of entries in free list data
         size_t num_callbacks = 0;
@@ -46,41 +46,40 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
         free_node_t *free_list_head;
     } m;
 
-    static zl::res<heap_allocator_t, AllocationStatusCode> make_inner(
-        const zl::slice<uint8_t> &memory,
-        const zl::opt<detail::dynamic_heap_allocator_t> &parent) noexcept;
+    static zl::res<heap_allocator_t, AllocationStatusCode>
+    make_inner(const bytes_t &memory,
+               zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept;
 
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::HeapAllocator;
 
-    template <typename Allocator>
     inline static zl::res<heap_allocator_t, AllocationStatusCode>
-    make_owned(zl::slice<uint8_t> memory, Allocator &parent) noexcept
+    make_owned(bytes_t memory,
+               detail::abstract_heap_allocator_t &parent) noexcept
     {
-        return make_inner(memory, detail::dynamic_heap_allocator_t(parent));
+        return make_inner(memory, parent);
     }
 
     inline static zl::res<heap_allocator_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> memory) noexcept
+    make(bytes_t memory) noexcept
     {
         return make_inner(memory, {});
     }
 
-    [[nodiscard]] allocation_result_t remap_bytes(zl::slice<uint8_t> mem,
+    [[nodiscard]] allocation_result_t remap_bytes(bytes_t mem,
                                                   size_t old_typehash,
                                                   size_t new_size,
                                                   size_t new_typehash) noexcept;
 
-    allocation_status_t free_bytes(zl::slice<uint8_t> mem,
-                                   size_t typehash) noexcept;
+    allocation_status_t free_bytes(bytes_t mem, size_t typehash) noexcept;
 
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
 
     [[nodiscard]] allocation_status_t
-    free_status(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
+    free_status(bytes_t mem, size_t typehash) const noexcept;
 
     [[nodiscard]] inline constexpr const allocator_properties_t &
     properties() const noexcept
@@ -105,7 +104,7 @@ class heap_allocator_t : private detail::dynamic_allocator_base_t
 
   private:
     [[nodiscard]] zl::res<allocation_bookkeeping_t *, AllocationStatusCode>
-    free_common(zl::slice<uint8_t> mem, size_t typehash) const noexcept;
+    free_common(bytes_t mem, size_t typehash) const noexcept;
 };
 } // namespace allo
 

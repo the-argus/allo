@@ -1,5 +1,6 @@
 #pragma once
 #include "allo/detail/abstracts.h"
+#include "allo/detail/alignment.h"
 
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifndef ALLO_USE_RTTI
@@ -14,17 +15,14 @@ template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
 [[nodiscard]] inline zl::res<T &, AllocationStatusCode>
 alloc_one(Allocator &allocator) noexcept
 {
-    constexpr bool is_valid_interface =
-        std::is_base_of_v<detail::allocator_common_t, Allocator>;
-    constexpr bool is_valid_allocator =
-        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
 #ifndef ALLO_ALLOW_NONTRIVIAL_COPY
     static_assert(std::is_trivially_copyable_v<T>,
                   "Refusing to allocate non-trivially copyable type which "
                   "could cause UB on reallocation.");
 #endif
-    static_assert(is_valid_interface || is_valid_allocator,
-                  "Cannot use given type to perform allocations");
+    static_assert(
+        detail::is_allocator<Allocator>,
+        "Cannot use the item given as allocator to perform allocations");
     static_assert(!std::is_reference_v<T>, "Cannot allocate a reference type.");
     static_assert(
         alignment >= alignof(T),
@@ -60,17 +58,14 @@ template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
 [[nodiscard]] inline zl::res<zl::slice<T>, AllocationStatusCode>
 alloc(Allocator &allocator, size_t number) noexcept
 {
-    constexpr bool is_valid_interface =
-        std::is_base_of_v<detail::allocator_common_t, Allocator>;
-    constexpr bool is_valid_allocator =
-        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
 #ifndef ALLO_ALLOW_NONTRIVIAL_COPY
     static_assert(std::is_trivially_copyable_v<T>,
                   "Refusing to allocate non-trivially copyable type which "
                   "could cause UB on reallocation.");
 #endif
-    static_assert(is_valid_interface || is_valid_allocator,
-                  "Cannot use given type to perform allocations");
+    static_assert(
+        detail::is_allocator<Allocator>,
+        "Cannot use the item given as allocator to perform allocations");
     static_assert(!std::is_reference_v<T>, "Cannot allocate a reference type.");
     static_assert(
         alignment >= alignof(T),
@@ -115,12 +110,9 @@ construct_one(Allocator &allocator, Args &&...args)
                   "Refusing to construct_one for a type with a non-trivial "
                   "destructor which will never be called");
 #endif
-    constexpr bool is_valid_interface =
-        std::is_base_of_v<detail::allocator_common_t, Allocator>;
-    constexpr bool is_valid_allocator =
-        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
-    static_assert(is_valid_interface || is_valid_allocator,
-                  "Cannot use given type to perform allocations");
+    static_assert(
+        detail::is_allocator<Allocator>,
+        "Cannot use the item given as allocator to perform allocations");
     static_assert(!std::is_reference_v<T>, "Cannot allocate a reference type.");
     static_assert(std::is_constructible_v<T, Args...>,
                   "Type is not constructible with those arguments.");
@@ -147,12 +139,9 @@ construct_many(Allocator &allocator, size_t number, Args &&...args)
                   "Refusing to construct_one for a type with a non-trivial "
                   "destructor which will never be called");
 #endif
-    constexpr bool is_valid_interface =
-        std::is_base_of_v<detail::allocator_common_t, Allocator>;
-    constexpr bool is_valid_allocator =
-        std::is_base_of_v<detail::dynamic_allocator_base_t, Allocator>;
-    static_assert(is_valid_interface || is_valid_allocator,
-                  "Cannot use given type to perform allocations");
+    static_assert(
+        detail::is_allocator<Allocator>,
+        "Cannot use the item given as allocator to perform allocations");
     static_assert(!std::is_reference_v<T>, "Cannot allocate a reference type.");
     static_assert(std::is_constructible_v<T, Args...>,
                   "Type is not constructible with those arguments.");
