@@ -37,7 +37,7 @@ set(headers
 )
 
 # TODO: have cmake and pkg-config config files so that it makes sense to install allo
-# option(ALLO_INSTALL "Generate the install target." ON)
+option(ALLO_INSTALL "Generate the install target." ON)
 option(ALLO_SYSTEM_HEADERS "Expose headers with marking them as system." OFF)
 
 set(ALLO_INC_DIR ${CMAKE_INSTALL_INCLUDEDIR} CACHE STRING
@@ -57,3 +57,17 @@ target_compile_features(allo-header-only INTERFACE cxx_std_17)
 target_include_directories(allo-header-only ${ALLO_SYSTEM_HEADERS_ATTRIBUTE} INTERFACE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${ALLO_INC_DIR}>)
+
+if (ALLO_INSTALL)
+  set(INSTALL_TARGETS allo-header-only)
+
+  set_verbose(FMT_LIB_DIR ${CMAKE_INSTALL_LIBDIR} CACHE STRING
+              "Installation directory for libraries, a relative path that "
+              "will be joined to ${CMAKE_INSTALL_PREFIX} or an absolute path.")
+
+  install(TARGETS ${INSTALL_TARGETS}
+          LIBRARY DESTINATION ${FMT_LIB_DIR}
+          ARCHIVE DESTINATION ${FMT_LIB_DIR}
+          PUBLIC_HEADER DESTINATION "${ALLO_INC_DIR}/fmt"
+          RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
