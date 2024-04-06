@@ -17,17 +17,14 @@ TEST_SUITE("collection_t")
             REQUIRE(maybe_collection.okay());
         }
 
-        SUBCASE("Making with reservation allocator")
+        SUBCASE("Making with heap allocator")
         {
-            auto maybe_reserve = reservation_allocator_t::make(
-                reservation_allocator_t::options_t{
-                    .committed = 1,
-                    .additional_pages_reserved = 10,
-                });
-            REQUIRE(maybe_reserve.okay());
-            auto &reserve = maybe_reserve.release_ref();
+            c_allocator_t c;
+            auto heap =
+                heap_allocator_t::make(alloc<uint8_t>(c, 4000).release())
+                    .release();
 
-            auto maybe_collection = collection_t<uint8_t>::make(reserve, 4000);
+            auto maybe_collection = collection_t<uint8_t>::make(heap, 2000);
             REQUIRE(maybe_collection.okay());
         }
     }
@@ -46,8 +43,8 @@ TEST_SUITE("collection_t")
 
             for (int i : toadd) {
                 auto a_res = collection.try_append(i);
-                REQUIRE(*collection.items().end().ptr() == i);
                 REQUIRE(a_res.okay());
+                REQUIRE(*(collection.items().end().ptr() - 1) == i);
                 auto e_res = collection.try_emplace(i);
                 REQUIRE(e_res.okay());
             }
