@@ -39,6 +39,7 @@ const test_source_files = &[_][]const u8{
     "nonvirtual_inheritance/nonvirtual_inheritance.cpp",
     "heap_allocator_t/heap_allocator_t.cpp",
     "memory_map/memory_map.cpp",
+    "collection_t/collection_t.cpp",
 };
 
 const universal_tests_source_files = &[_][]const u8{

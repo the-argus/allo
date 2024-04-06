@@ -23,6 +23,7 @@ set(headers
     allo/ctti/detail/hash.h
     allo/ctti/detail/name_filters.h
     allo/ctti/detail/pretty_function.h
+    allo/structures/collection.h
     allo/detail/abstracts.h
     allo/detail/alignment.h
     allo/detail/forward_decls.h
