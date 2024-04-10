@@ -32,6 +32,9 @@ enum class AllocationStatusCode : uint8_t
     InvalidType,
     // unknown OS failure returned from system call
     OsErr,
+    // Error propagated from another source which was not supposed to happen and
+    // cannot be mapped to an AllocationStatusCode.
+    UnknownOrUnexpectedError,
 };
 
 using allocation_status_t = zl::status<AllocationStatusCode>;

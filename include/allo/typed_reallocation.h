@@ -1,7 +1,6 @@
 #pragma once
 // c allocator is needed because it breaks abstraction so we need access to its
 // impl details
-#include "allo/c_allocator.h"
 #include "allo/detail/abstracts.h"
 #include "allo/detail/alignment.h"
 #include <ziglike/stdmem.h>
@@ -13,6 +12,7 @@
 #endif
 
 namespace allo {
+class c_allocator_t;
 /// Change the size of an allocation without invalidating pointers to that
 /// allocation. Often fails, since it will not succeed if you request a larger
 /// size and there is no way for the allocator to grow the existing allocation.

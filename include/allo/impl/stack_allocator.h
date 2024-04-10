@@ -133,23 +133,35 @@ ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
     if (!m.parent)
         return AllocationStatusCode::OOM;
 
-    auto result = m.parent.value().remap_bytes(
+    allocation_result_t result = m.parent.value().remap_bytes(
         m.memory, 0,
         size_t(std::ceil(static_cast<double>(m.memory.size()) *
                          reallocation_ratio)),
         0);
 
-    if (!result.okay())
-        return result.err();
+    if (!result.okay()) {
+        // we failed to remap, resort to a separate buffer
+        if (!m.buffers) {
+            auto maybe_buffers = allo::alloc_one<stack_t<bytes_t>>(m.parent);
+            if (!maybe_buffers.okay())
+                return maybe_buffers.err();
+            stack_t<bytes_t> &buffers = maybe_buffers.release();
+            zl::defer delbuffers(
+                [&buffers, this]() { allo::free_one(m.parent, buffers); });
+            auto maybe_collection =
+                stack_t<bytes_t>::make(m.parent.value(), m.memory.size());
+            if (!maybe_collection.okay())
+                return maybe_collection.err();
+            new (&buffers) stack_t<bytes_t>(maybe_collection.release());
+            m.buffers.emplace(buffers);
+            delbuffers.cancel();
+        }
+
+        bytes_t lastbytes = m.buffers.value().end_unchecked();
+    }
 
     const bytes_t &newmem = result.release_ref();
-#ifndef NDEBUG
-    if (newmem.data() != m.memory.data()) {
-        // this shouldnt happen, reallocation is supposed to be stable
-        std::abort();
-    }
-#endif
-
+    assert(newmem.data() == m.memory.data());
     m.memory = newmem;
     return AllocationStatusCode::Okay;
 }

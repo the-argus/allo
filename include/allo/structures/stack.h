@@ -17,43 +17,38 @@
 #include <ziglike/slice.h>
 
 namespace allo {
-template <typename T> class collection_t
+template <typename T> class stack_t
 {
   public:
     using type = T;
 
     static constexpr float realloc_ratio = 1.5f;
 
-    enum class StatusCode : uint8_t
-    {
-        Okay,
-        ResultReleased,
-        OutOfRange,
-    };
-
-    using status_t = zl::status<StatusCode>;
-
-    /// Create a new collection_t by creating a buffer in a given heap allocator
+    /// Create a new stack-t by creating a buffer in a given heap allocator
     /// initial_items is the number of items to reserve space for initially.
     /// If zero, will be rounded up to one.
-    [[nodiscard]] static zl::res<collection_t, AllocationStatusCode>
+    [[nodiscard]] static zl::res<stack_t, AllocationStatusCode>
     make(detail::abstract_heap_allocator_t &parent_allocator,
          size_t initial_items) noexcept;
 
-    collection_t() = delete;
-    collection_t(const collection_t &) = delete;
-    collection_t &operator=(const collection_t &) = delete;
-    collection_t(collection_t &&) noexcept = default;
-    collection_t &operator=(collection_t &&) noexcept = default;
+    stack_t() = delete;
+    stack_t(const stack_t &) = delete;
+    stack_t &operator=(const stack_t &) = delete;
+    stack_t(stack_t &&) noexcept = default;
+    stack_t &operator=(stack_t &&) noexcept = default;
 
     [[nodiscard]] constexpr zl::slice<const T> items() const noexcept;
 
     [[nodiscard]] constexpr zl::slice<T> items() noexcept;
 
+    [[nodiscard]] constexpr zl::opt<T &> end() noexcept;
+
+    constexpr void pop() noexcept;
+
     [[nodiscard]] constexpr size_t capacity() const noexcept;
 
     template <typename... Args>
-    [[nodiscard]] inline allocation_status_t try_put(Args &&...args) noexcept
+    [[nodiscard]] inline allocation_status_t try_push(Args &&...args) noexcept
     {
         if (m.capacity <= m.items.size()) [[unlikely]] {
             auto status = try_realloc();
@@ -62,25 +57,13 @@ template <typename T> class collection_t
             }
         }
         assert(m.capacity > m.items.size());
-        emplace_unchecked(std::forward<Args>(args)...);
+        push_unchecked(std::forward<Args>(args)...);
         return AllocationStatusCode::Okay;
     }
 
-    [[nodiscard]] constexpr status_t try_remove_at(size_t index) noexcept;
+    [[nodiscard]] constexpr T &end_unchecked() noexcept;
 
-    // unsafe api
-    constexpr void remove_at_unchecked(size_t index) noexcept;
-
-    template <typename... Args>
-    inline constexpr void put_unchecked(Args &&...args) noexcept
-    {
-        // grow items by one
-        m.items = zl::raw_slice<T>(*m.items.begin().ptr(), m.items.size() + 1);
-        new (std::addressof(m.items.data()[m.items.size() - 1]))
-            T(std::forward<Args>(args)...);
-    }
-
-    inline ~collection_t() noexcept
+    inline ~stack_t() noexcept
     {
         allo::free(m.parent, zl::raw_slice(*m.items.begin().ptr(), m.capacity));
     }
@@ -97,60 +80,34 @@ template <typename T> class collection_t
 
     constexpr allocation_status_t try_realloc() noexcept;
 
+    template <typename... Args>
+    inline constexpr void push_unchecked(Args &&...args) noexcept
+    {
+        // grow items by one
+        m.items = zl::raw_slice<T>(*m.items.begin().ptr(), m.items.size() + 1);
+        new (std::addressof(m.items.data()[m.items.size() - 1]))
+            T(std::forward<Args>(args)...);
+    }
+
   public:
-    inline constexpr collection_t(M members) noexcept : m(members) {}
+    inline constexpr stack_t(M members) noexcept : m(members) {}
 };
 
 template <typename T>
-inline constexpr zl::slice<const T> collection_t<T>::items() const noexcept
+inline constexpr zl::slice<const T> stack_t<T>::items() const noexcept
+{
+    return m.items;
+}
+
+template <typename T> inline constexpr zl::slice<T> stack_t<T>::items() noexcept
 {
     return m.items;
 }
 
 template <typename T>
-inline constexpr zl::slice<T> collection_t<T>::items() noexcept
-{
-    return m.items;
-}
-
-template <typename T>
-constexpr auto collection_t<T>::try_remove_at(size_t index) noexcept -> status_t
-{
-    static_assert(std::is_destructible_v<T>,
-                  "Cannot remove_at from a collection which holds an "
-                  "un-destructible type.");
-    static_assert(std::is_nothrow_destructible_v<T>,
-                  "Cannot call remove_at on a collection_t whose contents may "
-                  "throw when destroyed.");
-    static_assert(
-        std::is_nothrow_move_constructible_v<T>,
-        "Cannot remove_at item from collection which holds a type which "
-        "may throw when move constructed.");
-
-    if (index >= m.items.size()) [[unlikely]]
-        return StatusCode::OutOfRange;
-
-    remove_at_unchecked(index);
-    return StatusCode::Okay;
-}
-
-template <typename T>
-constexpr void collection_t<T>::remove_at_unchecked(size_t index) noexcept
-{
-    T &target = m.items.data()[index];
-    target.~T();
-    const size_t newsize = m.items.size() - 1;
-    if (index != newsize) {
-        new (std::addressof(target)) T(std::move(m.items.data()[newsize]));
-    }
-    m.items = zl::slice<T>(m.items, 0, newsize);
-}
-
-template <typename T>
-inline zl::res<collection_t<T>, AllocationStatusCode>
-collection_t<T>::make(detail::abstract_heap_allocator_t &parent_allocator,
-                      size_t initial_items) noexcept
-
+inline zl::res<stack_t<T>, AllocationStatusCode>
+stack_t<T>::make(detail::abstract_heap_allocator_t &parent_allocator,
+                 size_t initial_items) noexcept
 {
     const size_t actual_initial = initial_items == 0 ? 1 : initial_items;
 
@@ -160,7 +117,7 @@ collection_t<T>::make(detail::abstract_heap_allocator_t &parent_allocator,
 
     auto &initial = maybe_initial.release_ref();
 
-    return zl::res<collection_t, AllocationStatusCode>{
+    return zl::res<stack_t, AllocationStatusCode>{
         std::in_place, M{
                            .items = zl::slice<T>(initial, 0, 0),
                            .capacity = initial.size(),
@@ -168,8 +125,7 @@ collection_t<T>::make(detail::abstract_heap_allocator_t &parent_allocator,
                        }};
 }
 
-template <typename T>
-constexpr size_t collection_t<T>::calculate_new_size() noexcept
+template <typename T> constexpr size_t stack_t<T>::calculate_new_size() noexcept
 {
     const auto res = static_cast<size_t>(
         std::ceil(static_cast<float>(m.items.size()) * realloc_ratio));
@@ -178,7 +134,7 @@ constexpr size_t collection_t<T>::calculate_new_size() noexcept
 }
 
 template <typename T>
-constexpr allocation_status_t collection_t<T>::try_realloc() noexcept
+constexpr allocation_status_t stack_t<T>::try_realloc() noexcept
 {
     static_assert(std::is_trivially_copyable_v<T>,
                   "collection assumes trivially copyable types for T... until "
@@ -192,4 +148,25 @@ constexpr allocation_status_t collection_t<T>::try_realloc() noexcept
     m.items = zl::slice<T>(new_mem, 0, m.items.size());
     return AllocationStatusCode::Okay;
 }
+
+template <typename T> constexpr zl::opt<T &> stack_t<T>::end() noexcept
+{
+    if (m.items.size() == 0)
+        return {};
+    return end_unchecked();
+}
+
+template <typename T> constexpr T &stack_t<T>::end_unchecked() noexcept
+{
+    assert(m.items.size() > 0);
+    return *(m.items.end().ptr() - 1);
+}
+
+template <typename T> constexpr void stack_t<T>::pop() noexcept
+{
+    if (m.items.size() == 0)
+        return;
+    remove_unchecked(m.items.size() - 1);
+}
+
 } // namespace allo

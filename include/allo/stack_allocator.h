@@ -1,5 +1,6 @@
 #pragma once
 #include "allo/detail/abstracts.h"
+#include "allo/structures/stack.h"
 
 namespace allo {
 
@@ -12,6 +13,7 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
         bytes_t memory;
         bytes_t available_memory;
         size_t last_type_hashcode = 0;
+        zl::opt<stack_t<bytes_t> &> buffers;
         allocator_properties_t properties;
     } m;
 
@@ -26,7 +28,7 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
 
     inline static zl::res<stack_allocator_t, AllocationStatusCode>
     make_owned(bytes_t memory,
-               detail::abstract_heap_allocator_t& parent) noexcept
+               detail::abstract_heap_allocator_t &parent) noexcept
     {
         return make_inner(memory, parent);
     }

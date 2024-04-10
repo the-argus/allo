@@ -40,6 +40,7 @@ const test_source_files = &[_][]const u8{
     "heap_allocator_t/heap_allocator_t.cpp",
     "memory_map/memory_map.cpp",
     "collection_t/collection_t.cpp",
+    "stack_t/stack_t.cpp",
 };
 
 const universal_tests_source_files = &[_][]const u8{
