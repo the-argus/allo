@@ -15,11 +15,6 @@ template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
 [[nodiscard]] inline zl::res<T &, AllocationStatusCode>
 alloc_one(Allocator &allocator) noexcept
 {
-#ifndef ALLO_ALLOW_NONTRIVIAL_COPY
-    static_assert(std::is_trivially_copyable_v<T>,
-                  "Refusing to allocate non-trivially copyable type which "
-                  "could cause UB on reallocation.");
-#endif
     static_assert(
         detail::is_allocator<Allocator>,
         "Cannot use the item given as allocator to perform allocations");
@@ -58,11 +53,6 @@ template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
 [[nodiscard]] inline zl::res<zl::slice<T>, AllocationStatusCode>
 alloc(Allocator &allocator, size_t number) noexcept
 {
-#ifndef ALLO_ALLOW_NONTRIVIAL_COPY
-    static_assert(std::is_trivially_copyable_v<T>,
-                  "Refusing to allocate non-trivially copyable type which "
-                  "could cause UB on reallocation.");
-#endif
     static_assert(
         detail::is_allocator<Allocator>,
         "Cannot use the item given as allocator to perform allocations");

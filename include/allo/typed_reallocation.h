@@ -60,8 +60,8 @@ remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 /// Remap, or if remap fails, create an entirely new, differently sized
 /// allocation and copy the contents of the first allocation to that one.
 template <typename T, typename Allocator, size_t alignment = alignof(T)>
-inline allocation_result_t realloc(Allocator &allocator, zl::slice<T> original,
-                                   size_t new_size) noexcept
+inline zl::res<zl::slice<T>, AllocationStatusCode>
+realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 {
     static_assert(detail::is_reallocator<Allocator>,
                   "Cannot use given type to perform reallocations");
@@ -100,14 +100,18 @@ inline allocation_result_t realloc(Allocator &allocator, zl::slice<T> original,
         // it and call its threadsafe reallocation function.
         if (detail::is_threadsafe_runtime(allocator)) {
             auto stack_to_threadsafe_downcast =
-                [original_bytes, new_size_bytes,
+                [original_bytes, new_size, new_size_bytes,
                  typehash](detail::abstract_stack_allocator_t &ally)
-                -> allocation_result_t {
+                -> zl::res<zl::slice<T>, AllocationStatusCode> {
                 detail::abstract_threadsafe_heap_allocator_t &ts =
                     *reinterpret_cast<
                         detail::abstract_threadsafe_heap_allocator_t *>(&ally);
-                return ts.threadsafe_realloc_bytes(original_bytes, typehash,
-                                                   new_size_bytes, typehash);
+                auto res = ts.threadsafe_realloc_bytes(
+                    original_bytes, typehash, new_size_bytes, typehash);
+                if (!res.okay())
+                    return res.err();
+                return zl::raw_slice(
+                    *reinterpret_cast<T *>(res.release().data()), new_size);
             };
             return stack_to_threadsafe_downcast(allocator);
         }

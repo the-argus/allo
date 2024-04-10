@@ -1,5 +1,4 @@
 #define ALLO_ALLOW_DESTRUCTORS
-#define ALLO_ALLOW_NONTRIVIAL_COPY
 #include "allo/make_into.h"
 #include "allo/scratch_allocator.h"
 #include "allo/typed_allocation.h"

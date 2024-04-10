@@ -142,18 +142,20 @@ ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
     if (!result.okay()) {
         // we failed to remap, resort to a separate buffer
         if (!m.buffers) {
-            auto maybe_buffers = allo::alloc_one<stack_t<bytes_t>>(m.parent);
+            auto maybe_buffers =
+                allo::alloc_one<stack_t<bytes_t>>(m.parent.value());
             if (!maybe_buffers.okay())
                 return maybe_buffers.err();
             stack_t<bytes_t> &buffers = maybe_buffers.release();
-            zl::defer delbuffers(
-                [&buffers, this]() { allo::free_one(m.parent, buffers); });
+            zl::defer delbuffers([&buffers, this]() {
+                allo::free_one(m.parent.value(), buffers);
+            });
             auto maybe_collection =
                 stack_t<bytes_t>::make(m.parent.value(), m.memory.size());
             if (!maybe_collection.okay())
                 return maybe_collection.err();
             new (&buffers) stack_t<bytes_t>(maybe_collection.release());
-            m.buffers.emplace(buffers);
+            m.buffers = buffers;
             delbuffers.cancel();
         }
 
