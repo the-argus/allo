@@ -32,8 +32,7 @@ TEST_SUITE("list_t")
         SUBCASE("make with static buffer")
         {
             std::array<int, 120> mem;
-            auto maybe_mystack = list_t<int>::make(mem);
-            REQUIRE(maybe_mystack.okay());
+            auto list = list_t<int>::make(mem);
         }
     }
 
@@ -67,9 +66,7 @@ TEST_SUITE("list_t")
         SUBCASE("functionality with static buffer")
         {
             std::array<int, 500> buf;
-            auto maybe_list = list_t<int>::make(buf);
-            REQUIRE(maybe_list.okay());
-            list_t<int> list = maybe_list.release();
+            auto list = list_t<int>::make(buf);
 
             std::array toadd = {1,  2,     3,    4,       345, 64556,
                                 23, 23423, 8989, 9089234, 1234};
@@ -92,7 +89,7 @@ TEST_SUITE("list_t")
         SUBCASE("items stay in expected order after removal and insertion")
         {
             std::array<int, 500> buf;
-            auto list = list_t<int>::make(buf).release();
+            auto list = list_t<int>::make(buf);
             REQUIRE(list.items().size() == 0);
             for (size_t i = 0; i < 20; ++i) {
                 auto res = list.try_append(i);

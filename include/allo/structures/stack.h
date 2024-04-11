@@ -31,8 +31,7 @@ template <typename T> class stack_t
     make_owned(detail::abstract_heap_allocator_t &parent_allocator,
                size_t initial_items) noexcept;
 
-    [[nodiscard]] static zl::res<stack_t, AllocationStatusCode>
-    make(zl::slice<T> memory) noexcept;
+    [[nodiscard]] static constexpr stack_t make(zl::slice<T> memory) noexcept;
 
     stack_t() = delete;
     stack_t(const stack_t &) = delete;
@@ -140,21 +139,12 @@ stack_t<T>::make_owned(detail::abstract_heap_allocator_t &parent_allocator,
 }
 
 template <typename T>
-inline zl::res<stack_t<T>, AllocationStatusCode>
-stack_t<T>::make(zl::slice<T> memory) noexcept
+inline constexpr stack_t<T> stack_t<T>::make(zl::slice<T> memory) noexcept
 {
-    if (memory.size() == 0) [[unlikely]] {
-        assert(false);
-        return AllocationStatusCode::OOM;
-    }
-
-    return zl::res<stack_t, AllocationStatusCode>{
-        std::in_place,
-        M{
-            .items = zl::slice<T>(memory, 0, 0),
-            .capacity = memory.size(),
-            .parent = {},
-        },
+    return M{
+        .items = zl::slice<T>(memory, 0, 0),
+        .capacity = memory.size(),
+        .parent = {},
     };
 }
 

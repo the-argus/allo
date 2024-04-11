@@ -46,8 +46,7 @@ template <typename T> class list_t
     list_t(list_t &&) noexcept = default;
     list_t &operator=(list_t &&) noexcept = default;
 
-    [[nodiscard]] static zl::res<list_t, AllocationStatusCode>
-    make(zl::slice<T> memory) noexcept;
+    [[nodiscard]] static constexpr list_t make(zl::slice<T> memory) noexcept;
 
     [[nodiscard]] static zl::res<list_t, AllocationStatusCode>
     make_owned(detail::abstract_heap_allocator_t &parent_allocator,
@@ -131,21 +130,12 @@ template <typename T> class list_t
 };
 
 template <typename T>
-zl::res<list_t<T>, AllocationStatusCode>
-list_t<T>::make(zl::slice<T> memory) noexcept
+constexpr list_t<T> list_t<T>::make(zl::slice<T> memory) noexcept
 {
-    if (memory.size() == 0) [[unlikely]] {
-        assert(false);
-        return AllocationStatusCode::OOM;
-    }
-
-    return zl::res<list_t<T>, AllocationStatusCode>{
-        std::in_place,
-        M{
-            .parent = {},
-            .memory = memory,
-            .size = 0,
-        },
+    return M{
+        .parent = {},
+        .memory = memory,
+        .size = 0,
     };
 }
 

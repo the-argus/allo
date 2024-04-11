@@ -37,8 +37,11 @@ template <typename T> class collection_t
     /// initial_items is the number of items to reserve space for initially.
     /// If zero, will be rounded up to one.
     [[nodiscard]] static zl::res<collection_t, AllocationStatusCode>
-    make(detail::abstract_heap_allocator_t &parent_allocator,
-         size_t initial_items) noexcept;
+    make_owned(detail::abstract_heap_allocator_t &parent_allocator,
+               size_t initial_items) noexcept;
+
+    [[nodiscard]] static constexpr collection_t
+    make(zl::slice<T> memory) noexcept;
 
     collection_t() = delete;
     collection_t(const collection_t &) = delete;
@@ -150,8 +153,8 @@ collection_t<T>::remove_at_unchecked(size_t index) noexcept
 
 template <typename T>
 inline zl::res<collection_t<T>, AllocationStatusCode>
-collection_t<T>::make(detail::abstract_heap_allocator_t &parent_allocator,
-                      size_t initial_items) noexcept
+collection_t<T>::make_owned(detail::abstract_heap_allocator_t &parent_allocator,
+                            size_t initial_items) noexcept
 
 {
     const size_t actual_initial = initial_items == 0 ? 1 : initial_items;
@@ -168,6 +171,16 @@ collection_t<T>::make(detail::abstract_heap_allocator_t &parent_allocator,
                            .capacity = initial.size(),
                            .parent = parent_allocator,
                        }};
+}
+
+template <typename T>
+constexpr collection_t<T> collection_t<T>::make(zl::slice<T> memory) noexcept
+{
+    return M{
+        .items = zl::slice<T>(memory, 0, 0),
+        .capacity = memory.size(),
+        .parent = {},
+    };
 }
 
 template <typename T>

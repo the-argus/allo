@@ -13,7 +13,7 @@ TEST_SUITE("collection_t")
         SUBCASE("Making with c allocator")
         {
             c_allocator_t c;
-            auto maybe_collection = collection_t<int>::make(c, 100);
+            auto maybe_collection = collection_t<int>::make_owned(c, 100);
             REQUIRE(maybe_collection.okay());
         }
 
@@ -24,7 +24,8 @@ TEST_SUITE("collection_t")
                 heap_allocator_t::make(alloc<uint8_t>(c, 4000).release())
                     .release();
 
-            auto maybe_collection = collection_t<uint8_t>::make(heap, 2000);
+            auto maybe_collection =
+                collection_t<uint8_t>::make_owned(heap, 2000);
             REQUIRE(maybe_collection.okay());
         }
     }
@@ -34,7 +35,7 @@ TEST_SUITE("collection_t")
         SUBCASE("push back a bunch of ints and pop some off")
         {
             c_allocator_t c;
-            auto maybe_collection = collection_t<int>::make(c, 100);
+            auto maybe_collection = collection_t<int>::make_owned(c, 100);
             REQUIRE(maybe_collection.okay());
             collection_t<int> collection = maybe_collection.release();
 

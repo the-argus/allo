@@ -32,8 +32,7 @@ TEST_SUITE("stack_t")
         SUBCASE("make with static buffer")
         {
             std::array<int, 120> mem;
-            auto maybe_mystack = stack<int>::make(mem);
-            REQUIRE(maybe_mystack.okay());
+            auto mystack = stack<int>::make(mem);
         }
     }
 
@@ -66,25 +65,23 @@ TEST_SUITE("stack_t")
         SUBCASE("functionality with static buffer")
         {
             std::array<int, 500> buf;
-            auto maybe_stack = stack<int>::make(buf);
-            REQUIRE(maybe_stack.okay());
-            stack<int> stack = maybe_stack.release();
+            auto st = stack<int>::make(buf);
 
             std::array toadd = {1,  2,     3,    4,       345, 64556,
                                 23, 23423, 8989, 9089234, 1234};
 
             for (int i : toadd) {
-                auto put_res_1 = stack.try_push(i);
+                auto put_res_1 = st.try_push(i);
                 REQUIRE(put_res_1.okay());
-                REQUIRE(stack.end().has_value());
-                REQUIRE(stack.end().value() == i);
-                auto pus_res_2 = stack.try_push(i);
+                REQUIRE(st.end().has_value());
+                REQUIRE(st.end().value() == i);
+                auto pus_res_2 = st.try_push(i);
                 REQUIRE(pus_res_2.okay());
-                REQUIRE(stack.end().value() == i);
-                stack.pop();
+                REQUIRE(st.end().value() == i);
+                st.pop();
             }
 
-            REQUIRE(zl::memcompare(stack.items(), zl::slice<int>(toadd)));
+            REQUIRE(zl::memcompare(st.items(), zl::slice<int>(toadd)));
         }
 
         SUBCASE("items stay the same after reallocation")
