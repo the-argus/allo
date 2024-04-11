@@ -1,5 +1,6 @@
 #include "allo/c_allocator.h"
 #include "allo/structures/list.h"
+#include "allo/structures/uninitialized_array.h"
 // test header should be last
 #include "test_header.h"
 
@@ -31,7 +32,7 @@ TEST_SUITE("list_t")
 
         SUBCASE("make with static buffer")
         {
-            std::array<int, 120> mem;
+            allo::uninitialized_array_t<int, 120> mem;
             auto list = list_t<int>::make(mem);
         }
     }
@@ -65,7 +66,7 @@ TEST_SUITE("list_t")
 
         SUBCASE("functionality with static buffer")
         {
-            std::array<int, 500> buf;
+            allo::uninitialized_array_t<int, 500> buf;
             auto list = list_t<int>::make(buf);
 
             std::array toadd = {1,  2,     3,    4,       345, 64556,
@@ -88,7 +89,7 @@ TEST_SUITE("list_t")
 
         SUBCASE("items stay in expected order after removal and insertion")
         {
-            std::array<int, 500> buf;
+            uninitialized_array_t<int, 500> buf;
             auto list = list_t<int>::make(buf);
             REQUIRE(list.items().size() == 0);
             for (size_t i = 0; i < 20; ++i) {

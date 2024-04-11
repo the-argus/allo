@@ -1,5 +1,6 @@
 #include "allo/c_allocator.h"
 #include "allo/structures/stack.h"
+#include "allo/structures/uninitialized_array.h"
 // test header should be last
 #include "test_header.h"
 
@@ -31,7 +32,7 @@ TEST_SUITE("stack_t")
 
         SUBCASE("make with static buffer")
         {
-            std::array<int, 120> mem;
+            allo::uninitialized_array_t<int, 120> mem;
             auto mystack = stack<int>::make(mem);
         }
     }
@@ -64,7 +65,7 @@ TEST_SUITE("stack_t")
 
         SUBCASE("functionality with static buffer")
         {
-            std::array<int, 500> buf;
+            allo::uninitialized_array_t<int, 500> buf;
             auto st = stack<int>::make(buf);
 
             std::array toadd = {1,  2,     3,    4,       345, 64556,
