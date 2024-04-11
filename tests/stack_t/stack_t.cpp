@@ -4,6 +4,17 @@
 // test header should be last
 #include "test_header.h"
 
+struct WeirdShape
+{
+    int alignment;
+    char needspadding;
+};
+
+static_assert(sizeof(allo::uninitialized_array_t<int, 5>) ==
+              sizeof(std::array<int, 5>));
+static_assert(sizeof(allo::uninitialized_array_t<WeirdShape, 5>) ==
+              sizeof(std::array<WeirdShape, 5>));
+
 template <typename T> using stack = allo::stack_t<T>;
 static_assert(!std::is_default_constructible_v<stack<int>>,
               "Collection of ints is default constructible");

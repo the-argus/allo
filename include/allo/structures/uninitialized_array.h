@@ -50,7 +50,7 @@ template <typename T, size_t n> class uninitialized_array_t
     static constexpr bool divisible = ((sizeof(aligned_int) - 1) & bytes) == 0;
 
     static constexpr size_t items_needed =
-        (bytes / sizeof(aligned_int)) + (divisible ? 1 : 0);
+        (bytes / sizeof(aligned_int)) + (divisible ? 0 : 1);
 
     static_assert(items_needed * sizeof(aligned_int) >= bytes,
                   "Incorrectly calculated number of ints needed to have enough "
