@@ -1,11 +1,11 @@
 #pragma once
-#include "allo/status.h"
 #include <cmath>
 #include <type_traits>
 #ifdef ALLO_HEADER_ONLY
 #define ALLO_HEADER_ONLY_AVOID
 #undef ALLO_HEADER_ONLY
 #endif
+#include "allo/status.h"
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
 #include "allo/typed_reallocation.h"
