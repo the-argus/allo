@@ -1,7 +1,6 @@
 #pragma once
 #include "allo/status.h"
 #include <cmath>
-#include <sys/stat.h>
 #include <type_traits>
 #ifdef ALLO_HEADER_ONLY
 #define ALLO_HEADER_ONLY_AVOID
