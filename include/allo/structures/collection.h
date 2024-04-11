@@ -95,7 +95,7 @@ template <typename T> class collection_t
 
     constexpr size_t calculate_new_size() noexcept;
 
-    constexpr allocation_status_t try_realloc() noexcept;
+    allocation_status_t try_realloc() noexcept;
 
   public:
     inline constexpr collection_t(M members) noexcept : m(members) {}
@@ -114,7 +114,8 @@ inline constexpr zl::slice<T> collection_t<T>::items() noexcept
 }
 
 template <typename T>
-constexpr auto collection_t<T>::try_remove_at(size_t index) noexcept -> status_t
+inline constexpr auto collection_t<T>::try_remove_at(size_t index) noexcept
+    -> status_t
 {
     static_assert(std::is_destructible_v<T>,
                   "Cannot remove_at from a collection which holds an "
@@ -135,7 +136,8 @@ constexpr auto collection_t<T>::try_remove_at(size_t index) noexcept -> status_t
 }
 
 template <typename T>
-constexpr void collection_t<T>::remove_at_unchecked(size_t index) noexcept
+inline constexpr void
+collection_t<T>::remove_at_unchecked(size_t index) noexcept
 {
     T &target = m.items.data()[index];
     target.~T();
@@ -169,7 +171,7 @@ collection_t<T>::make(detail::abstract_heap_allocator_t &parent_allocator,
 }
 
 template <typename T>
-constexpr size_t collection_t<T>::calculate_new_size() noexcept
+inline constexpr size_t collection_t<T>::calculate_new_size() noexcept
 {
     const auto res = static_cast<size_t>(
         std::ceil(static_cast<float>(m.items.size()) * realloc_ratio));
@@ -178,7 +180,7 @@ constexpr size_t collection_t<T>::calculate_new_size() noexcept
 }
 
 template <typename T>
-constexpr allocation_status_t collection_t<T>::try_realloc() noexcept
+inline allocation_status_t collection_t<T>::try_realloc() noexcept
 {
     static_assert(std::is_trivially_copyable_v<T>,
                   "collection assumes trivially copyable types for T... until "

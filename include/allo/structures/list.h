@@ -21,7 +21,9 @@ namespace allo {
 template <typename T> class list_t
 {
   public:
-    static_assert(std::is_nothrow_destructible_v<T>, "Cannot instantiate a list whose contents are not nothrow destructible.");
+    static_assert(std::is_nothrow_destructible_v<T>,
+                  "Cannot instantiate a list whose contents are not nothrow "
+                  "destructible.");
 
     using type = T;
 
@@ -45,7 +47,7 @@ template <typename T> class list_t
     list_t &operator=(list_t &&) noexcept = default;
 
     [[nodiscard]] static zl::res<list_t, AllocationStatusCode>
-    make(zl::slice<uint8_t> memory) noexcept;
+    make(zl::slice<T> memory) noexcept;
 
     [[nodiscard]] static zl::res<list_t, AllocationStatusCode>
     make_owned(detail::abstract_heap_allocator_t &parent_allocator,
@@ -58,8 +60,7 @@ template <typename T> class list_t
     [[nodiscard]] constexpr size_t capacity() const noexcept;
 
     template <typename... Args>
-    [[nodiscard]] status_t try_insert_at(size_t index,
-                                                    Args &&...args) noexcept
+    [[nodiscard]] status_t try_insert_at(size_t index, Args &&...args) noexcept
     {
         if (index > m.size) {
             assert(false);
@@ -69,11 +70,14 @@ template <typename T> class list_t
         if (!status.okay())
             return status.err();
         assert(m.memory.size() > m.size);
-        // move all items between the end of the buffer and index down one to make room for the new item
+        // move all items between the end of the buffer and index down one to
+        // make room for the new item
         for (int64_t i = m.size; i >= index + 1; --i) {
-            new (m.memory.data() + i) T(std::move(m.memory.data()[i-1]));
+            new (m.memory.data() + i) T(std::move(m.memory.data()[i - 1]));
         }
-        static_assert(std::is_nothrow_constructible_v<T, Args...>, "T is not nothrow constructible with the given arguments.");
+        static_assert(
+            std::is_nothrow_constructible_v<T, Args...>,
+            "T is not nothrow constructible with the given arguments.");
         new (m.memory.data() + index) T(std::forward<Args>(args)...);
         ++m.size;
     }
@@ -86,7 +90,9 @@ template <typename T> class list_t
         auto status = try_realloc_if_needed();
         if (!status.okay())
             return status.err();
-        static_assert(std::is_nothrow_constructible_v<T, Args...>, "T is not nothrow constructible with the given arguments.");
+        static_assert(
+            std::is_nothrow_constructible_v<T, Args...>,
+            "T is not nothrow constructible with the given arguments.");
         new (items().end().ptr()) T(std::forward<Args>(args)...);
         ++m.size;
     }
@@ -97,9 +103,9 @@ template <typename T> class list_t
 
     void remove_at_unchecked(size_t index) noexcept;
 
-    [[nodiscard]] T &get_at_unchecked(size_t index) noexcept {}
+    [[nodiscard]] T &get_at_unchecked(size_t index) noexcept;
 
-    [[nodiscard]] const T &get_at_unchecked(size_t index) const noexcept {}
+    [[nodiscard]] const T &get_at_unchecked(size_t index) const noexcept;
 
     inline ~list_t() noexcept
     {
@@ -118,6 +124,44 @@ template <typename T> class list_t
 
     [[nodiscard]] status_t try_realloc_if_needed() noexcept;
 };
+
+template <typename T>
+zl::res<list_t<T>, AllocationStatusCode>
+list_t<T>::make(zl::slice<T> memory) noexcept
+{
+    if (memory.size() == 0) [[unlikely]] {
+        assert(false);
+        return AllocationStatusCode::OOM;
+    }
+
+    return zl::res<list_t<T>, AllocationStatusCode>{
+        std::in_place,
+        M{
+            .size = 0,
+            .memory = memory,
+            .parent = {},
+        },
+    };
+}
+
+template <typename T>
+zl::res<list_t<T>, AllocationStatusCode>
+list_t<T>::make_owned(detail::abstract_heap_allocator_t &parent_allocator,
+                      size_t initial_items) noexcept
+{
+    auto result = alloc<T>(parent_allocator, initial_items);
+    if (!result.okay())
+        return result.err();
+
+    return zl::res<list_t<T>, AllocationStatusCode>{
+        std::in_place,
+        M{
+            .size = 0,
+            .memory = result.release(),
+            .parent = parent_allocator,
+        },
+    };
+}
 
 template <typename T>
 [[nodiscard]] constexpr zl::slice<const T> list_t<T>::items() const noexcept
@@ -148,8 +192,7 @@ auto list_t<T>::try_remove_at(size_t index) noexcept -> status_t
     return StatusCode::Okay;
 }
 
-template <typename T>
-void list_t<T>::remove_at_unchecked(size_t index) noexcept
+template <typename T> void list_t<T>::remove_at_unchecked(size_t index) noexcept
 {
     assert(index < m.size);
     (m.memory.data()[index]).~T();
@@ -182,12 +225,11 @@ auto list_t<T>::try_realloc_if_needed() noexcept -> status_t
     }
 }
 
-template <typename T>
-zl::opt<T &> list_t<T>::try_get_at(size_t index) noexcept
+template <typename T> zl::opt<T &> list_t<T>::try_get_at(size_t index) noexcept
 {
     if (index >= m.size)
         return {};
-    return m.memory.data()[index];
+    return get_at_unchecked(index);
 }
 
 template <typename T>
@@ -195,6 +237,20 @@ zl::opt<const T &> list_t<T>::try_get_at(size_t index) const noexcept
 {
     if (index >= m.size)
         return {};
+    return get_at_unchecked(index);
+}
+
+template <typename T> T &list_t<T>::get_at_unchecked(size_t index) noexcept
+{
+    assert(index < m.size);
     return m.memory.data()[index];
 }
+
+template <typename T>
+const T &list_t<T>::get_at_unchecked(size_t index) const noexcept
+{
+    assert(index < m.size);
+    return m.memory.data()[index];
+}
+
 } // namespace allo

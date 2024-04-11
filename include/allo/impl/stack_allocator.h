@@ -151,7 +151,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
                 allo::free_one(m.parent.value(), buffers);
             });
             auto maybe_collection =
-                stack_t<bytes_t>::make(m.parent.value(), m.memory.size());
+                stack_t<bytes_t>::make_owned(m.parent.value(), m.memory.size());
             if (!maybe_collection.okay())
                 return maybe_collection.err();
             new (&buffers) stack_t<bytes_t>(maybe_collection.release());
