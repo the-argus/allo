@@ -62,7 +62,7 @@ template <typename T> class collection_t
             }
         }
         assert(m.capacity > m.items.size());
-        emplace_unchecked(std::forward<Args>(args)...);
+        put_unchecked(std::forward<Args>(args)...);
         return AllocationStatusCode::Okay;
     }
 

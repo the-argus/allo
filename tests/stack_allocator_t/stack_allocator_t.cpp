@@ -1,7 +1,7 @@
-#include "allo/make_into.h"
-#include "allo/stack_allocator.h"
 #define ALLO_ALLOW_DESTRUCTORS // we allocate a std::set and std::vector
                                // TODO: make this not necessary
+#include "allo/make_into.h"
+#include "allo/stack_allocator.h"
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
 #include "generic_allocator_tests.h"
