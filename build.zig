@@ -41,6 +41,7 @@ const test_source_files = &[_][]const u8{
     "memory_map/memory_map.cpp",
     "collection_t/collection_t.cpp",
     "stack_t/stack_t.cpp",
+    "list_t/list_t.cpp",
 };
 
 const universal_tests_source_files = &[_][]const u8{

@@ -80,12 +80,13 @@ template <typename T> class list_t
             "T is not nothrow constructible with the given arguments.");
         new (m.memory.data() + index) T(std::forward<Args>(args)...);
         ++m.size;
+        return StatusCode::Okay;
     }
 
     [[nodiscard]] status_t try_remove_at(size_t index) noexcept;
 
     template <typename... Args>
-    [[nodiscard]] allocation_status_t try_append(Args &&...args) noexcept
+    [[nodiscard]] status_t try_append(Args &&...args) noexcept
     {
         auto status = try_realloc_if_needed();
         if (!status.okay())
@@ -95,6 +96,7 @@ template <typename T> class list_t
             "T is not nothrow constructible with the given arguments.");
         new (items().end().ptr()) T(std::forward<Args>(args)...);
         ++m.size;
+        return StatusCode::Okay;
     }
 
     [[nodiscard]] zl::opt<T &> try_get_at(size_t index) noexcept;
@@ -123,6 +125,9 @@ template <typename T> class list_t
     } m;
 
     [[nodiscard]] status_t try_realloc_if_needed() noexcept;
+
+  public:
+    inline constexpr list_t(M members) noexcept : m(members) {}
 };
 
 template <typename T>
@@ -137,9 +142,9 @@ list_t<T>::make(zl::slice<T> memory) noexcept
     return zl::res<list_t<T>, AllocationStatusCode>{
         std::in_place,
         M{
-            .size = 0,
-            .memory = memory,
             .parent = {},
+            .memory = memory,
+            .size = 0,
         },
     };
 }
@@ -156,9 +161,9 @@ list_t<T>::make_owned(detail::abstract_heap_allocator_t &parent_allocator,
     return zl::res<list_t<T>, AllocationStatusCode>{
         std::in_place,
         M{
-            .size = 0,
-            .memory = result.release(),
             .parent = parent_allocator,
+            .memory = result.release(),
+            .size = 0,
         },
     };
 }
@@ -205,10 +210,9 @@ template <typename T> void list_t<T>::remove_at_unchecked(size_t index) noexcept
 template <typename T>
 auto list_t<T>::try_realloc_if_needed() noexcept -> status_t
 {
-    const bool needs_realloc = m.memory.size() <= m.size;
     // NOTE: reallocation here is very simple, because you can only insert
     // one item at a time.
-    if (needs_realloc) {
+    if (m.memory.size() <= m.size) {
         if (m.parent) {
             const auto newsize = static_cast<size_t>(std::ceil(
                 static_cast<double>(m.memory.size()) * realloc_ratio));
@@ -223,6 +227,7 @@ auto list_t<T>::try_realloc_if_needed() noexcept -> status_t
             return StatusCode::OOM;
         }
     }
+    return StatusCode::Okay;
 }
 
 template <typename T> zl::opt<T &> list_t<T>::try_get_at(size_t index) noexcept
