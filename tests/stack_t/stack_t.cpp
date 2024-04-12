@@ -46,6 +46,28 @@ TEST_SUITE("stack_t")
             allo::uninitialized_array_t<int, 120> mem;
             auto mystack = stack<int>::make(mem);
         }
+
+        SUBCASE("move into function")
+        {
+            allo::uninitialized_array_t<int, 500> buf;
+            auto st = stack<int>::make(buf);
+            std::array toadd = {1,  2,     3,    4,       345, 64556,
+                                23, 23423, 8989, 9089234, 1234};
+            for (int item : toadd) {
+                auto res = st.try_push(item);
+                REQUIRE(res.okay());
+            }
+
+            REQUIRE(zl::memcompare(st.items(), zl::slice<int>(toadd)));
+
+            auto consumer = [&toadd](stack<int> &&s) {
+                stack<int> ourstack(std::move(s));
+                REQUIRE(
+                    zl::memcompare(ourstack.items(), zl::slice<int>(toadd)));
+            };
+
+            consumer(std::move(st));
+        }
     }
 
     TEST_CASE("functionality")
