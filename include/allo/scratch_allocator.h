@@ -18,13 +18,12 @@ class scratch_allocator_t : public detail::abstract_allocator_t
     scratch_allocator_t(scratch_allocator_t &&) noexcept;
     scratch_allocator_t &operator=(scratch_allocator_t &&) = delete;
 
-    inline static zl::res<scratch_allocator_t, AllocationStatusCode>
-    make(bytes_t memory) noexcept
+    inline static scratch_allocator_t make(bytes_t memory) noexcept
     {
         return make_inner(memory, {});
     }
 
-    inline static zl::res<scratch_allocator_t, AllocationStatusCode>
+    inline static scratch_allocator_t
     make_owned(bytes_t memory,
                detail::abstract_heap_allocator_t &parent) noexcept
     {
@@ -44,7 +43,7 @@ class scratch_allocator_t : public detail::abstract_allocator_t
                                   void *user_data) noexcept;
 
   private:
-    static zl::res<scratch_allocator_t, AllocationStatusCode>
+    static scratch_allocator_t
     make_inner(bytes_t memory,
                zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept;
 

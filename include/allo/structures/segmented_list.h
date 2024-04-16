@@ -55,7 +55,7 @@ template <typename T> class segmented_list_t
     segmented_list_t &operator=(segmented_list_t &&) noexcept = default;
 
     [[nodiscard]] static zl::res<segmented_list_t, AllocationStatusCode>
-    make(detail::abstract_stack_allocator_t &parent_allocator,
+    make(detail::abstract_allocator_t &parent_allocator,
          size_t initial_items) noexcept;
 
     [[nodiscard]] static zl::res<segmented_list_t, AllocationStatusCode>
@@ -119,7 +119,7 @@ template <typename T> class segmented_list_t
 
 template <typename T>
 inline auto
-segmented_list_t<T>::make(detail::abstract_stack_allocator_t &parent_allocator,
+segmented_list_t<T>::make(detail::abstract_allocator_t &parent_allocator,
                           size_t initial_items) noexcept
     -> zl::res<segmented_list_t, AllocationStatusCode>
 {
@@ -144,7 +144,7 @@ segmented_list_t<T>::make(detail::abstract_stack_allocator_t &parent_allocator,
     }
 
     const any_allocator_t parent = parent_allocator;
-    assert(parent.is_stack());
+    assert(parent.is_basic());
 
     return zl::res<segmented_list_t, AllocationStatusCode>{
         std::in_place,

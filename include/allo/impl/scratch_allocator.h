@@ -132,8 +132,7 @@ ALLO_FUNC const allocator_properties_t &scratch_allocator_t::properties() const
     return m.properties;
 }
 
-ALLO_FUNC zl::res<scratch_allocator_t, AllocationStatusCode>
-scratch_allocator_t::make_inner(
+ALLO_FUNC scratch_allocator_t scratch_allocator_t::make_inner(
     bytes_t memory,
     zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept
 {

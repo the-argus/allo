@@ -17,18 +17,14 @@ TEST_SUITE("scratch_allocator_t")
         {
             std::array<uint8_t, 512> mem;
 
-            auto maybe_ally = scratch_allocator_t::make(mem);
-            REQUIRE(maybe_ally.okay());
-            scratch_allocator_t ally = maybe_ally.release();
+            auto ally = scratch_allocator_t::make(mem);
         }
 
         SUBCASE("move semantics")
         {
             std::array<uint8_t, 512> mem;
 
-            auto maybe_ally = scratch_allocator_t::make(mem);
-            REQUIRE(maybe_ally.okay());
-            scratch_allocator_t ally = maybe_ally.release();
+            auto ally = scratch_allocator_t::make(mem);
 
             auto maybe_myint = allo::alloc_one<int>(ally);
             REQUIRE(maybe_myint.okay());
@@ -57,7 +53,7 @@ TEST_SUITE("scratch_allocator_t")
             std::fill(mem.begin(), mem.end(), 1);
             REQUIRE(mem[0] == 1);
 
-            auto ally = scratch_allocator_t::make(subslice).release();
+            auto ally = scratch_allocator_t::make(subslice);
 
             uint8_t &a_byte = allo::alloc_one<uint8_t>(ally).release();
             REQUIRE(a_byte == 1); // alloc one does not zero-initialize memory,
@@ -96,7 +92,7 @@ TEST_SUITE("scratch_allocator_t")
         SUBCASE("alloc array")
         {
             std::array<uint8_t, 512> mem;
-            auto ally = scratch_allocator_t::make(mem).release();
+            auto ally = scratch_allocator_t::make(mem);
 
             auto maybe_my_ints = allo::alloc_one<std::array<int, 88>>(ally);
             REQUIRE(maybe_my_ints.okay());
@@ -106,7 +102,8 @@ TEST_SUITE("scratch_allocator_t")
 
         SUBCASE("generic ref, large allocation")
         {
-            tests::make_large_allocation_with<scratch_allocator_t>();
+            tests::make_large_allocation_with_nonfailing_make<
+                scratch_allocator_t>();
         }
 
         SUBCASE("generic ref, allocate linked list")
@@ -115,14 +112,14 @@ TEST_SUITE("scratch_allocator_t")
             // bytes? where is the memory going? or is my math just wrong
             std::array<uint8_t, 945> mem; // just barely enough memory for the
                                           // linked list of strings
-            auto ally = scratch_allocator_t::make(mem).release();
+            auto ally = scratch_allocator_t::make(mem);
             tests::allocate_object_with_linked_list(ally);
         }
 
         SUBCASE("OOM")
         {
             std::array<uint8_t, 512> mem;
-            auto ally = scratch_allocator_t::make(mem).release();
+            auto ally = scratch_allocator_t::make(mem);
 
             auto arr_res = allo::alloc_one<std::array<uint8_t, 494>>(ally);
             REQUIRE(arr_res.okay());
@@ -135,7 +132,7 @@ TEST_SUITE("scratch_allocator_t")
             std::array<uint8_t, 512> mem;
             int test = 0;
             {
-                auto stack = scratch_allocator_t::make(mem).release();
+                auto stack = scratch_allocator_t::make(mem);
                 auto status = stack.register_destruction_callback(
                     [](void *test_int) { *((int *)test_int) = 1; }, &test);
                 REQUIRE(status.okay());
@@ -162,7 +159,7 @@ TEST_SUITE("scratch_allocator_t")
 
             {
                 scratch_allocator_t scratch =
-                    scratch_allocator_t::make(real_mem).release();
+                    scratch_allocator_t::make(real_mem);
 
                 auto &counter_1 =
                     allo::construct_one<DestroyCounter>(scratch).release();

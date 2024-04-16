@@ -28,6 +28,12 @@ class heap_allocator_t : public detail::abstract_heap_allocator_t
 #ifndef ALLO_DISABLE_TYPEINFO
         size_t typehash;
 #endif
+        static constexpr size_t static_magic = 0xDEADBEEF;
+        // NOTE: this is here so that we can check if the bookkeeping is stored
+        // right behind the allocation. if the bytes behind an allocation dont
+        // match static_magic, then we interpret them as a pointer to the
+        // allocation_bookkeeping_t.
+        size_t magic = static_magic;
     };
 
   private:

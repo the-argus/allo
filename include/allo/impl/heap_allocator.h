@@ -158,23 +158,30 @@ ALLO_FUNC auto heap_allocator_t::free_common(bytes_t mem,
 
     void *head = mem.data();
 #ifndef NDEBUG
-    size_t dummyspace = sizeof(allocation_bookkeeping_t) * 2;
-    assert(std::align(alignof(allocation_bookkeeping_t),
-                      sizeof(allocation_bookkeeping_t), head,
-                      dummyspace) == mem.data());
+    {
+        size_t debug_space = sizeof(allocation_bookkeeping_t) * 2;
+        void *debug_head = head;
+        assert(std::align(alignof(allocation_bookkeeping_t),
+                          sizeof(allocation_bookkeeping_t), debug_head,
+                          debug_space) == mem.data());
+    }
 #endif
     auto *bk = static_cast<allocation_bookkeeping_t *>(head);
     while ((uint8_t *)(bk + 1) > mem.data()) {
         --bk;
     }
+    // make sure magic matches. if it doesnt, treat it as a pointer to the
+    // actual allocation_bookkeeping_t
+    if (bk->magic != allocation_bookkeeping_t::static_magic) {
+        bk = reinterpret_cast<allocation_bookkeeping_t *>(bk->magic); // NOLINT
+        assert((uint8_t *)bk >= m.mem.begin().ptr());
+        assert((uint8_t *)bk < m.mem.end().ptr());
+    }
     if (bk->size_requested == mem.size()) {
         return AllocationStatusCode::MemoryInvalid;
     }
 #ifndef ALLO_DISABLE_TYPEINFO
-    // NOTE: this really should be a log message... you probably don't want
-    // memory returning an error and therefore not being freed because of a
-    // typing mistake. maybe would be different if free_bytes was always
-    // nodiscard? using an assert to alert in debug mode
+    // NOTE: this really should be a log message
     assert(bk->typehash == typehash);
 #endif
     return bk;
@@ -208,21 +215,42 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
         assert(((uint8_t *)iter >= m.mem.data() &&
                 (uint8_t *)iter < m.mem.end().ptr()));
         if (iter->size >= actual_size) {
+            // make sure everything is aligned and has space
+#ifndef NDEBUG
+            {
+                size_t space = iter->size;
+                void *block = iter;
+                assert(std::align(alignof(allocation_bookkeeping_t),
+                                  sizeof(allocation_bookkeeping_t), block,
+                                  space));
+                assert(block == iter);
+                assert(space > sizeof(allocation_bookkeeping_t));
+            }
+#endif
             size_t space = iter->size;
             void *block = iter;
-            assert(std::align(alignof(allocation_bookkeeping_t),
-                              sizeof(allocation_bookkeeping_t), block, space));
-            assert(block == iter);
-            assert(space > sizeof(allocation_bookkeeping_t));
 
             auto *bookkeeping =
                 reinterpret_cast<allocation_bookkeeping_t *>(block);
             block = bookkeeping + 1;
             space -= sizeof(allocation_bookkeeping_t);
 
+            // keep track of where we were originally planning to allocate
+            // before alignment, so we can see if we moved when aligning
+            void *original_block = block;
+
             if (!std::align(size_t(std::pow(2, actual_align_ex)), bytes, block,
                             space)) {
                 continue;
+            }
+            if (block != original_block) {
+                // make sure we moved by at least 8 bytes. doesnt make sense to
+                // move any less since we were already 8-byte aligned
+                assert((uint8_t *)block - (uint8_t *)original_block >
+                       sizeof(void *));
+                // go back before the block, place down a pointer to the actual
+                // allocation_bookkeeping_t.
+                *(((allocation_bookkeeping_t **)block) - 1) = bookkeeping;
             }
             assert(space >= bytes);
             space -= bytes;

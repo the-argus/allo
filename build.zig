@@ -42,6 +42,7 @@ const test_source_files = &[_][]const u8{
     "collection_t/collection_t.cpp",
     "stack_t/stack_t.cpp",
     "list_t/list_t.cpp",
+    "segmented_stack_t/segmented_stack_t.cpp",
 };
 
 const universal_tests_source_files = &[_][]const u8{

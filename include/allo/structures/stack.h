@@ -161,7 +161,7 @@ template <typename T>
 inline allocation_status_t stack_t<T>::try_realloc() noexcept
 {
     static_assert(std::is_trivially_copyable_v<T>,
-                  "collection assumes trivially copyable types for T... until "
+                  "stack assumes trivially copyable types for T... until "
                   "allo implements nontrivial realloc this is the only thing "
                   "that makes sense");
     auto result =
@@ -191,6 +191,9 @@ template <typename T> inline constexpr void stack_t<T>::pop() noexcept
 {
     if (m.items.size() == 0)
         return;
+    static_assert(
+        std::is_nothrow_destructible_v<T>,
+        "Cannot pop off a stack whose contents are not nothrow destructible.");
     m.items.data()[m.items.size() - 1].~T();
     m.items = zl::slice<T>(m.items, 0, m.items.size() - 1);
 }

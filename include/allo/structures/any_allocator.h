@@ -107,6 +107,22 @@ class any_allocator_t
         return *static_cast<detail::abstract_allocator_t *>(m.ref);
     }
 
+    [[nodiscard]] inline constexpr detail::abstract_allocator_t &
+    cast_to_basic() const noexcept
+    {
+        switch (m.type) {
+        case AllocatorReferenceType::Basic:
+            return get_basic_unchecked();
+            break;
+        case AllocatorReferenceType::Heap:
+            return get_heap_unchecked();
+            break;
+        case AllocatorReferenceType::Stack:
+            return get_stack_unchecked();
+            break;
+        }
+    }
+
   private:
     struct M
     {
