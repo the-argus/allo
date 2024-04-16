@@ -131,8 +131,8 @@ segmented_list_t<T>::make(detail::abstract_allocator_t &parent_allocator,
     if (!maybe_memory_for_segments.okay())
         return maybe_memory_for_segments.err();
 
-    auto segments =
-        list_t<zl::slice<T>>::make(maybe_memory_for_segments.release_ref());
+    auto segments = segmented_stack_t<zl::slice<T>>::make(
+        maybe_memory_for_segments.release_ref());
 
     for (size_t i = 0; i < segments_needed; ++i) {
         auto maybe_segment = alloc<T>(parent_allocator, items_per_segment);
@@ -175,8 +175,8 @@ inline auto segmented_list_t<T>::make_owned(
             free(parent_allocator, maybe_memory_for_segments);
         });
 
-    auto segments =
-        list_t<zl::slice<T>>::make(maybe_memory_for_segments.release_ref());
+    auto segments = segmented_stack_t<zl::slice<T>>::make(
+        maybe_memory_for_segments.release_ref());
 
     zl::defer free_segments([&segments, &parent_allocator]() {
         for (auto &slice : segments.items()) {
