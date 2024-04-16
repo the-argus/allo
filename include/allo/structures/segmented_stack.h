@@ -8,7 +8,6 @@
 #include "allo/structures/uninitialized_array.h"
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
-#include "allo/typed_reallocation.h"
 #include <cmath>
 #ifdef ALLO_HEADER_ONLY_AVOID
 #undef ALLO_HEADER_ONLY_AVOID
@@ -63,6 +62,30 @@ template <typename T> class segmented_stack_t
     [[nodiscard]] constexpr zl::opt<T &> end() noexcept;
 
     constexpr void pop() noexcept;
+
+    template <typename Callable>
+    inline constexpr void for_each(Callable &&callable) noexcept
+    {
+        static_assert(std::is_invocable_r_v<void, Callable, T &>,
+                      "The given function either does not return void or "
+                      "cannot be called with just a T&.");
+        Segment *iter = &m.head;
+        size_t index = 0;
+        while (index <= m.index_of_segment_containing_end) {
+            zl::slice<T> items_in_this_segment =
+                index == m.index_of_segment_containing_end
+                    ? zl::slice<T>(iter->items, 0,
+                                   m.items_in_segment_containing_end)
+                    : zl::slice<T>(iter->items);
+
+            for (T &item : items_in_this_segment) {
+                callable(item);
+            }
+
+            ++index;
+            iter = iter->endcap.next;
+        }
+    }
 
     template <typename... Args>
     [[nodiscard]] inline allocation_status_t try_push(Args &&...args) noexcept

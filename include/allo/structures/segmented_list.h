@@ -7,10 +7,9 @@
 #endif
 #include "allo/detail/calculate_segment_size.h"
 #include "allo/structures/any_allocator.h"
-#include "allo/structures/list.h"
+#include "allo/structures/segmented_stack.h"
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
-#include "allo/typed_reallocation.h"
 #ifdef ALLO_HEADER_ONLY_AVOID
 #undef ALLO_HEADER_ONLY_AVOID
 #define ALLO_HEADER_ONLY
@@ -106,7 +105,7 @@ template <typename T> class segmented_list_t
   private:
     struct M
     {
-        list_t<zl::slice<T>> segments;
+        segmented_stack_t<zl::slice<T>> segments;
         size_t size;
         any_allocator_t parent;
     } m;

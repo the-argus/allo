@@ -130,6 +130,15 @@ TEST_SUITE("segmented_stack_t")
                 st.pop();
             }
 
+            {
+                REQUIRE(toadd.size() == st.size());
+                size_t index = 0;
+                st.for_each([&toadd, &index](int &item) {
+                    REQUIRE(toadd[index] == item);
+                    ++index;
+                });
+            }
+
             for (size_t i = 0; i < toadd.size(); ++i) {
                 int end = st.end_unchecked();
                 REQUIRE(end == toadd[toadd.size() - i - 1]);
