@@ -9,11 +9,13 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
   private:
     struct M
     {
-        zl::opt<detail::abstract_heap_allocator_t &> parent;
+        detail::abstract_heap_allocator_t* parent;
         bytes_t memory;
         bytes_t available_memory;
+#ifndef ALLO_DISABLE_TYPEINFO
         size_t last_type_hashcode = 0;
-        zl::opt<stack_t<bytes_t> &> buffers;
+#endif
+        stack_t<bytes_t>* buffers = nullptr;
         allocator_properties_t properties;
     } m;
 
@@ -89,7 +91,9 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     struct previous_state_t
     {
         size_t stack_top;
+#ifndef ALLO_DISABLE_TYPEINFO
         size_t type_hashcode;
+#endif
     };
 
     struct destruction_callback_entry_t

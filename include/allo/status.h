@@ -27,9 +27,11 @@ enum class AllocationStatusCode : uint8_t
     // of keeping track of whether memory has been freed or not, and the one
     // passed in has been freed.
     AlreadyFreed,
+#ifndef ALLO_DISABLE_TYPEINFO
     // when using type checking, this indicates that you tried to free as a
     // different type that what was originally allocated
     InvalidType,
+#endif
     // unknown OS failure returned from system call
     OsErr,
     // Error propagated from another source which was not supposed to happen and

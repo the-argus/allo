@@ -33,13 +33,13 @@ ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
     }
     // now that callbacks are called, free memory
     if (m.parent) {
-        m.parent.value().free_bytes(m.memory, 0);
+        m.parent->free_bytes(m.memory, 0);
     }
 }
 
 ALLO_FUNC
 stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
-    : m(std::move(other.m))
+    : m(other.m)
 {
     m_type = enum_value;
 }
@@ -133,7 +133,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
     if (!m.parent)
         return AllocationStatusCode::OOM;
 
-    allocation_result_t result = m.parent.value().remap_bytes(
+    allocation_result_t result = m.parent->remap_bytes(
         m.memory, 0,
         size_t(std::ceil(static_cast<double>(m.memory.size()) *
                          reallocation_ratio)),
@@ -143,23 +143,23 @@ ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
         // we failed to remap, resort to a separate buffer
         if (!m.buffers) {
             auto maybe_buffers =
-                allo::alloc_one<stack_t<bytes_t>>(m.parent.value());
+                allo::alloc_one<stack_t<bytes_t>>(*m.parent);
             if (!maybe_buffers.okay())
                 return maybe_buffers.err();
             stack_t<bytes_t> &buffers = maybe_buffers.release();
             zl::defer delbuffers([&buffers, this]() {
-                allo::free_one(m.parent.value(), buffers);
+                allo::free_one(*m.parent, buffers);
             });
             auto maybe_collection =
-                stack_t<bytes_t>::make_owned(m.parent.value(), m.memory.size());
+                stack_t<bytes_t>::make_owned(*m.parent, m.memory.size());
             if (!maybe_collection.okay())
                 return maybe_collection.err();
             new (&buffers) stack_t<bytes_t>(maybe_collection.release());
-            m.buffers = buffers;
+            m.buffers = &buffers;
             delbuffers.cancel();
         }
 
-        bytes_t lastbytes = m.buffers.value().end_unchecked();
+        bytes_t lastbytes = m.buffers->end_unchecked();
     }
 
     const bytes_t &newmem = result.release_ref();
@@ -271,7 +271,7 @@ stack_allocator_t::make_inner(
 
     return zl::res<stack_allocator_t, AllocationStatusCode>{
         std::in_place, M{
-                           .parent = parent,
+                           .parent = &parent.value(),
                            .memory = memory,
                            .available_memory = memory,
                            .last_type_hashcode = 0,
