@@ -55,6 +55,15 @@ TEST_SUITE("memory mapping alloc")
                 data[i] = (uint8_t)i;
             }
         }
+        SUBCASE("reserving, comitting, and then re-comitting")
+        {
+            auto res = mm_reserve_pages(nullptr, 10);
+            REQUIRE(res.code == 0);
+            int32_t commit_res = mm_commit_pages(res.data, 2);
+            REQUIRE(commit_res == 0);
+            commit_res = mm_commit_pages(res.data, 8);
+            REQUIRE(commit_res == 0);
+        }
     }
     TEST_CASE("errors returned")
     {
