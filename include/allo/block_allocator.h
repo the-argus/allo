@@ -1,6 +1,7 @@
 #pragma once
 
 #include "allo/detail/abstracts.h"
+#include <ziglike/opt.h>
 
 namespace allo {
 
@@ -41,12 +42,6 @@ class block_allocator_t : public detail::abstract_heap_allocator_t
     [[nodiscard]] allocation_status_t
     free_status(bytes_t mem, size_t typehash) const noexcept;
 
-    [[nodiscard]] inline constexpr const allocator_properties_t &
-    properties() const noexcept
-    {
-        return m.properties;
-    }
-
     allocation_status_t
     register_destruction_callback(destruction_callback_t callback,
                                   void *user_data) noexcept;
@@ -65,7 +60,6 @@ class block_allocator_t : public detail::abstract_heap_allocator_t
     {
         zl::opt<detail::abstract_heap_allocator_t &> parent;
         bytes_t mem;
-        allocator_properties_t properties;
         size_t last_freed_index;
         size_t blocks_free;
         const size_t blocksize;

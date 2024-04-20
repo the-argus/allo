@@ -9,12 +9,20 @@ class any_allocator_t
   public:
     enum class AllocatorReferenceType : uint8_t
     {
+        Null,
         Basic,
         Stack,
         Heap,
     };
 
-    any_allocator_t() = delete;
+    inline any_allocator_t() noexcept
+        : m(M{
+              .ref = nullptr,
+              .type = AllocatorReferenceType::Null,
+          })
+    {
+    }
+
     inline constexpr any_allocator_t(
         detail::abstract_allocator_t &ally) noexcept
         : m(M{
@@ -60,6 +68,11 @@ class any_allocator_t
     [[nodiscard]] inline constexpr bool is_heap() const noexcept
     {
         return m.type == AllocatorReferenceType::Heap;
+    }
+
+    [[nodiscard]] inline constexpr bool is_null() const noexcept
+    {
+        return m.type == AllocatorReferenceType::Null;
     }
 
     [[nodiscard]] inline zl::opt<detail::abstract_heap_allocator_t &>
@@ -119,6 +132,9 @@ class any_allocator_t
             break;
         case AllocatorReferenceType::Stack:
             return get_stack_unchecked();
+            break;
+        case AllocatorReferenceType::Null:
+            std::abort();
             break;
         }
     }

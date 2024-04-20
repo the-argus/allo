@@ -120,8 +120,6 @@ block_allocator_t::make_inner(
             .parent = parent,
             // block of memory
             .mem = memory,
-            // allocator properties
-            .properties = allocator_properties_t(actual_blocksize, alignment),
             // last freed index (the first block is free at start)
             .last_freed_index = 0,
             // blocks free (all are free at start)
@@ -150,12 +148,14 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
         }
     }
 
-    if (bytes > m.properties.m_maximum_contiguous_bytes) {
+    if (bytes > m.blocksize) {
         return AllocationStatusCode::OOM;
     }
 
-    auto alignment = static_cast<size_t>(std::pow(2, alignment_exponent));
-    if (alignment > m.properties.m_maximum_alignment) {
+    const uint8_t our_alignment =
+        detail::nearest_alignment_exponent(m.blocksize);
+    assert(our_alignment != 64);
+    if (alignment_exponent > our_alignment) {
         return AllocationStatusCode::AllocationTooAligned;
     }
 

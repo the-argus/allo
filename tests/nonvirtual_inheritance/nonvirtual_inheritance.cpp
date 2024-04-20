@@ -46,7 +46,6 @@ TEST_SUITE("allocator interfaces")
             std::array<uint8_t, 512> mem;
             auto stack = stack_allocator_t::make(mem).release();
             abstract_allocator_t &stackalloc = stack;
-            REQUIRE(stack.properties() == stackalloc.properties());
         }
 
         SUBCASE("upcast to single interface, use typed alloc")

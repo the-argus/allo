@@ -25,14 +25,6 @@
 
 namespace allo::detail {
 
-template <typename T, typename... Args> struct get_properties_generic
-{
-    inline constexpr const allocator_properties_t &operator()(T *item)
-    {
-        return item->properties();
-    }
-};
-
 template <typename T, typename... Args> struct threadsafe_realloc_bytes_generic
 {
     inline allocation_result_t operator()(T *item, Args &&...args)
@@ -139,13 +131,6 @@ auto return_from(detail::abstract_allocator_t *self, Args &&...args)
         // some sort of memory corruption going on
         std::abort();
     }
-}
-
-ALLO_FUNC const allocator_properties_t &
-abstract_allocator_t::properties() const noexcept
-{
-    auto *mutable_self = const_cast<abstract_allocator_t *>(this);
-    return return_from<get_properties_generic>(mutable_self);
 }
 
 ALLO_FUNC allocation_result_t abstract_allocator_t::alloc_bytes(

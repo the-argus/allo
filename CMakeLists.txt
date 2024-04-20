@@ -9,7 +9,6 @@ set(headers
     allo/heap_allocator.h
     allo/make_into.h
     allo/memory_map.h
-    allo/properties.h
     allo/reservation_allocator.h
     allo/scratch_allocator.h
     allo/stack_allocator.h

@@ -53,11 +53,6 @@ heap_allocator_t::make_inner(
         M{
             .parent = parent,
             .mem = memory,
-            // 0 maximum contiguous bites == theoretically infinite
-            // TODO: probably add some detection of the actual max alignment?
-            // although it is a bit odd because a 9 byte heap which happens to
-            // contain a 1048 byte boundary is 1048 byte aligned...
-            .properties = allocator_properties_t(0, memory.size()),
             .num_nodes = 1,
             .num_callbacks = 0,
             .last_callback_node = nullptr,

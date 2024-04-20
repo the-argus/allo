@@ -43,13 +43,4 @@ ALLO_FUNC allocation_status_t c_allocator_t::free_bytes(bytes_t mem,
     ::free(mem.data());
     return AllocationStatusCode::Okay;
 }
-
-ALLO_FUNC const allocator_properties_t &
-c_allocator_t::properties() const noexcept
-{
-    static constexpr allocator_properties_t c_allocator_properties =
-        allocator_properties_t(0, 32);
-
-    return c_allocator_properties;
-}
 }; // namespace allo

@@ -80,8 +80,6 @@ reservation_allocator_t::make(const options_t &options) noexcept
                              options.committed * pagesize_res.value),
             .pagesize = pagesize_res.value,
             .num_pages_reserved = max_pages,
-            .properties =
-                allocator_properties_t(pagesize_res.value * max_pages, 1),
         }};
 }
 } // namespace allo

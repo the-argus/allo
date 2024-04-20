@@ -41,8 +41,6 @@ class c_allocator_t : public detail::abstract_threadsafe_heap_allocator_t
         return AllocationStatusCode::Okay;
     }
 
-    [[nodiscard]] const allocator_properties_t &properties() const noexcept;
-
     /// Always returns invalid argument
     inline constexpr allocation_status_t
     register_destruction_callback(destruction_callback_t, void *) noexcept

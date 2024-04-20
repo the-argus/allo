@@ -16,9 +16,9 @@ enum class AllocationStatusCode : uint8_t
     Corruption,
     // invalid item trying to be freed, usually
     InvalidArgument,
-    // you requested a greater alignment than the allocator can provide.
-    // guaranteed to not be produced if the allocators' properties meet
-    // requirements
+    // attempted to make an allocation at an alignment greater than the
+    // allocator can assuredly provide (for example, a block allocator can only
+    // align to the size of its blocks, no greater)
     AllocationTooAligned,
     // memory passed in to an allocator function could not concievably be owned
     // by that allocator, either by being outside its bounds or misaligned

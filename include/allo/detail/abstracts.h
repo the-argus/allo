@@ -1,5 +1,4 @@
 #pragma once
-#include "allo/properties.h"
 #include "allo/status.h"
 #include <type_traits>
 
@@ -64,8 +63,6 @@ class abstract_allocator_t
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
                                                   uint8_t alignment_exponent,
                                                   size_t typehash) noexcept;
-
-    [[nodiscard]] const allocator_properties_t &properties() const noexcept;
 
     [[nodiscard]] allocation_status_t
     register_destruction_callback(destruction_callback_t callback,

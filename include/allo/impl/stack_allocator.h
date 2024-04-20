@@ -7,8 +7,8 @@
 #endif
 
 #include "allo/stack_allocator.h"
-#include "ziglike/defer.h"
-#include "ziglike/slice.h"
+#include <ziglike/defer.h>
+#include <ziglike/slice.h>
 #include <cmath>
 #include <cstring>
 #include <memory>
@@ -52,7 +52,7 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
     }
 
     auto alignment = static_cast<size_t>(std::pow(2, alignment_exponent));
-    if (alignment > properties().m_maximum_alignment) {
+    if (alignment > alignof(previous_state_t)) {
         return AllocationStatusCode::AllocationTooAligned;
     }
     bytes_t original_available = m.available_memory;
@@ -142,14 +142,12 @@ ALLO_FUNC allocation_status_t stack_allocator_t::realloc() noexcept
     if (!result.okay()) {
         // we failed to remap, resort to a separate buffer
         if (!m.buffers) {
-            auto maybe_buffers =
-                allo::alloc_one<stack_t<bytes_t>>(*m.parent);
+            auto maybe_buffers = allo::alloc_one<stack_t<bytes_t>>(*m.parent);
             if (!maybe_buffers.okay())
                 return maybe_buffers.err();
             stack_t<bytes_t> &buffers = maybe_buffers.release();
-            zl::defer delbuffers([&buffers, this]() {
-                allo::free_one(*m.parent, buffers);
-            });
+            zl::defer delbuffers(
+                [&buffers, this]() { allo::free_one(*m.parent, buffers); });
             auto maybe_collection =
                 stack_t<bytes_t>::make_owned(*m.parent, m.memory.size());
             if (!maybe_collection.okay())
@@ -275,15 +273,7 @@ stack_allocator_t::make_inner(
                            .memory = memory,
                            .available_memory = memory,
                            .last_type_hashcode = 0,
-                           .properties = allocator_properties_t(
-                               memory.size(), alignof(previous_state_t)),
                        }};
-}
-
-ALLO_FUNC const allocator_properties_t &
-stack_allocator_t::properties() const noexcept
-{
-    return m.properties;
 }
 
 ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(

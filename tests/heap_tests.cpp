@@ -1,7 +1,7 @@
 #include "heap_tests.h"
 #include "allo.h"
 #include "doctest.h"
-#include "ziglike/stdmem.h"
+#include <ziglike/stdmem.h>
 using namespace allo;
 
 struct Parent;
@@ -64,16 +64,6 @@ void typed_alloc_realloc_free(abstract_heap_allocator_t &heap)
         int id;
         bool active = false;
     };
-    if (!heap.properties().meets(allocator_requirements_t{
-            .maximum_contiguous_bytes = sizeof(Test) * 8,
-            .maximum_alignment = alignof(Test),
-        })) {
-        printf("[WARN] Skipping test %s for allocator of type %s\n",
-               __PRETTY_FUNCTION__, heap.name());
-        // dont run the tests if the allocator is going to OOM
-        return;
-    }
-    static_assert(detail::nearest_alignment_exponent(alignof(Test)) <= 5);
     zl::slice<Test> first = allo::alloc<Test>(heap, 1).release();
     first = allo::realloc(heap, first, 8).release();
     first = allo::realloc(heap, first, 1).release();

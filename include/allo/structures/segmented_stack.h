@@ -9,6 +9,7 @@
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
 #include <cmath>
+#include <ziglike/opt.h>
 #ifdef ALLO_HEADER_ONLY_AVOID
 #undef ALLO_HEADER_ONLY_AVOID
 #define ALLO_HEADER_ONLY

@@ -12,12 +12,7 @@ class reservation_allocator_t : public detail::abstract_heap_allocator_t
         size_t pagesize;
         // num_pages_reserved is the maximum number of pages that this
         // allocation can be remapped t
-        // NOTE: num_pages_reserved is sort of
-        // encoded in the allocator properties already with
-        // max_contigious_bytes. could remove num_pages_reserved and just
-        // calculate it from properties instead.
         size_t num_pages_reserved;
-        allocator_properties_t properties;
     } m;
 
   public:
@@ -78,12 +73,6 @@ class reservation_allocator_t : public detail::abstract_heap_allocator_t
         noexcept
     {
         return AllocationStatusCode::OOM;
-    }
-
-    [[nodiscard]] inline constexpr const allocator_properties_t &
-    properties() const noexcept
-    {
-        return m.properties;
     }
 
     // return a slice to the memory currently allocated by this allocator.

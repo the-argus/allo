@@ -16,7 +16,6 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
         size_t last_type_hashcode = 0;
 #endif
         stack_t<bytes_t>* buffers = nullptr;
-        allocator_properties_t properties;
     } m;
 
   public:
@@ -64,8 +63,6 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
 
     [[nodiscard]] allocation_status_t
     free_status(bytes_t mem, size_t typehash) const noexcept;
-
-    [[nodiscard]] const allocator_properties_t &properties() const noexcept;
 
     allocation_status_t
     register_destruction_callback(destruction_callback_t callback,

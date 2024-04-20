@@ -1,7 +1,7 @@
 #pragma once
 
 #include "allo/detail/bytes_collection.h"
-#include "ziglike/defer.h"
+#include <ziglike/defer.h>
 
 namespace allo::detail {
 
