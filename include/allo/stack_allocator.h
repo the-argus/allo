@@ -1,21 +1,30 @@
 #pragma once
 #include "allo/detail/abstracts.h"
-#include "allo/structures/stack.h"
+#include "allo/structures/segmented_stack.h"
 
 namespace allo {
 
 class stack_allocator_t : public detail::abstract_stack_allocator_t
 {
   private:
+    struct destruction_callback_entry_t
+    {
+        destruction_callback_t callback;
+        void *user_data;
+        destruction_callback_entry_t *prev = nullptr;
+    };
+
     struct M
     {
-        detail::abstract_heap_allocator_t* parent;
         bytes_t memory;
-        bytes_t available_memory;
+        uint8_t *top;
 #ifndef ALLO_DISABLE_TYPEINFO
         size_t last_type_hashcode = 0;
 #endif
-        stack_t<bytes_t>* buffers = nullptr;
+        segmented_stack_t<bytes_t> *blocks = nullptr;
+        destruction_callback_entry_t *last_callback = nullptr;
+        const size_t original_size;
+        any_allocator_t parent;
     } m;
 
   public:
@@ -26,8 +35,14 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     stack_allocator_t() = delete;
     stack_allocator_t(const stack_allocator_t &) = delete;
     stack_allocator_t &operator=(const stack_allocator_t &) = delete;
+    // can be moved
+    stack_allocator_t(stack_allocator_t &&) noexcept;
+    // cannot be move assigned
+    stack_allocator_t &operator=(stack_allocator_t &&) = delete;
 
-    inline static zl::res<stack_allocator_t, AllocationStatusCode>
+    // create a stack allocator which takes ownership of a block of memory
+    // allocated by the parent.
+    inline static stack_allocator_t
     make_owned(bytes_t memory,
                detail::abstract_heap_allocator_t &parent) noexcept
     {
@@ -35,19 +50,22 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     }
 
     // create a stack allocator which allocates into a given block of memory.
-    inline static zl::res<stack_allocator_t, AllocationStatusCode>
-    make(bytes_t memory) noexcept
+    // it does not own the memory. it cannot allocate new buffers because it
+    // has no parent.
+    inline static stack_allocator_t make(bytes_t memory) noexcept
     {
         return make_inner(memory, {});
     }
 
-    // can be moved
-    stack_allocator_t(stack_allocator_t &&) noexcept;
+    // create a stack allocator which allocates into a given buffer, and can
+    // allocate new buffers for theoretically unbounded space, but will not free
+    // those buffers upon destruction
+    inline static stack_allocator_t
+    make(bytes_t memory, detail::abstract_allocator_t &parent) noexcept
+    {
+        return make_inner(memory, parent);
+    }
 
-    // cannot be move assigned
-    stack_allocator_t &operator=(stack_allocator_t &&) = delete;
-
-    // owns its memory
     ~stack_allocator_t() noexcept;
 
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
@@ -80,23 +98,23 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     static constexpr double reallocation_ratio = 1.5;
     allocation_status_t realloc() noexcept;
 
-    static zl::res<stack_allocator_t, AllocationStatusCode>
-    make_inner(bytes_t memory,
-               zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept;
+    static stack_allocator_t make_inner(bytes_t memory,
+                                        any_allocator_t parent) noexcept;
 
     /// the information placed underneath every allocation in the stack
     struct previous_state_t
     {
-        size_t stack_top;
+        uint8_t *stack_top;
 #ifndef ALLO_DISABLE_TYPEINFO
         size_t type_hashcode;
 #endif
-    };
-
-    struct destruction_callback_entry_t
-    {
-        destruction_callback_t callback;
-        void *user_data;
+        // this should always be nullptr.
+        // if you backtrack from an allocation and find a nullptr, then you have
+        // found the previous_state_t. if you backtrack and you find something
+        // else, interpret that as a previous_state_t* which should take you to
+        // where the previous_state_t actually is (ie it should be before the
+        // allocation you backtracked from).
+        void *_magic = nullptr;
     };
 
     /// Common logic shared between freeing functions

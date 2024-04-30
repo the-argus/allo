@@ -7,11 +7,11 @@
 #endif
 
 #include "allo/stack_allocator.h"
-#include <ziglike/defer.h>
-#include <ziglike/slice.h>
 #include <cmath>
 #include <cstring>
 #include <memory>
+#include <ziglike/defer.h>
+#include <ziglike/slice.h>
 
 #ifdef ALLO_HEADER_ONLY
 #ifndef ALLO_FUNC
@@ -251,29 +251,23 @@ stack_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash,
     return AllocationStatusCode::OOM;
 }
 
-ALLO_FUNC zl::res<stack_allocator_t, AllocationStatusCode>
-stack_allocator_t::make_inner(
-    bytes_t memory,
-    zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept
+ALLO_FUNC stack_allocator_t
+stack_allocator_t::make_inner(bytes_t memory, any_allocator_t parent) noexcept
 {
-    // make sure there is at least one byte of space to be allocated in memory
-    if (memory.size() <= sizeof(previous_state_t)) {
-        return AllocationStatusCode::InvalidArgument;
-    }
-
 #ifndef NDEBUG
-    if (parent) {
-        assert(parent.value().free_status(memory, 0).okay());
+    if (parent.is_heap()) {
+        assert(parent.get_heap_unchecked().free_status(memory, 0).okay());
     }
 #endif
-
     return zl::res<stack_allocator_t, AllocationStatusCode>{
-        std::in_place, M{
-                           .parent = &parent.value(),
-                           .memory = memory,
-                           .available_memory = memory,
-                           .last_type_hashcode = 0,
-                       }};
+        std::in_place,
+        M{
+            .memory = memory,
+            .top = memory.data(),
+            .original_size = memory.size(),
+            .parent = parent,
+        },
+    };
 }
 
 ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(
