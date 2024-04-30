@@ -72,13 +72,10 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
 #endif
             auto newmem = res.release();
             if (m.blocks) {
-                auto status = m.blocks->try_push(newmem);
-                if (!status.okay()) {
-                    // NOTE: returning error but not undoing the remap or
-                    // anything. means that technically this function can modify
-                    // stuff upon err
-                    return status.err();
-                }
+                // we already asserted t hat there is an end and it is our
+                // current memory block, so just overwrite it with the
+                // now-remapped block
+                m.blocks->end_unchecked() = newmem;
             }
             m.memory = newmem;
             return AllocationStatusCode::Okay;
