@@ -15,6 +15,7 @@
 #endif
 #include <cmath>
 #include <ziglike/slice.h>
+#include <ziglike/opt.h>
 
 namespace allo {
 template <typename T> class stack_t

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "allo/detail/abstracts.h"
+#include <ziglike/opt.h>
 #include <cstdint>
 
 namespace allo {

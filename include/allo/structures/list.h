@@ -15,6 +15,7 @@
 #endif
 
 #include <ziglike/slice.h>
+#include <ziglike/opt.h>
 
 namespace allo {
 template <typename T> class list_t
