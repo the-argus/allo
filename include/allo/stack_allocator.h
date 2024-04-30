@@ -104,11 +104,16 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     /// the information placed underneath every allocation in the stack
     struct previous_state_t
     {
-        uint8_t *stack_top;
 #ifndef ALLO_DISABLE_TYPEINFO
         size_t type_hashcode;
 #endif
+        uint8_t *stack_top;
     };
+
+    [[nodiscard]] inline constexpr size_t bytes_remaining() const
+    {
+        return m.memory.end().ptr() - m.top;
+    }
 
     /// Common logic shared between freeing functions
     [[nodiscard]] zl::res<previous_state_t &, AllocationStatusCode>

@@ -62,15 +62,43 @@ stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
 ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
     size_t bytes, uint8_t alignment_exponent, size_t typehash) noexcept
 {
-    void *res = raw_alloc(bytes, 1 << alignment_exponent);
-    if (!res) {
-        auto status = try_make_space_for_at_least(bytes, alignment_exponent);
-        if (!status.okay()) [[unlikely]] {
-            // NOTE: should we ignore errors here and just still try to alloc?
-            return status.err();
+    // TODO: all the alignment stuff in this function could probably become some
+    // bithacks, optimize this at some point
+    const size_t actual_alignment = 1 << alignment_exponent;
+
+    u8* oldtop = m.top;
+    while (1) {
+
+        void* status = allocate_prevstate();
+        if (!status) {
+            size_t extra_space = max(alignof(item), sizeof(previous_state_t)) * 2;
+            size_t alignment = max(alignof(item), actual_alignment);
+            make_new_buffer_for_at_least(align=alignment, size = extra_space + sizeof(item));
         }
-        res = raw_alloc(bytes, 1 << alignment_exponent);
+        status = allocate_item();
+        if (!status) {
+            deallocate(prevstate);
+            size_t extra_space = max(alignof(item), sizeof(previous_state_t)) * 2;
+            size_t alignment = max(alignof(item), actual_alignment);
+            make_new_buffer_for_at_least(align=alignment, size = extra_space + sizeof(item));
+            if (buffer_failed)
+                return err;
+            // try again in the new buffer
+            continue;
+        }
+        if (alignof(item) > alignof(previous_state_t)) {
+            prevstate = move_forward_to_before_item(prevstate);
+        }
+        *prevstate = {
+            .stack_top = oldtop,
+#ifndef ALLO_DISABLE_TYPEINFO
+        .type_hashcode = m.last_type_hashcode,
+#endif
+        };
+        // all good, allocated both successfully and the alignment is less so the previous state is guaranteed to be right before the item
+        break;
     }
+
     return zl::raw_slice<uint8_t>(*reinterpret_cast<uint8_t *>(res), bytes);
 }
 
@@ -79,7 +107,7 @@ ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
 {
     // these will get modified in place by std::align
     void *new_available_start = m.top;
-    size_t new_size = m.memory.end().ptr() - m.top;
+    size_t new_size = bytes_remaining();
     if (std::align(align, typesize, new_available_start, new_size)) {
         if (new_available_start >= (m.memory.end().ptr() - typesize)) {
             return nullptr;
