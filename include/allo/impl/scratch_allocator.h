@@ -20,6 +20,13 @@
 
 namespace allo {
 
+#ifndef NDEBUG
+inline constexpr bool is_power_of_two(size_t n)
+{
+    return n != 0 && (n & (n - 1)) == 0;
+}
+#endif
+
 ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
     size_t bytes, uint8_t alignment_exponent) noexcept
 {
@@ -34,12 +41,22 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
 
         size_t new_size = m.memory.size() + bytes +
                           (aligned_data - reinterpret_cast<size_t>(m.top));
-        // round up to be an even integer exponential of the original allocation
-        // size
-        auto new_size_rounded = static_cast<size_t>(
-            std::pow(m.original_size,
-                     std::ceil(std::log10(new_size) * m.remap_divisor)));
-        assert(new_size_rounded > new_size);
+        assert(new_size > m.memory.size());
+        // round up to be an even integer exponential of 2, times the original
+        // size.
+        // NOTE: the fact that we always grow the buffer by two is SUPER
+        // hardcoded here since we use log2. you'll have to use some fancy
+        // log rules to get log base 1.5 or some other multiplier
+        const auto new_size_rounded = static_cast<size_t>(std::round(
+            std::pow(2.0, std::floor(
+                              std::log2(static_cast<double>(new_size) /
+                                        static_cast<double>(m.original_size))) +
+                              1) *
+            static_cast<double>(m.original_size)));
+
+        assert(new_size_rounded >= new_size);
+        assert(new_size_rounded % m.original_size == 0);
+        assert(is_power_of_two(new_size_rounded / m.original_size));
         auto res = m.parent.get_heap_unchecked().remap_bytes(
             m.memory, 0, new_size_rounded, 0);
         if (res.okay()) {
@@ -176,7 +193,7 @@ ALLO_FUNC allocation_result_t scratch_allocator_t::alloc_bytes(
             assert(remaining >= bytes);
             auto result =
                 zl::raw_slice(*static_cast<uint8_t *>(new_top), bytes);
-            m.top = static_cast<uint8_t *>(new_top);
+            m.top = static_cast<uint8_t *>(new_top) + bytes;
             return result;
         }
         return AllocationStatusCode::OOM;
@@ -221,7 +238,6 @@ scratch_allocator_t::make_inner(bytes_t memory, any_allocator_t parent) noexcept
         .top = memory.data(),
         .original_size = memory.size(),
         .parent = parent,
-        .remap_divisor = static_cast<float>(1.0 / std::log10(memory.size())),
     }};
 }
 

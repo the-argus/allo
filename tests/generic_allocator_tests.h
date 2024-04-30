@@ -10,7 +10,8 @@ bytes_t large_allocation(abstract_allocator_t &ally, size_t maxpages);
 template <typename Allocator, typename... Args>
 void make_large_allocation_with(Args &&...args)
 {
-    constexpr size_t maxpages = 1000;
+    constexpr size_t maxpages = 1024;
+    constexpr size_t pages_to_allocate = 1000;
     reservation_allocator_t reserve =
         reservation_allocator_t::make(
             {.committed = 1, .additional_pages_reserved = maxpages})
@@ -26,7 +27,7 @@ void make_large_allocation_with(Args &&...args)
                 ++(*d);
             },
             &count);
-        bytes_t result = allo::tests::large_allocation(ally, maxpages);
+        bytes_t result = allo::tests::large_allocation(ally, pages_to_allocate);
     }
     assert(count == 1);
 }
@@ -36,7 +37,8 @@ void make_large_allocation_with(Args &&...args)
 template <typename Allocator, typename... Args>
 void make_large_allocation_with_nonfailing_make(Args &&...args)
 {
-    constexpr size_t maxpages = 1000;
+    constexpr size_t maxpages = 1024;
+    constexpr size_t pages_to_allocate = 1000;
     reservation_allocator_t reserve =
         reservation_allocator_t::make(
             {.committed = 1, .additional_pages_reserved = maxpages})
@@ -51,7 +53,7 @@ void make_large_allocation_with_nonfailing_make(Args &&...args)
                 ++(*d);
             },
             &count);
-        bytes_t result = allo::tests::large_allocation(ally, maxpages);
+        bytes_t result = allo::tests::large_allocation(ally, pages_to_allocate);
     }
     assert(count == 1);
 }

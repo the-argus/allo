@@ -5,6 +5,9 @@
 namespace allo::detail {
 /// Take a given number divisible by two and find what n is in 2^n = number.
 /// Returns 64 (ie. 2^64) as an error value
+/// TODO: use tricks from
+/// http://www.graphics.stanford.edu/~seander/bithacks.html to do this without
+/// linear search
 inline constexpr uint8_t alignment_exponent(size_t alignment)
 {
     constexpr auto bits = sizeof(size_t) * 8;
@@ -23,6 +26,9 @@ inline constexpr uint8_t alignment_exponent(size_t alignment)
 /// If you pass in a pointer cast to a size_t, then the nearest alignment
 /// exponent will be as big as the alignment exponent of the allocation that
 /// originally created that pointer, *or bigger*.
+/// TODO: use tricks from
+/// http://www.graphics.stanford.edu/~seander/bithacks.html to do this without
+/// linear search
 inline constexpr uint8_t nearest_alignment_exponent(size_t num)
 {
     constexpr auto bits = sizeof(size_t) * 8;

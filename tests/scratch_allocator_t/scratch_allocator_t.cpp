@@ -124,7 +124,8 @@ TEST_SUITE("scratch_allocator_t")
             auto arr_res = allo::alloc_one<std::array<uint8_t, 494>>(ally);
             REQUIRE(arr_res.okay());
             auto &arr = arr_res.release();
-            REQUIRE(!allo::alloc_one<std::array<uint8_t, 512>>(ally).okay());
+            auto res = allo::alloc_one<std::array<uint8_t, 512>>(ally);
+            REQUIRE(!res.okay());
         }
 
         SUBCASE("register destruction callback")

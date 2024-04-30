@@ -42,16 +42,19 @@ ALLO_FUNC allocation_result_t reservation_allocator_t::remap_bytes(
     // requires new pages which are not committed
     if (new_size > m.mem.size()) {
         const auto pages_needed = static_cast<size_t>(
-            std::round(static_cast<double>(new_size - m.mem.size()) /
-                       static_cast<double>(m.pagesize)));
+            std::ceil(static_cast<double>(new_size - m.mem.size()) /
+                      static_cast<double>(m.pagesize)));
+        const size_t current_pages = m.mem.size() / m.pagesize;
+        assert(m.mem.size() % m.pagesize == 0);
+        const size_t total_pages = pages_needed + current_pages;
         // catch error before it happens
-        if (pages_needed > m.num_pages_reserved)
+        if (total_pages > m.num_pages_reserved)
             return AllocationStatusCode::OOM;
         // add some read/write pages to this allocation
-        int64_t res = mm_commit_pages(m.mem.data(), pages_needed);
+        int64_t res = mm_commit_pages(m.mem.data(), total_pages);
         if (res != 0)
             return AllocationStatusCode::OOM;
-        m.mem = zl::raw_slice(*m.mem.data(), pages_needed * m.pagesize);
+        m.mem = zl::raw_slice(*m.mem.data(), total_pages * m.pagesize);
     }
     return bytes_t(m.mem, 0, new_size);
 }

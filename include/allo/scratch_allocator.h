@@ -26,10 +26,6 @@ class scratch_allocator_t : public detail::abstract_allocator_t
         destruction_callback_entry_t *last_callback = nullptr;
         const size_t original_size;
         any_allocator_t parent;
-        /// 1/log10(original_allocation_size). Used to make sure the size of
-        /// memory is always an even integer exponential of the original
-        /// allocation size
-        const float remap_divisor;
     } m;
 
     static constexpr size_t blocks_stack_initial_items = 2;
