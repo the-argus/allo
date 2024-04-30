@@ -27,6 +27,22 @@ inline constexpr bool is_power_of_two(size_t n)
 }
 #endif
 
+// round up to be an even integer exponential of 2, times the original
+// size.
+inline size_t scratch_allocator_t::round_up_to_valid_buffersize(
+    size_t needed_bytes) const noexcept
+{
+    // NOTE: the fact that we always grow the buffer by two is SUPER
+    // hardcoded here since we use log2. you'll have to use some fancy
+    // log rules to get log base 1.5 or some other multiplier
+    return static_cast<size_t>(std::round(
+        std::pow(2.0,
+                 std::floor(std::log2(static_cast<double>(needed_bytes) /
+                                      static_cast<double>(m.original_size))) +
+                     1) *
+        static_cast<double>(m.original_size)));
+}
+
 ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
     size_t bytes, uint8_t alignment_exponent) noexcept
 {
@@ -39,26 +55,14 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
             ((reinterpret_cast<size_t>(m.top) >> alignment_exponent) + 1)
             << alignment_exponent;
 
-        size_t new_size = m.memory.size() + bytes +
-                          (aligned_data - reinterpret_cast<size_t>(m.top));
+        size_t new_size = round_up_to_valid_buffersize(
+            m.memory.size() + bytes +
+            (aligned_data - reinterpret_cast<size_t>(m.top)));
         assert(new_size > m.memory.size());
-        // round up to be an even integer exponential of 2, times the original
-        // size.
-        // NOTE: the fact that we always grow the buffer by two is SUPER
-        // hardcoded here since we use log2. you'll have to use some fancy
-        // log rules to get log base 1.5 or some other multiplier
-        const auto new_size_rounded = static_cast<size_t>(std::round(
-            std::pow(2.0, std::floor(
-                              std::log2(static_cast<double>(new_size) /
-                                        static_cast<double>(m.original_size))) +
-                              1) *
-            static_cast<double>(m.original_size)));
-
-        assert(new_size_rounded >= new_size);
-        assert(new_size_rounded % m.original_size == 0);
-        assert(is_power_of_two(new_size_rounded / m.original_size));
-        auto res = m.parent.get_heap_unchecked().remap_bytes(
-            m.memory, 0, new_size_rounded, 0);
+        assert(new_size % m.original_size == 0);
+        assert(is_power_of_two(new_size / m.original_size));
+        auto res =
+            m.parent.get_heap_unchecked().remap_bytes(m.memory, 0, new_size, 0);
         if (res.okay()) {
 #ifndef NDEBUG
             if (m.blocks) {
@@ -80,9 +84,6 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
             return AllocationStatusCode::Okay;
         }
     }
-
-    const auto bytes_overestimate =
-        static_cast<size_t>(std::ceil((1.5 * static_cast<double>(bytes))));
 
     // if we're not a heap, or if heap failed the remap, then do this.
     if (!m.blocks) {
@@ -129,8 +130,8 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
         } else {
             // allocate a new block with space for both the blocks stack and
             // the new space as well
-            const size_t necessary_size =
-                sizeof(segmented_stack_t<bytes_t>) + bytes_overestimate;
+            const size_t necessary_size = round_up_to_valid_buffersize(
+                sizeof(segmented_stack_t<bytes_t>) + bytes);
             auto maybe_newblock = m.parent.cast_to_basic().alloc_bytes(
                 necessary_size > m.memory.size() ? necessary_size
                                                  : m.memory.size(),
@@ -163,10 +164,11 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
         }
     }
 
+    const size_t new_buffersize = round_up_to_valid_buffersize(bytes);
+
     auto maybe_newblock = m.parent.cast_to_basic().alloc_bytes(
-        bytes_overestimate > m.memory.size() ? bytes_overestimate
-                                             : m.memory.size(),
-        3, 0);
+        new_buffersize > m.memory.size() ? new_buffersize : m.memory.size(), 3,
+        0);
 
     if (!maybe_newblock.okay()) [[unlikely]]
         return maybe_newblock.err();

@@ -81,6 +81,9 @@ class scratch_allocator_t : public detail::abstract_allocator_t
     allocation_status_t
     try_make_space_for_at_least(size_t bytes,
                                 uint8_t alignment_exponent) noexcept;
+
+    [[nodiscard]] size_t
+    round_up_to_valid_buffersize(size_t needed_bytes) const noexcept;
 };
 } // namespace allo
 
