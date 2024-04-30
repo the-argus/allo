@@ -214,6 +214,7 @@ scratch_allocator_t::register_destruction_callback(
     destruction_callback_t callback, void *user_data) noexcept
 {
     if (!callback) {
+        assert(callback);
         return AllocationStatusCode::InvalidArgument;
     }
     auto res = allo::alloc_one<destruction_callback_entry_t>(*this);
@@ -260,7 +261,6 @@ ALLO_FUNC scratch_allocator_t::~scratch_allocator_t() noexcept
             m.parent.get_heap_unchecked().free_bytes(iter.value(), 0);
             m.blocks->pop();
         }
-        m.blocks->~segmented_stack_t<bytes_t>();
     } else {
         m.parent.get_heap_unchecked().free_bytes(m.memory, 0);
     }

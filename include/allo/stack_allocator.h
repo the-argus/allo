@@ -86,7 +86,7 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     register_destruction_callback(destruction_callback_t callback,
                                   void *user_data) noexcept;
 
-    inline explicit stack_allocator_t(M &&members) noexcept : m(members)
+    inline stack_allocator_t(M &&members) noexcept : m(members)
     {
         m_type = enum_value;
     }
@@ -108,13 +108,6 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
 #ifndef ALLO_DISABLE_TYPEINFO
         size_t type_hashcode;
 #endif
-        // this should always be nullptr.
-        // if you backtrack from an allocation and find a nullptr, then you have
-        // found the previous_state_t. if you backtrack and you find something
-        // else, interpret that as a previous_state_t* which should take you to
-        // where the previous_state_t actually is (ie it should be before the
-        // allocation you backtracked from).
-        void *_magic = nullptr;
     };
 
     /// Common logic shared between freeing functions
