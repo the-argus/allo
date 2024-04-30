@@ -75,7 +75,7 @@ reservation_allocator_t::make(const options_t &options) noexcept
     defer unmap([&reserve_res]() {
         mm_memory_unmap(reserve_res.data, reserve_res.bytes);
     });
-    int32_t commit_res = mm_commit_pages(reserve_res.data, options.committed);
+    int64_t commit_res = mm_commit_pages(reserve_res.data, options.committed);
     if (commit_res != 0) {
         return AllocationStatusCode::OOM;
     }
