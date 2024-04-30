@@ -27,6 +27,8 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
         any_allocator_t parent;
     } m;
 
+    static constexpr size_t blocks_stack_initial_items = 2;
+
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::StackAllocator;
@@ -93,10 +95,7 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
 
   private:
     /// Allocate stuff with no typing
-    void *raw_alloc(size_t align, size_t typesize) noexcept;
-
-    static constexpr double reallocation_ratio = 1.5;
-    allocation_status_t realloc() noexcept;
+    [[nodiscard]] void *raw_alloc(size_t align, size_t typesize) noexcept;
 
     static stack_allocator_t make_inner(bytes_t memory,
                                         any_allocator_t parent) noexcept;
@@ -114,6 +113,13 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     {
         return m.memory.end().ptr() - m.top;
     }
+
+    [[nodiscard]] allocation_status_t
+    try_make_space_for_at_least(size_t bytes,
+                                uint8_t alignment_exponent) noexcept;
+
+    [[nodiscard]] size_t
+    round_up_to_valid_buffersize(size_t needed_bytes) const noexcept;
 
     /// Common logic shared between freeing functions
     [[nodiscard]] zl::res<previous_state_t &, AllocationStatusCode>

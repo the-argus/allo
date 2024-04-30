@@ -29,7 +29,7 @@ inline constexpr bool is_power_of_two(size_t n)
 
 // round up to be an even integer exponential of 2, times the original
 // size.
-inline size_t scratch_allocator_t::round_up_to_valid_buffersize(
+ALLO_FUNC size_t scratch_allocator_t::round_up_to_valid_buffersize(
     size_t needed_bytes) const noexcept
 {
     // NOTE: the fact that we always grow the buffer by two is SUPER
@@ -128,7 +128,12 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
             // allocate a new block with space for both the blocks stack and
             // the new space as well
             const size_t necessary_size = round_up_to_valid_buffersize(
-                sizeof(segmented_stack_t<bytes_t>) + bytes);
+                sizeof(segmented_stack_t<bytes_t>) + bytes +
+                // add generous space for alignment of stack
+                (alignof(segmented_stack_t<bytes_t>) * 2) +
+                // add generous space for alignment of thing we're making space
+                // for
+                ((1UL << alignment_exponent) * 2UL));
             auto maybe_newblock = m.parent.cast_to_basic().alloc_bytes(
                 necessary_size > m.memory.size() ? necessary_size
                                                  : m.memory.size(),
@@ -161,7 +166,8 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
         }
     }
 
-    const size_t new_buffersize = round_up_to_valid_buffersize(bytes);
+    const size_t new_buffersize = round_up_to_valid_buffersize(
+        bytes + ((1UL << alignment_exponent) * 2UL));
 
     auto maybe_newblock = m.parent.cast_to_basic().alloc_bytes(
         new_buffersize > m.memory.size() ? new_buffersize : m.memory.size(), 3,
