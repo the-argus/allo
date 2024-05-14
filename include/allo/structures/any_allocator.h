@@ -1,8 +1,8 @@
 #pragma once
 
 #include "allo/detail/abstracts.h"
-#include <ziglike/opt.h>
 #include <cstdint>
+#include <ziglike/opt.h>
 
 namespace allo {
 class any_allocator_t

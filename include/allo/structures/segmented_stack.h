@@ -55,8 +55,8 @@ template <typename T> class segmented_stack_t
     /// Make a segmented stack with a heap allocator, in which case
     /// the stack will free its contents upon destruction.
     [[nodiscard]] static zl::res<segmented_stack_t, AllocationStatusCode>
-    make_owned(detail::abstract_heap_allocator_t &parent_allocator,
-               size_t initial_items) noexcept;
+    make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+                size_t initial_items) noexcept;
 
     [[nodiscard]] constexpr size_t size() const noexcept;
 
@@ -212,7 +212,7 @@ auto segmented_stack_t<T>::make(detail::abstract_allocator_t &parent_allocator,
 }
 
 template <typename T>
-auto segmented_stack_t<T>::make_owned(
+auto segmented_stack_t<T>::make_owning(
     detail::abstract_heap_allocator_t &parent_allocator,
     size_t initial_items) noexcept
     -> zl::res<segmented_stack_t, AllocationStatusCode>

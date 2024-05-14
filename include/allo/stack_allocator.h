@@ -45,8 +45,8 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     // create a stack allocator which takes ownership of a block of memory
     // allocated by the parent.
     inline static stack_allocator_t
-    make_owned(bytes_t memory,
-               detail::abstract_heap_allocator_t &parent) noexcept
+    make_owning(bytes_t memory,
+                detail::abstract_heap_allocator_t &parent) noexcept
     {
         return make_inner(memory, parent);
     }

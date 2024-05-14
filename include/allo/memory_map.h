@@ -24,9 +24,10 @@ extern "C"
     {
         void *data;
         size_t bytes;
-        /// Error-code. This will be 0 on success: check that before reading bytes and data.
-        /// There is no compatibility of error codes between OSes. The only guaranteed is
-        /// that it will be 0 on success on all platforms.
+        /// Error-code. This will be 0 on success: check that before reading
+        /// bytes and data. There is no compatibility of error codes between
+        /// OSes. The only guaranteed is that it will be 0 on success on all
+        /// platforms.
         int64_t code;
     };
 

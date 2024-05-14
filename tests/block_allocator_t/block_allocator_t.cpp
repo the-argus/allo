@@ -28,7 +28,7 @@ TEST_SUITE("block_allocator_t")
         SUBCASE("Default construction")
         {
             c_allocator_t global_allocator;
-            auto mally = block_allocator_t::make_owned(
+            auto mally = block_allocator_t::make_owning(
                 allo::alloc<uint8_t>(global_allocator, 2000).release(),
                 global_allocator, 200);
             REQUIRE(mally.okay());
@@ -82,7 +82,7 @@ TEST_SUITE("block_allocator_t")
             {
                 // 256 bytes per block, 32 byte aligned blocks
                 auto ally =
-                    block_allocator_t::make_owned(
+                    block_allocator_t::make_owning(
                         // this memory will be cleaned up by the allocator
                         allo::alloc<uint8_t>(global_allocator, 2000).release(),
                         global_allocator, 256)
@@ -108,7 +108,7 @@ TEST_SUITE("block_allocator_t")
                         {.committed = 1, .additional_pages_reserved = 19})
                         .release();
                 // 256 bytes per block, 32 byte aligned blocks
-                auto ally = block_allocator_t::make_owned(
+                auto ally = block_allocator_t::make_owning(
                                 reservation.current_memory(), reservation, 32)
                                 .release();
                 auto one = alloc_one<int>(ally);
@@ -130,7 +130,7 @@ TEST_SUITE("block_allocator_t")
 
             {
                 // 256 bytes per block, 32 byte aligned blocks
-                auto ally = block_allocator_t::make_owned(
+                auto ally = block_allocator_t::make_owning(
                                 allo::alloc<uint8_t>(global_allocator, 32UL * 4)
                                     .release(),
                                 global_allocator, 32)
@@ -154,7 +154,7 @@ TEST_SUITE("block_allocator_t")
 
             // 256 bytes per block, 32 byte aligned blocks
             auto ally =
-                block_allocator_t::make_owned(
+                block_allocator_t::make_owning(
                     // this memory will be cleaned up by the allocator
                     // TODO: optimize this... similar memory usage to stack
                     // allocator, although linked list nodes should be a perfect
@@ -184,8 +184,8 @@ TEST_SUITE("block_allocator_t")
                 auto mem = allo::alloc<uint8_t>(global_allocator, blocksize * 4)
                                .release();
                 // 256 bytes per block, 32 byte aligned blocks
-                auto ally = block_allocator_t::make_owned(mem, global_allocator,
-                                                          blocksize)
+                auto ally = block_allocator_t::make_owning(
+                                mem, global_allocator, blocksize)
                                 .release();
 
                 auto callback = [](void *data) {

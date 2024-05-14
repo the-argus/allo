@@ -14,8 +14,8 @@
 #define ALLO_HEADER_ONLY
 #endif
 
-#include <ziglike/slice.h>
 #include <ziglike/opt.h>
+#include <ziglike/slice.h>
 
 namespace allo {
 template <typename T> class list_t
@@ -49,8 +49,8 @@ template <typename T> class list_t
     [[nodiscard]] static constexpr list_t make(zl::slice<T> memory) noexcept;
 
     [[nodiscard]] static zl::res<list_t, AllocationStatusCode>
-    make_owned(detail::abstract_heap_allocator_t &parent_allocator,
-               size_t initial_items) noexcept;
+    make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+                size_t initial_items) noexcept;
 
     [[nodiscard]] constexpr zl::slice<const T> items() const noexcept;
 
@@ -141,8 +141,8 @@ constexpr list_t<T> list_t<T>::make(zl::slice<T> memory) noexcept
 
 template <typename T>
 zl::res<list_t<T>, AllocationStatusCode>
-list_t<T>::make_owned(detail::abstract_heap_allocator_t &parent_allocator,
-                      size_t initial_items) noexcept
+list_t<T>::make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+                       size_t initial_items) noexcept
 {
     auto result = alloc<T>(parent_allocator, initial_items);
     if (!result.okay())

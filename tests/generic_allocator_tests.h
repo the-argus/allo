@@ -18,8 +18,8 @@ void make_large_allocation_with(Args &&...args)
             .release();
     static int count = 0;
     {
-        auto ally = Allocator::make_owned(reserve.current_memory(), reserve,
-                                          std::forward<Args>(args)...)
+        auto ally = Allocator::make_owning(reserve.current_memory(), reserve,
+                                           std::forward<Args>(args)...)
                         .release();
         ally.register_destruction_callback(
             [](void *data) {
@@ -33,7 +33,7 @@ void make_large_allocation_with(Args &&...args)
 }
 
 // version of make_large_allocation_with where the allocator provides a make and
-// make_owned which return the allocator, not a result
+// make_owning which return the allocator, not a result
 template <typename Allocator, typename... Args>
 void make_large_allocation_with_nonfailing_make(Args &&...args)
 {
@@ -45,8 +45,8 @@ void make_large_allocation_with_nonfailing_make(Args &&...args)
             .release();
     static int count = 0;
     {
-        auto ally = Allocator::make_owned(reserve.current_memory(), reserve,
-                                          std::forward<Args>(args)...);
+        auto ally = Allocator::make_owning(reserve.current_memory(), reserve,
+                                           std::forward<Args>(args)...);
         ally.register_destruction_callback(
             [](void *data) {
                 auto *d = ((int *)data);

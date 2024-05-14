@@ -17,16 +17,14 @@ namespace detail {
 template <typename T>
 struct TypeNameLength
     : std::integral_constant<std::size_t, ctti::nameof<T>().length()>
-{
-};
+{};
 
 } // namespace detail
 
 namespace detail {
 
 template <typename T> struct another_level_of_indirection
-{
-};
+{};
 
 template <typename T, typename = void> struct nameof_impl
 {

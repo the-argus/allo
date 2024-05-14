@@ -15,7 +15,7 @@ TEST_SUITE("list_t")
         SUBCASE("Making with c allocator")
         {
             c_allocator_t c;
-            auto maybe_collection = list_t<int>::make_owned(c, 100);
+            auto maybe_collection = list_t<int>::make_owning(c, 100);
             REQUIRE(maybe_collection.okay());
         }
 
@@ -26,7 +26,7 @@ TEST_SUITE("list_t")
                             allo::alloc<uint8_t>(c, 4000).release())
                             .release();
 
-            auto maybe_collection = list_t<uint8_t>::make_owned(heap, 2000);
+            auto maybe_collection = list_t<uint8_t>::make_owning(heap, 2000);
             REQUIRE(maybe_collection.okay());
         }
 
@@ -42,7 +42,7 @@ TEST_SUITE("list_t")
         SUBCASE("push back a bunch of ints and pop some off, also reallocate")
         {
             allo::c_allocator_t c;
-            auto maybe_list = list_t<int>::make_owned(c, 2);
+            auto maybe_list = list_t<int>::make_owning(c, 2);
             REQUIRE(maybe_list.okay());
             list_t<int> list = maybe_list.release();
 
@@ -132,7 +132,7 @@ TEST_SUITE("list_t")
         SUBCASE("items stay the same after reallocation")
         {
             allo::c_allocator_t c;
-            auto list = list_t<int>::make_owned(c, 2).release();
+            auto list = list_t<int>::make_owning(c, 2).release();
             REQUIRE(list.capacity() == 2);
 
             auto res = list.try_append(0);

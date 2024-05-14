@@ -26,7 +26,7 @@ TEST_SUITE("stack_t")
         SUBCASE("Making with c allocator")
         {
             allo::c_allocator_t c;
-            auto maybe_collection = stack<int>::make_owned(c, 100);
+            auto maybe_collection = stack<int>::make_owning(c, 100);
             REQUIRE(maybe_collection.okay());
         }
 
@@ -37,7 +37,7 @@ TEST_SUITE("stack_t")
                             allo::alloc<uint8_t>(c, 4000).release())
                             .release();
 
-            auto maybe_collection = stack<uint8_t>::make_owned(heap, 2000);
+            auto maybe_collection = stack<uint8_t>::make_owning(heap, 2000);
             REQUIRE(maybe_collection.okay());
         }
 
@@ -75,7 +75,7 @@ TEST_SUITE("stack_t")
         SUBCASE("push back a bunch of ints and pop some off, also reallocate")
         {
             allo::c_allocator_t c;
-            auto maybe_stack = stack<int>::make_owned(c, 2);
+            auto maybe_stack = stack<int>::make_owning(c, 2);
             REQUIRE(maybe_stack.okay());
             stack<int> stack = maybe_stack.release();
 
@@ -121,7 +121,7 @@ TEST_SUITE("stack_t")
         SUBCASE("items stay the same after reallocation")
         {
             allo::c_allocator_t c;
-            auto st = stack<int>::make_owned(c, 2).release();
+            auto st = stack<int>::make_owning(c, 2).release();
             REQUIRE(st.capacity() == 2);
 
             auto res = st.try_push(0);

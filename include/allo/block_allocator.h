@@ -15,7 +15,7 @@ class block_allocator_t : public detail::abstract_heap_allocator_t
     /// is destroyed, and will try to remap the memory should it run out of
     /// space.
     inline static zl::res<block_allocator_t, AllocationStatusCode>
-    make_owned(bytes_t memory, detail::abstract_heap_allocator_t &parent,
+    make_owning(bytes_t memory, detail::abstract_heap_allocator_t &parent,
                size_t blocksize) noexcept
     {
         return make_inner(memory, parent, blocksize);

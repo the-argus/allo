@@ -26,7 +26,7 @@ TEST_SUITE("heap_allocator_t")
             c_allocator_t global_allocator;
             auto mem = alloc<uint8_t>(global_allocator, 2000).release();
             heap_allocator_t heap =
-                heap_allocator_t::make_owned(mem, global_allocator).release();
+                heap_allocator_t::make_owning(mem, global_allocator).release();
         }
         SUBCASE("make_into")
         {
@@ -67,7 +67,7 @@ TEST_SUITE("heap_allocator_t")
             // heap allocator has a significant amount of bookkeeping space
             auto mem = alloc<uint8_t>(global_allocator, 2315).release();
             heap_allocator_t heap =
-                heap_allocator_t::make_owned(mem, global_allocator).release();
+                heap_allocator_t::make_owning(mem, global_allocator).release();
             tests::allocate_object_with_linked_list(heap);
         }
 
@@ -81,7 +81,7 @@ TEST_SUITE("heap_allocator_t")
             c_allocator_t global_allocator;
             auto mem = alloc<uint8_t>(global_allocator, 2000).release();
             heap_allocator_t heap =
-                heap_allocator_t::make_owned(mem, global_allocator).release();
+                heap_allocator_t::make_owning(mem, global_allocator).release();
             tests::allocate_480_bytes_related_objects(heap);
             tests::typed_alloc_realloc_free(heap);
         }

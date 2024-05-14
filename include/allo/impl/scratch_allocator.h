@@ -87,7 +87,7 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
         auto make_segmented_stack_at =
             [this](void *location) -> allocation_status_t {
             if (m.parent.is_heap()) {
-                auto new_blocks_stack = segmented_stack_t<bytes_t>::make_owned(
+                auto new_blocks_stack = segmented_stack_t<bytes_t>::make_owning(
                     m.parent.get_heap_unchecked(), blocks_stack_initial_items);
 
                 if (!new_blocks_stack.okay())

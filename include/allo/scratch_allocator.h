@@ -52,8 +52,8 @@ class scratch_allocator_t : public detail::abstract_allocator_t
     }
 
     inline static scratch_allocator_t
-    make_owned(bytes_t memory,
-               detail::abstract_heap_allocator_t &parent) noexcept
+    make_owning(bytes_t memory,
+                detail::abstract_heap_allocator_t &parent) noexcept
     {
         return make_inner(memory, parent);
     }

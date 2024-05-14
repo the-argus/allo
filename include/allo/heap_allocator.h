@@ -60,8 +60,8 @@ class heap_allocator_t : public detail::abstract_heap_allocator_t
         detail::AllocatorType::HeapAllocator;
 
     inline static zl::res<heap_allocator_t, AllocationStatusCode>
-    make_owned(bytes_t memory,
-               detail::abstract_heap_allocator_t &parent) noexcept
+    make_owning(bytes_t memory,
+                detail::abstract_heap_allocator_t &parent) noexcept
     {
         return make_inner(memory, parent);
     }

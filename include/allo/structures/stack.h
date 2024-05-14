@@ -14,8 +14,8 @@
 #define ALLO_HEADER_ONLY
 #endif
 #include <cmath>
-#include <ziglike/slice.h>
 #include <ziglike/opt.h>
+#include <ziglike/slice.h>
 
 namespace allo {
 template <typename T> class stack_t
@@ -29,8 +29,8 @@ template <typename T> class stack_t
     /// initial_items is the number of items to reserve space for initially.
     /// If zero, will be rounded up to one.
     [[nodiscard]] static zl::res<stack_t, AllocationStatusCode>
-    make_owned(detail::abstract_heap_allocator_t &parent_allocator,
-               size_t initial_items) noexcept;
+    make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+                size_t initial_items) noexcept;
 
     [[nodiscard]] static constexpr stack_t make(zl::slice<T> memory) noexcept;
 
@@ -118,8 +118,8 @@ template <typename T> inline constexpr zl::slice<T> stack_t<T>::items() noexcept
 
 template <typename T>
 inline zl::res<stack_t<T>, AllocationStatusCode>
-stack_t<T>::make_owned(detail::abstract_heap_allocator_t &parent_allocator,
-                       size_t initial_items) noexcept
+stack_t<T>::make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+                        size_t initial_items) noexcept
 {
     const size_t actual_initial = initial_items == 0 ? 1 : initial_items;
 

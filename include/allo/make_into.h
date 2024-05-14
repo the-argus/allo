@@ -54,13 +54,13 @@ make_into(ParentAllocator &allocator, bytes_t mem, Args &&...args) noexcept
         0;
 #endif
 
-    // figure out at compile time whether we should make or make_owned
+    // figure out at compile time whether we should make or make_owning
     auto makefunc =
         [mem](Args &&...args) -> zl::res<Allocator, AllocationStatusCode> {
         if constexpr (maketype == MakeType::Unowned) {
             return Allocator::make(mem, std::forward<Args>(args)...);
         } else {
-            return Allocator::make_owned(mem, std::forward<Args>(args)...);
+            return Allocator::make_owning(mem, std::forward<Args>(args)...);
         }
     };
 
