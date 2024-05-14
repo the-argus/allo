@@ -7,7 +7,7 @@
 
 namespace allo::ctti::detail {
 
-template <typename T, size_t N> constexpr const T *begin(const T (&array)[N])
+template <typename T, size_t N> constexpr const T* begin(const T (&array)[N])
 {
     return &array[0];
 }
@@ -22,17 +22,17 @@ constexpr bool equal_range(LhsIt lhsBegin, LhsIt lhsEnd, RhsIt rhsBegin,
                : (lhsBegin == lhsEnd && rhsBegin == rhsEnd);
 }
 
-template <typename T, size_t N> constexpr const T *end(const T (&array)[N])
+template <typename T, size_t N> constexpr const T* end(const T (&array)[N])
 {
     return &array[N];
 }
 
-template <typename T> constexpr const T &max(const T &lhs, const T &rhs)
+template <typename T> constexpr const T& max(const T& lhs, const T& rhs)
 {
     return (lhs >= rhs) ? lhs : rhs;
 }
 
-template <typename T> constexpr const T &min(const T &lhs, const T &rhs)
+template <typename T> constexpr const T& min(const T& lhs, const T& rhs)
 {
     return (lhs <= rhs) ? lhs : rhs;
 }

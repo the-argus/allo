@@ -33,7 +33,7 @@ ALLO_FUNC block_allocator_t::~block_allocator_t() noexcept
 }
 
 ALLO_FUNC
-block_allocator_t::block_allocator_t(block_allocator_t &&other) noexcept
+block_allocator_t::block_allocator_t(block_allocator_t&& other) noexcept
     : m(std::move(other.m))
 {
     m_type = other.m_type;
@@ -48,14 +48,14 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
         return;
 
     size_t darray_index = m.current_destruction_array_index;
-    auto *const darray = reinterpret_cast<destruction_callback_array_t *>(
+    auto* const darray = reinterpret_cast<destruction_callback_array_t*>(
         &m.mem.data()[darray_index * m.blocksize]);
     for (size_t i = 0; i < m.current_destruction_array_size; ++i) {
         darray->entries[i].callback(darray->entries[i].user_data);
     }
     darray_index = darray->previous_index;
     for (size_t i = 0; i < m.num_destruction_array_blocks - 1; ++i) {
-        auto *const darray = reinterpret_cast<destruction_callback_array_t *>(
+        auto* const darray = reinterpret_cast<destruction_callback_array_t*>(
             &m.mem.data()[darray_index * m.blocksize]);
         // all of the remaining destruction arrays should be full
         for (size_t i = 0; i < m.max_destruction_entries_per_block; ++i) {
@@ -67,7 +67,7 @@ block_allocator_t::call_all_destruction_callbacks() const noexcept
 
 ALLO_FUNC zl::res<block_allocator_t, AllocationStatusCode>
 block_allocator_t::make_inner(
-    bytes_t memory, zl::opt<detail::abstract_heap_allocator_t &> parent,
+    bytes_t memory, zl::opt<detail::abstract_heap_allocator_t&> parent,
     size_t blocksize) noexcept
 {
     // blocksize must be at least 8 bytes
@@ -108,9 +108,9 @@ block_allocator_t::make_inner(
     assert(max_destruction_entries_per_block >= 1);
 
     for (size_t i = 0; i < num_blocks; ++i) {
-        uint8_t *head = memory.data() + (i * actual_blocksize);
+        uint8_t* head = memory.data() + (i * actual_blocksize);
         assert(detail::nearest_alignment_exponent((size_t)head) >= 3);
-        *reinterpret_cast<size_t *>(head) = i + 1;
+        *reinterpret_cast<size_t*>(head) = i + 1;
     }
 
     return zl::res<block_allocator_t, AllocationStatusCode>(
@@ -159,7 +159,7 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
         return AllocationStatusCode::AllocationTooAligned;
     }
 
-    size_t next_to_last_freed = *reinterpret_cast<size_t *>(
+    size_t next_to_last_freed = *reinterpret_cast<size_t*>(
         &m.mem.data()[m.last_freed_index * m.blocksize]);
     if (next_to_last_freed > (m.mem.size() / m.blocksize)) {
         return AllocationStatusCode::Corruption;
@@ -173,7 +173,7 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
 
     // try to insert the typehash after the allocation
     if (typehash != 0) {
-        if (auto *const typehash_location =
+        if (auto* const typehash_location =
                 get_location_for_typehash(chosen_block.data(), bytes)) {
             *typehash_location = typehash;
         }
@@ -185,18 +185,18 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
     return allocation_result_t(std::in_place, chosen_block, 0, bytes);
 }
 
-ALLO_FUNC size_t *
-block_allocator_t::get_location_for_typehash(uint8_t *blockhead,
+ALLO_FUNC size_t*
+block_allocator_t::get_location_for_typehash(uint8_t* blockhead,
                                              size_t allocsize) const noexcept
 {
     assert(allocsize <= m.blocksize);
-    uint8_t *head = blockhead;
+    uint8_t* head = blockhead;
     head += allocsize;
-    void *headvoid = head;
+    void* headvoid = head;
     size_t space_remaining = m.blocksize - allocsize;
     if (std::align(alignof(size_t), sizeof(size_t), headvoid,
                    space_remaining)) {
-        return static_cast<size_t *>(headvoid);
+        return static_cast<size_t*>(headvoid);
     }
     return nullptr;
 }
@@ -209,7 +209,7 @@ block_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash,
         return AllocationStatusCode::AllocationTooAligned;
     }
     if (old_typehash != 0) {
-        if (auto *typehash_location =
+        if (auto* typehash_location =
                 get_location_for_typehash(mem.data(), mem.size())) {
             if (*typehash_location != old_typehash) {
                 return AllocationStatusCode::InvalidType;
@@ -217,7 +217,7 @@ block_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash,
         }
     }
     if (new_typehash != 0) {
-        if (auto *typehash_location =
+        if (auto* typehash_location =
                 get_location_for_typehash(mem.data(), new_size)) {
             *typehash_location = new_typehash;
         }
@@ -235,7 +235,7 @@ block_allocator_t::free_bytes(bytes_t mem, size_t typehash) noexcept
 
     const auto analysis = manalysis.release();
 
-    *reinterpret_cast<size_t *>(analysis.first_byte) = m.last_freed_index;
+    *reinterpret_cast<size_t*>(analysis.first_byte) = m.last_freed_index;
     m.last_freed_index = analysis.block_index;
 
     return AllocationStatusCode::Okay;
@@ -261,7 +261,7 @@ block_allocator_t::try_analyze_block(bytes_t mem,
     result.first_byte = &m.mem.data()[result.block_index];
 
     if (typehash != 0) {
-        if (size_t *original_typehash =
+        if (size_t* original_typehash =
                 get_location_for_typehash(result.first_byte, mem.size())) {
             if (*original_typehash != typehash) {
                 return AllocationStatusCode::InvalidType;
@@ -281,7 +281,7 @@ block_allocator_t::free_status(bytes_t mem, size_t typehash) const noexcept
 }
 
 ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
-    destruction_callback_t callback, void *user_data) noexcept
+    destruction_callback_t callback, void* user_data) noexcept
 {
     if (!callback) {
         return AllocationStatusCode::InvalidArgument;
@@ -293,7 +293,7 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
                m.max_destruction_entries_per_block);
         // there is space available inside the current destruction array, add to
         // it
-        auto *array = reinterpret_cast<destruction_callback_array_t *>(
+        auto* array = reinterpret_cast<destruction_callback_array_t*>(
             &m.mem.data()[m.current_destruction_array_index * m.blocksize]);
         array->entries[m.current_destruction_array_size] = {callback,
                                                             user_data};
@@ -306,11 +306,10 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
             }
         }
         const size_t free_index = m.last_freed_index;
-        void *const freeblock = &m.mem.data()[free_index * m.blocksize];
-        const size_t next_to_last_freed =
-            *reinterpret_cast<size_t *>(freeblock);
-        auto *const new_array =
-            reinterpret_cast<destruction_callback_array_t *>(freeblock);
+        void* const freeblock = &m.mem.data()[free_index * m.blocksize];
+        const size_t next_to_last_freed = *reinterpret_cast<size_t*>(freeblock);
+        auto* const new_array =
+            reinterpret_cast<destruction_callback_array_t*>(freeblock);
         --m.blocks_free;
         ++m.num_destruction_array_blocks;
         m.last_freed_index = next_to_last_freed;
@@ -341,10 +340,10 @@ ALLO_FUNC allocation_status_t block_allocator_t::remap() noexcept
     // realloc, we can use size_t for iterator instead of int64_t
     for (int64_t i = static_cast<int64_t>(num_blocks) - 1;
          i >= original_num_blocks; --i) {
-        uint8_t *first_byte_of_new_block = m.mem.data() + (m.blocksize * i);
+        uint8_t* first_byte_of_new_block = m.mem.data() + (m.blocksize * i);
         assert(detail::nearest_alignment_exponent(
                    (size_t)first_byte_of_new_block) >= 3);
-        *reinterpret_cast<size_t *>(first_byte_of_new_block) = next_available;
+        *reinterpret_cast<size_t*>(first_byte_of_new_block) = next_available;
         // the next block we iterate over will be pointing to this one
         next_available = i;
     }

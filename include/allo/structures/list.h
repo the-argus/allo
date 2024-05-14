@@ -41,15 +41,15 @@ template <typename T> class list_t
     using status_t = zl::status<StatusCode>;
 
     list_t() = delete;
-    list_t(const list_t &) = delete;
-    list_t &operator=(const list_t &) = delete;
-    list_t(list_t &&) noexcept = default;
-    list_t &operator=(list_t &&) noexcept = default;
+    list_t(const list_t&) = delete;
+    list_t& operator=(const list_t&) = delete;
+    list_t(list_t&&) noexcept = default;
+    list_t& operator=(list_t&&) noexcept = default;
 
     [[nodiscard]] static constexpr list_t make(zl::slice<T> memory) noexcept;
 
     [[nodiscard]] static zl::res<list_t, AllocationStatusCode>
-    make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+    make_owning(detail::abstract_heap_allocator_t& parent_allocator,
                 size_t initial_items) noexcept;
 
     [[nodiscard]] constexpr zl::slice<const T> items() const noexcept;
@@ -59,7 +59,7 @@ template <typename T> class list_t
     [[nodiscard]] constexpr size_t capacity() const noexcept;
 
     template <typename... Args>
-    [[nodiscard]] status_t try_insert_at(size_t index, Args &&...args) noexcept
+    [[nodiscard]] status_t try_insert_at(size_t index, Args&&... args) noexcept
     {
         if (index > m.size) {
             assert(false);
@@ -85,7 +85,7 @@ template <typename T> class list_t
     [[nodiscard]] status_t try_remove_at(size_t index) noexcept;
 
     template <typename... Args>
-    [[nodiscard]] status_t try_append(Args &&...args) noexcept
+    [[nodiscard]] status_t try_append(Args&&... args) noexcept
     {
         auto status = try_realloc_if_needed();
         if (!status.okay())
@@ -98,15 +98,15 @@ template <typename T> class list_t
         return StatusCode::Okay;
     }
 
-    [[nodiscard]] zl::opt<T &> try_get_at(size_t index) noexcept;
+    [[nodiscard]] zl::opt<T&> try_get_at(size_t index) noexcept;
 
-    [[nodiscard]] zl::opt<const T &> try_get_at(size_t index) const noexcept;
+    [[nodiscard]] zl::opt<const T&> try_get_at(size_t index) const noexcept;
 
     void remove_at_unchecked(size_t index) noexcept;
 
-    [[nodiscard]] T &get_at_unchecked(size_t index) noexcept;
+    [[nodiscard]] T& get_at_unchecked(size_t index) noexcept;
 
-    [[nodiscard]] const T &get_at_unchecked(size_t index) const noexcept;
+    [[nodiscard]] const T& get_at_unchecked(size_t index) const noexcept;
 
     inline ~list_t() noexcept
     {
@@ -118,7 +118,7 @@ template <typename T> class list_t
   private:
     struct M
     {
-        zl::opt<detail::abstract_heap_allocator_t &> parent;
+        zl::opt<detail::abstract_heap_allocator_t&> parent;
         zl::slice<T> memory;
         size_t size;
     } m;
@@ -141,7 +141,7 @@ constexpr list_t<T> list_t<T>::make(zl::slice<T> memory) noexcept
 
 template <typename T>
 zl::res<list_t<T>, AllocationStatusCode>
-list_t<T>::make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+list_t<T>::make_owning(detail::abstract_heap_allocator_t& parent_allocator,
                        size_t initial_items) noexcept
 {
     auto result = alloc<T>(parent_allocator, initial_items);
@@ -220,7 +220,7 @@ auto list_t<T>::try_realloc_if_needed() noexcept -> status_t
     return StatusCode::Okay;
 }
 
-template <typename T> zl::opt<T &> list_t<T>::try_get_at(size_t index) noexcept
+template <typename T> zl::opt<T&> list_t<T>::try_get_at(size_t index) noexcept
 {
     if (index >= m.size)
         return {};
@@ -228,21 +228,21 @@ template <typename T> zl::opt<T &> list_t<T>::try_get_at(size_t index) noexcept
 }
 
 template <typename T>
-zl::opt<const T &> list_t<T>::try_get_at(size_t index) const noexcept
+zl::opt<const T&> list_t<T>::try_get_at(size_t index) const noexcept
 {
     if (index >= m.size)
         return {};
     return get_at_unchecked(index);
 }
 
-template <typename T> T &list_t<T>::get_at_unchecked(size_t index) noexcept
+template <typename T> T& list_t<T>::get_at_unchecked(size_t index) noexcept
 {
     assert(index < m.size);
     return m.memory.data()[index];
 }
 
 template <typename T>
-const T &list_t<T>::get_at_unchecked(size_t index) const noexcept
+const T& list_t<T>::get_at_unchecked(size_t index) const noexcept
 {
     assert(index < m.size);
     return m.memory.data()[index];

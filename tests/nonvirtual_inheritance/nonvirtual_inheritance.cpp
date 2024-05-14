@@ -21,13 +21,13 @@ TEST_SUITE("allocator interfaces")
     {
         SUBCASE("upcast to single interface")
         {
-            auto makeint = [](abstract_allocator_t &allocator)
-                -> zl::res<int *, AllocationStatusCode> {
+            auto makeint = [](abstract_allocator_t& allocator)
+                -> zl::res<int*, AllocationStatusCode> {
                 auto mem_res = allo::alloc<uint8_t>(allocator, sizeof(int) * 2);
                 if (!mem_res.okay())
                     return mem_res.err();
 
-                return reinterpret_cast<int *>(mem_res.release().data());
+                return reinterpret_cast<int*>(mem_res.release().data());
             };
 
             std::array<uint8_t, 512> mem;
@@ -45,13 +45,13 @@ TEST_SUITE("allocator interfaces")
         {
             std::array<uint8_t, 512> mem;
             auto stack = stack_allocator_t::make(mem).release();
-            abstract_allocator_t &stackalloc = stack;
+            abstract_allocator_t& stackalloc = stack;
         }
 
         SUBCASE("upcast to single interface, use typed alloc")
         {
-            auto makeint = [](abstract_allocator_t &allocator)
-                -> zl::res<int &, AllocationStatusCode> {
+            auto makeint = [](abstract_allocator_t& allocator)
+                -> zl::res<int&, AllocationStatusCode> {
                 return allo::alloc_one<int>(allocator);
             };
 

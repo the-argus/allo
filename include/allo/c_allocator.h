@@ -43,7 +43,7 @@ class c_allocator_t : public detail::abstract_threadsafe_heap_allocator_t
 
     /// Always returns invalid argument
     inline constexpr allocation_status_t
-    register_destruction_callback(destruction_callback_t, void *) noexcept
+    register_destruction_callback(destruction_callback_t, void*) noexcept
     {
         return AllocationStatusCode::InvalidArgument;
     }

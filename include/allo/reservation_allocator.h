@@ -25,14 +25,14 @@ class reservation_allocator_t : public detail::abstract_heap_allocator_t
         // extra pages past the end of the committed memory that we can expand
         // the allocation into
         size_t additional_pages_reserved;
-        void *hint = (void *)0x800000000000;
+        void* hint = (void*)0x800000000000;
     };
 
     /// Create a new reservation of a given size, with a number of additional
     /// pages reserved. Get the memory out of the reservation_allocator_t by
     /// calling current_memory().
     [[nodiscard]] static zl::res<reservation_allocator_t, AllocationStatusCode>
-    make(const options_t &options) noexcept;
+    make(const options_t& options) noexcept;
 
     /// Increase the size of the memory owned by this allocation without
     /// invalidating addresses.
@@ -69,7 +69,7 @@ class reservation_allocator_t : public detail::abstract_heap_allocator_t
     /// Cannot register destruction callback for a single memory reservation.
     /// Nest another allocator inside it to achieve this.
     inline allocation_status_t
-    register_destruction_callback(destruction_callback_t, void *) // NOLINT
+    register_destruction_callback(destruction_callback_t, void*) // NOLINT
         noexcept
     {
         return AllocationStatusCode::OOM;
@@ -83,16 +83,16 @@ class reservation_allocator_t : public detail::abstract_heap_allocator_t
 
     ~reservation_allocator_t() noexcept;
     // cannot be copied
-    reservation_allocator_t(const reservation_allocator_t &other) = delete;
-    reservation_allocator_t &
-    operator=(const reservation_allocator_t &other) = delete;
+    reservation_allocator_t(const reservation_allocator_t& other) = delete;
+    reservation_allocator_t&
+    operator=(const reservation_allocator_t& other) = delete;
     // can be move constructed
-    reservation_allocator_t(reservation_allocator_t &&other) noexcept;
+    reservation_allocator_t(reservation_allocator_t&& other) noexcept;
     // but not move assigned
-    reservation_allocator_t &
-    operator=(reservation_allocator_t &&other) = delete;
+    reservation_allocator_t&
+    operator=(reservation_allocator_t&& other) = delete;
 
-    inline reservation_allocator_t(M &&members) noexcept : m(members)
+    inline reservation_allocator_t(M&& members) noexcept : m(members)
     {
         m_type = enum_value;
     }

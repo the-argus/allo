@@ -13,7 +13,7 @@ struct bytes_collection_t
     // add a new buffer to the list of buffers, and if the bytes needed in the
     // new buffer is larger than the size of the current buffer, grow
     allo::allocation_status_t
-    new_buffer_for(detail::abstract_heap_allocator_t &allocator,
+    new_buffer_for(detail::abstract_heap_allocator_t& allocator,
                    size_t bytes) noexcept;
 };
 } // namespace allo::detail

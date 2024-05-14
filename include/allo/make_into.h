@@ -32,8 +32,8 @@ enum class MakeType
 /// args: additional arguments to pass to the make function
 template <typename Allocator, MakeType maketype = MakeType::Unowned,
           typename ParentAllocator, typename... Args>
-zl::res<Allocator &, AllocationStatusCode>
-make_into(ParentAllocator &allocator, bytes_t mem, Args &&...args) noexcept
+zl::res<Allocator&, AllocationStatusCode>
+make_into(ParentAllocator& allocator, bytes_t mem, Args&&... args) noexcept
 {
     static_assert(!std::is_reference_v<Allocator> &&
                       !std::is_pointer_v<Allocator>,
@@ -56,7 +56,7 @@ make_into(ParentAllocator &allocator, bytes_t mem, Args &&...args) noexcept
 
     // figure out at compile time whether we should make or make_owning
     auto makefunc =
-        [mem](Args &&...args) -> zl::res<Allocator, AllocationStatusCode> {
+        [mem](Args&&... args) -> zl::res<Allocator, AllocationStatusCode> {
         if constexpr (maketype == MakeType::Unowned) {
             return Allocator::make(mem, std::forward<Args>(args)...);
         } else {
@@ -79,11 +79,11 @@ make_into(ParentAllocator &allocator, bytes_t mem, Args &&...args) noexcept
 
     bytes_t allocation = alloc_res.release();
 
-    auto *ally = reinterpret_cast<Allocator *>(allocation.data());
+    auto* ally = reinterpret_cast<Allocator*>(allocation.data());
     new (ally) Allocator(std::move(construct_res.release()));
 
     auto callback_status = ally->register_destruction_callback(
-        [](void *data) { ((decltype(ally))data)->~Allocator(); }, ally);
+        [](void* data) { ((decltype(ally))data)->~Allocator(); }, ally);
 
     if (!callback_status.okay()) {
         // if this type can free, then free the allocator

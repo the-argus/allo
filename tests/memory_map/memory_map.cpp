@@ -47,7 +47,7 @@ TEST_SUITE("memory mapping alloc")
             REQUIRE(res.code == 0);
             int32_t commit_res = mm_commit_pages(res.data, 2);
             REQUIRE(commit_res == 0);
-            auto *data = (uint8_t *)res.data;
+            auto* data = (uint8_t*)res.data;
             auto pagesize_res = mm_get_page_size();
             REQUIRE((pagesize_res.has_value == 1));
             size_t pagesize = pagesize_res.value;

@@ -28,8 +28,8 @@ TEST_SUITE("scratch_allocator_t")
 
             auto maybe_myint = allo::alloc_one<int>(ally);
             REQUIRE(maybe_myint.okay());
-            int &myint = maybe_myint.release();
-            void *address_of_int = &myint;
+            int& myint = maybe_myint.release();
+            void* address_of_int = &myint;
             myint = 10;
 
             {
@@ -55,7 +55,7 @@ TEST_SUITE("scratch_allocator_t")
 
             auto ally = scratch_allocator_t::make(subslice);
 
-            uint8_t &a_byte = allo::alloc_one<uint8_t>(ally).release();
+            uint8_t& a_byte = allo::alloc_one<uint8_t>(ally).release();
             REQUIRE(a_byte == 1); // alloc one does not zero-initialize memory,
                                   // and the whole buffer was ones
         }
@@ -68,7 +68,7 @@ TEST_SUITE("scratch_allocator_t")
                 allo::alloc<uint8_t>(global_allocator, 2000).release();
 
             {
-                scratch_allocator_t &scratch =
+                scratch_allocator_t& scratch =
                     allo::make_into<scratch_allocator_t>(global_allocator, mem)
                         .release();
 
@@ -77,7 +77,7 @@ TEST_SUITE("scratch_allocator_t")
             }
 
             {
-                scratch_allocator_t &scratch =
+                scratch_allocator_t& scratch =
                     allo::make_into<scratch_allocator_t, MakeType::Owned>(
                         global_allocator, mem, global_allocator)
                         .release();
@@ -97,7 +97,7 @@ TEST_SUITE("scratch_allocator_t")
             auto maybe_my_ints = allo::alloc_one<std::array<int, 88>>(ally);
             REQUIRE(maybe_my_ints.okay());
 
-            std::array<int, 88> &my_ints = maybe_my_ints.release();
+            std::array<int, 88>& my_ints = maybe_my_ints.release();
         }
 
         SUBCASE("generic ref, large allocation")
@@ -123,7 +123,7 @@ TEST_SUITE("scratch_allocator_t")
 
             auto arr_res = allo::alloc_one<std::array<uint8_t, 494>>(ally);
             REQUIRE(arr_res.okay());
-            auto &arr = arr_res.release();
+            auto& arr = arr_res.release();
             auto res = allo::alloc_one<std::array<uint8_t, 512>>(ally);
             REQUIRE(!res.okay());
         }
@@ -135,7 +135,7 @@ TEST_SUITE("scratch_allocator_t")
             {
                 auto stack = scratch_allocator_t::make(mem);
                 auto status = stack.register_destruction_callback(
-                    [](void *test_int) { *((int *)test_int) = 1; }, &test);
+                    [](void* test_int) { *((int*)test_int) = 1; }, &test);
                 REQUIRE(status.okay());
                 REQUIRE(test == 0);
             }
@@ -162,23 +162,23 @@ TEST_SUITE("scratch_allocator_t")
                 scratch_allocator_t scratch =
                     scratch_allocator_t::make(real_mem);
 
-                auto &counter_1 =
+                auto& counter_1 =
                     allo::construct_one<DestroyCounter>(scratch).release();
-                auto &counter_2 =
+                auto& counter_2 =
                     allo::construct_one<DestroyCounter>(scratch).release();
-                auto &counter_3 =
+                auto& counter_3 =
                     allo::construct_one<DestroyCounter>(scratch).release();
 
                 auto status = scratch.register_destruction_callback(
-                    [](void *d) -> void {
-                        ((DestroyCounter *)d)->~DestroyCounter();
+                    [](void* d) -> void {
+                        ((DestroyCounter*)d)->~DestroyCounter();
                     },
                     &counter_1);
                 REQUIRE(status.okay());
 
                 static size_t meaningless = 0;
-                auto test = [](void *d) -> void {
-                    ((DestroyCounter *)d)->~DestroyCounter();
+                auto test = [](void* d) -> void {
+                    ((DestroyCounter*)d)->~DestroyCounter();
                     ++meaningless;
                 };
                 status =

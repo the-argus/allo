@@ -12,8 +12,8 @@ namespace allo {
 /// Allocate memory for one "T". The contents of this memory is undefined.
 /// T must not be a reference type.
 template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
-[[nodiscard]] inline zl::res<T &, AllocationStatusCode>
-alloc_one(Allocator &allocator) noexcept
+[[nodiscard]] inline zl::res<T&, AllocationStatusCode>
+alloc_one(Allocator& allocator) noexcept
 {
     static_assert(
         detail::is_allocator<Allocator>,
@@ -42,16 +42,16 @@ alloc_one(Allocator &allocator) noexcept
         sizeof(T), detail::alignment_exponent(alignment), typehash);
     if (!result.okay())
         return result.err();
-    const auto &mem = result.release_ref();
+    const auto& mem = result.release_ref();
     assert(sizeof(T) == mem.size());
-    return *reinterpret_cast<T *>(mem.data());
+    return *reinterpret_cast<T*>(mem.data());
 }
 
 /// Allocate memory for a contiguous buffer of a number of items of type T.
 /// The contents of this memory is undefined. T must not be a reference type.
 template <typename T, typename Allocator, uint8_t alignment = alignof(T)>
 [[nodiscard]] inline zl::res<zl::slice<T>, AllocationStatusCode>
-alloc(Allocator &allocator, size_t number) noexcept
+alloc(Allocator& allocator, size_t number) noexcept
 {
     static_assert(
         detail::is_allocator<Allocator>,
@@ -81,9 +81,9 @@ alloc(Allocator &allocator, size_t number) noexcept
         sizeof(T) * number, detail::alignment_exponent(alignment), typehash);
     if (!res.okay())
         return res.err();
-    const auto &mem = res.release_ref();
+    const auto& mem = res.release_ref();
     assert(sizeof(T) * number == mem.size());
-    return zl::raw_slice(*reinterpret_cast<T *>(mem.data()), number);
+    return zl::raw_slice(*reinterpret_cast<T*>(mem.data()), number);
 }
 
 /// Create one item of type T using an allocator, constructing it with "args".
@@ -92,8 +92,8 @@ alloc(Allocator &allocator, size_t number) noexcept
 /// If a constructor throws an exception, the function will exit but the memory
 /// will not be freed, and leak.
 template <typename T, typename Allocator, typename... Args>
-[[nodiscard]] inline zl::res<T &, AllocationStatusCode>
-construct_one(Allocator &allocator, Args &&...args)
+[[nodiscard]] inline zl::res<T&, AllocationStatusCode>
+construct_one(Allocator& allocator, Args&&... args)
 {
 #ifndef ALLO_ALLOW_DESTRUCTORS
     static_assert(std::is_trivially_destructible_v<T>,
@@ -109,7 +109,7 @@ construct_one(Allocator &allocator, Args &&...args)
     auto mem = alloc_one<T, Allocator>(allocator);
     if (!mem.okay())
         return mem.err();
-    auto &item = mem.release();
+    auto& item = mem.release();
     new (std::addressof(item)) T(std::forward<Args>(args)...);
     return item;
 }
@@ -122,7 +122,7 @@ construct_one(Allocator &allocator, Args &&...args)
 /// will not be freed, and leak.
 template <typename T, typename Allocator, typename... Args>
 [[nodiscard]] inline zl::res<zl::slice<T>, AllocationStatusCode>
-construct_many(Allocator &allocator, size_t number, Args &&...args)
+construct_many(Allocator& allocator, size_t number, Args&&... args)
 {
 #ifndef ALLO_ALLOW_DESTRUCTORS
     static_assert(std::is_trivially_destructible_v<T>,
@@ -138,9 +138,9 @@ construct_many(Allocator &allocator, size_t number, Args &&...args)
     auto mem = alloc<T, Allocator>(allocator, number);
     if (!mem.okay())
         return mem.err();
-    const auto &slice = mem.release_ref();
+    const auto& slice = mem.release_ref();
 
-    for (T &item : slice) {
+    for (T& item : slice) {
         new (std::addressof(item)) T(std::forward<Args>(args)...);
     }
 

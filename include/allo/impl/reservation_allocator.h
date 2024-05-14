@@ -26,7 +26,7 @@ ALLO_FUNC reservation_allocator_t::~reservation_allocator_t() noexcept
 }
 
 ALLO_FUNC reservation_allocator_t::reservation_allocator_t(
-    reservation_allocator_t &&other) noexcept
+    reservation_allocator_t&& other) noexcept
     : m(other.m)
 {
     m_type = enum_value;
@@ -60,7 +60,7 @@ ALLO_FUNC allocation_result_t reservation_allocator_t::remap_bytes(
 }
 
 ALLO_FUNC zl::res<reservation_allocator_t, AllocationStatusCode>
-reservation_allocator_t::make(const options_t &options) noexcept
+reservation_allocator_t::make(const options_t& options) noexcept
 {
     using namespace zl;
     auto pagesize_res = mm_get_page_size();
@@ -83,7 +83,7 @@ reservation_allocator_t::make(const options_t &options) noexcept
     return res<reservation_allocator_t, AllocationStatusCode>{
         std::in_place,
         M{
-            .mem = raw_slice(*reinterpret_cast<uint8_t *>(reserve_res.data),
+            .mem = raw_slice(*reinterpret_cast<uint8_t*>(reserve_res.data),
                              options.committed * pagesize_res.value),
             .pagesize = pagesize_res.value,
             .num_pages_reserved = max_pages,

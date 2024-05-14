@@ -36,7 +36,7 @@ TEST_SUITE("heap_allocator_t")
                 allo::alloc<uint8_t>(global_allocator, 2000).release();
 
             {
-                heap_allocator_t &heap =
+                heap_allocator_t& heap =
                     allo::make_into<heap_allocator_t>(global_allocator, mem)
                         .release();
 
@@ -45,7 +45,7 @@ TEST_SUITE("heap_allocator_t")
             }
 
             {
-                heap_allocator_t &heap =
+                heap_allocator_t& heap =
                     allo::make_into<heap_allocator_t, MakeType::Owned>(
                         global_allocator, mem, global_allocator)
                         .release();

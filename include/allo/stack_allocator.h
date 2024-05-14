@@ -10,19 +10,19 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     struct destruction_callback_entry_t
     {
         destruction_callback_t callback;
-        void *user_data;
-        destruction_callback_entry_t *prev = nullptr;
+        void* user_data;
+        destruction_callback_entry_t* prev = nullptr;
     };
 
     struct M
     {
         bytes_t memory;
-        uint8_t *top;
+        uint8_t* top;
 #ifndef ALLO_DISABLE_TYPEINFO
         size_t last_type_hashcode = 0;
 #endif
-        segmented_stack_t<bytes_t> *blocks = nullptr;
-        destruction_callback_entry_t *last_callback = nullptr;
+        segmented_stack_t<bytes_t>* blocks = nullptr;
+        destruction_callback_entry_t* last_callback = nullptr;
         const size_t original_size;
         any_allocator_t parent;
     } m;
@@ -35,18 +35,18 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
 
     // cannot be default constructed or copied
     stack_allocator_t() = delete;
-    stack_allocator_t(const stack_allocator_t &) = delete;
-    stack_allocator_t &operator=(const stack_allocator_t &) = delete;
+    stack_allocator_t(const stack_allocator_t&) = delete;
+    stack_allocator_t& operator=(const stack_allocator_t&) = delete;
     // can be moved
-    stack_allocator_t(stack_allocator_t &&) noexcept;
+    stack_allocator_t(stack_allocator_t&&) noexcept;
     // cannot be move assigned
-    stack_allocator_t &operator=(stack_allocator_t &&) = delete;
+    stack_allocator_t& operator=(stack_allocator_t&&) = delete;
 
     // create a stack allocator which takes ownership of a block of memory
     // allocated by the parent.
     inline static stack_allocator_t
     make_owning(bytes_t memory,
-                detail::abstract_heap_allocator_t &parent) noexcept
+                detail::abstract_heap_allocator_t& parent) noexcept
     {
         return make_inner(memory, parent);
     }
@@ -63,7 +63,7 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     // allocate new buffers for theoretically unbounded space, but will not free
     // those buffers upon destruction
     inline static stack_allocator_t
-    make(bytes_t memory, detail::abstract_allocator_t &parent) noexcept
+    make(bytes_t memory, detail::abstract_allocator_t& parent) noexcept
     {
         return make_inner(memory, parent);
     }
@@ -86,16 +86,16 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
 
     allocation_status_t
     register_destruction_callback(destruction_callback_t callback,
-                                  void *user_data) noexcept;
+                                  void* user_data) noexcept;
 
-    inline stack_allocator_t(M &&members) noexcept : m(members)
+    inline stack_allocator_t(M&& members) noexcept : m(members)
     {
         m_type = enum_value;
     }
 
   private:
     /// Allocate stuff with no typing
-    [[nodiscard]] void *raw_alloc(size_t align, size_t typesize) noexcept;
+    [[nodiscard]] void* raw_alloc(size_t align, size_t typesize) noexcept;
 
     static stack_allocator_t make_inner(bytes_t memory,
                                         any_allocator_t parent) noexcept;
@@ -106,7 +106,7 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
 #ifndef ALLO_DISABLE_TYPEINFO
         size_t type_hashcode;
 #endif
-        uint8_t *stack_top;
+        uint8_t* stack_top;
     };
 
     [[nodiscard]] inline constexpr size_t bytes_remaining() const
@@ -122,7 +122,7 @@ class stack_allocator_t : public detail::abstract_stack_allocator_t
     round_up_to_valid_buffersize(size_t needed_bytes) const noexcept;
 
     /// Common logic shared between freeing functions
-    [[nodiscard]] zl::res<previous_state_t &, AllocationStatusCode>
+    [[nodiscard]] zl::res<previous_state_t&, AllocationStatusCode>
     free_common(bytes_t mem, size_t typehash) const noexcept;
 };
 } // namespace allo

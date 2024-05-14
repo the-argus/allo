@@ -20,7 +20,7 @@ class c_allocator_t;
 /// size and there is no way for the allocator to grow the existing allocation.
 template <typename T, typename Allocator>
 inline zl::res<zl::slice<T>, AllocationStatusCode>
-remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
+remap(Allocator& allocator, zl::slice<T> original, size_t new_size) noexcept
 {
     // static assert to help catch the abstraction-breaking problem with
     // c_allocator_t
@@ -45,14 +45,14 @@ remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
     }
 
     auto remapped = allocator.remap_bytes(
-        zl::raw_slice(*reinterpret_cast<uint8_t *>(original.data()),
+        zl::raw_slice(*reinterpret_cast<uint8_t*>(original.data()),
                       original.size() * sizeof(T)),
         actual_typehash, new_size * sizeof(T), actual_typehash);
     if (!remapped.okay())
         return remapped.err();
 
-    bytes_t &newmem = remapped.release_ref();
-    assert(newmem.data() == (uint8_t *)original.data());
+    bytes_t& newmem = remapped.release_ref();
+    assert(newmem.data() == (uint8_t*)original.data());
 
     return zl::raw_slice(*original.data(), new_size);
 }
@@ -61,7 +61,7 @@ remap(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 /// allocation and copy the contents of the first allocation to that one.
 template <typename T, typename Allocator, size_t alignment = alignof(T)>
 inline zl::res<zl::slice<T>, AllocationStatusCode>
-realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
+realloc(Allocator& allocator, zl::slice<T> original, size_t new_size) noexcept
 {
     static_assert(detail::is_reallocator<Allocator>,
                   "Cannot use given type to perform reallocations");
@@ -77,7 +77,7 @@ realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
 #endif
 
     const bytes_t original_bytes =
-        zl::raw_slice(*reinterpret_cast<uint8_t *>(original.data()),
+        zl::raw_slice(*reinterpret_cast<uint8_t*>(original.data()),
                       original.size() * sizeof(T));
     const size_t new_size_bytes = new_size * sizeof(T);
 
@@ -85,7 +85,7 @@ realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
     auto remap = allocator.remap_bytes(original_bytes, typehash, new_size_bytes,
                                        typehash);
     if (remap.okay()) {
-        return zl::raw_slice(*reinterpret_cast<T *>(remap.release().data()),
+        return zl::raw_slice(*reinterpret_cast<T*>(remap.release().data()),
                              new_size);
     }
 
@@ -101,17 +101,17 @@ realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
         if (detail::is_threadsafe_runtime(allocator)) {
             auto stack_to_threadsafe_downcast =
                 [original_bytes, new_size, new_size_bytes,
-                 typehash](detail::abstract_stack_allocator_t &ally)
+                 typehash](detail::abstract_stack_allocator_t& ally)
                 -> zl::res<zl::slice<T>, AllocationStatusCode> {
-                detail::abstract_threadsafe_heap_allocator_t &ts =
+                detail::abstract_threadsafe_heap_allocator_t& ts =
                     *reinterpret_cast<
-                        detail::abstract_threadsafe_heap_allocator_t *>(&ally);
+                        detail::abstract_threadsafe_heap_allocator_t*>(&ally);
                 auto res = ts.threadsafe_realloc_bytes(
                     original_bytes, typehash, new_size_bytes, typehash);
                 if (!res.okay())
                     return res.err();
                 return zl::raw_slice(
-                    *reinterpret_cast<T *>(res.release().data()), new_size);
+                    *reinterpret_cast<T*>(res.release().data()), new_size);
             };
             return stack_to_threadsafe_downcast(allocator);
         }
@@ -127,7 +127,7 @@ realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
         const zl::slice<T> source =
             enlarging ? original : zl::slice<T>(original, 0, new_size);
         zl::slice<T> dest = zl::raw_slice(
-            *reinterpret_cast<T *>(new_allocation.release_ref().data()),
+            *reinterpret_cast<T*>(new_allocation.release_ref().data()),
             enlarging ? original.size() : new_size);
         // if we're trivially copyable, use memcpy
         if constexpr (std::is_trivially_copyable_v<T>) {
@@ -146,7 +146,7 @@ realloc(Allocator &allocator, zl::slice<T> original, size_t new_size) noexcept
             // some have been chopped off, call their destructors
             if (!enlarging) {
                 const zl::slice<T> removed(original, new_size, original.size());
-                for (T &item : removed) {
+                for (T& item : removed) {
                     item.~T();
                 }
             }

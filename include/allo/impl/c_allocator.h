@@ -23,18 +23,18 @@ ALLO_FUNC allocation_result_t c_allocator_t::alloc_bytes(
 {
     if (alignment_exponent > 5)
         return AllocationStatusCode::AllocationTooAligned;
-    void *newmem = ::malloc(bytes);
-    return zl::raw_slice(*reinterpret_cast<uint8_t *>(newmem), bytes);
+    void* newmem = ::malloc(bytes);
+    return zl::raw_slice(*reinterpret_cast<uint8_t*>(newmem), bytes);
 }
 
 ALLO_FUNC allocation_result_t c_allocator_t::threadsafe_realloc_bytes(
     bytes_t mem, size_t, size_t new_size, size_t) noexcept
 {
-    void *newmem = ::realloc(mem.data(), new_size);
+    void* newmem = ::realloc(mem.data(), new_size);
     if (newmem == nullptr) {
         return AllocationStatusCode::OOM;
     }
-    return zl::raw_slice(*reinterpret_cast<uint8_t *>(newmem), new_size);
+    return zl::raw_slice(*reinterpret_cast<uint8_t*>(newmem), new_size);
 }
 
 ALLO_FUNC allocation_status_t c_allocator_t::free_bytes(bytes_t mem,

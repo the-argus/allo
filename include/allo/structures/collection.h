@@ -37,17 +37,17 @@ template <typename T> class collection_t
     /// initial_items is the number of items to reserve space for initially.
     /// If zero, will be rounded up to one.
     [[nodiscard]] static zl::res<collection_t, AllocationStatusCode>
-    make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+    make_owning(detail::abstract_heap_allocator_t& parent_allocator,
                 size_t initial_items) noexcept;
 
     [[nodiscard]] static constexpr collection_t
     make(zl::slice<T> memory) noexcept;
 
     collection_t() = delete;
-    collection_t(const collection_t &) = delete;
-    collection_t &operator=(const collection_t &) = delete;
-    collection_t(collection_t &&) noexcept = default;
-    collection_t &operator=(collection_t &&) noexcept = default;
+    collection_t(const collection_t&) = delete;
+    collection_t& operator=(const collection_t&) = delete;
+    collection_t(collection_t&&) noexcept = default;
+    collection_t& operator=(collection_t&&) noexcept = default;
 
     [[nodiscard]] constexpr zl::slice<const T> items() const noexcept;
 
@@ -56,7 +56,7 @@ template <typename T> class collection_t
     [[nodiscard]] constexpr size_t capacity() const noexcept;
 
     template <typename... Args>
-    [[nodiscard]] inline allocation_status_t try_put(Args &&...args) noexcept
+    [[nodiscard]] inline allocation_status_t try_put(Args&&... args) noexcept
     {
         if (m.capacity <= m.items.size()) [[unlikely]] {
             auto status = try_realloc();
@@ -75,7 +75,7 @@ template <typename T> class collection_t
     constexpr void remove_at_unchecked(size_t index) noexcept;
 
     template <typename... Args>
-    inline constexpr void put_unchecked(Args &&...args) noexcept
+    inline constexpr void put_unchecked(Args&&... args) noexcept
     {
         // grow items by one
         m.items = zl::raw_slice<T>(*m.items.begin().ptr(), m.items.size() + 1);
@@ -93,7 +93,7 @@ template <typename T> class collection_t
     {
         zl::slice<T> items;
         size_t capacity;
-        detail::abstract_heap_allocator_t &parent;
+        detail::abstract_heap_allocator_t& parent;
     } m;
 
     constexpr size_t calculate_new_size() noexcept;
@@ -142,7 +142,7 @@ template <typename T>
 inline constexpr void
 collection_t<T>::remove_at_unchecked(size_t index) noexcept
 {
-    T &target = m.items.data()[index];
+    T& target = m.items.data()[index];
     target.~T();
     const size_t newsize = m.items.size() - 1;
     if (index != newsize) {
@@ -154,7 +154,7 @@ collection_t<T>::remove_at_unchecked(size_t index) noexcept
 template <typename T>
 inline zl::res<collection_t<T>, AllocationStatusCode>
 collection_t<T>::make_owning(
-    detail::abstract_heap_allocator_t &parent_allocator,
+    detail::abstract_heap_allocator_t& parent_allocator,
     size_t initial_items) noexcept
 
 {
@@ -164,7 +164,7 @@ collection_t<T>::make_owning(
     if (!maybe_initial.okay())
         return maybe_initial.err();
 
-    auto &initial = maybe_initial.release_ref();
+    auto& initial = maybe_initial.release_ref();
 
     return zl::res<collection_t, AllocationStatusCode>{
         std::in_place, M{
@@ -203,7 +203,7 @@ inline allocation_status_t collection_t<T>::try_realloc() noexcept
     auto result = allo::realloc(m.parent, m.items, calculate_new_size());
     if (!result.okay())
         return result.err();
-    auto &new_mem = result.release_ref();
+    auto& new_mem = result.release_ref();
     m.capacity = new_mem.size();
     m.items = zl::slice<T>(new_mem, 0, m.items.size());
     return AllocationStatusCode::Okay;

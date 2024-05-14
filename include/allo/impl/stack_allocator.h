@@ -28,7 +28,7 @@ ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
 {
     // call all destruction callbacks
     {
-        destruction_callback_entry_t *iter = m.last_callback;
+        destruction_callback_entry_t* iter = m.last_callback;
         while (iter) {
             iter->callback(iter->user_data);
             iter = iter->prev;
@@ -51,7 +51,7 @@ ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
 
 // NOTE: this function is identical to scratch allocator
 ALLO_FUNC
-stack_allocator_t::stack_allocator_t(stack_allocator_t &&other) noexcept
+stack_allocator_t::stack_allocator_t(stack_allocator_t&& other) noexcept
     : m(other.m)
 {
     m_type = other.m_type;
@@ -119,7 +119,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::try_make_space_for_at_least(
     // if we're not a heap, or if heap failed the remap, then do this.
     if (!m.blocks) {
         auto make_segmented_stack_at =
-            [this](void *location) -> allocation_status_t {
+            [this](void* location) -> allocation_status_t {
             if (m.parent.is_heap()) {
                 auto new_blocks_stack = segmented_stack_t<bytes_t>::make_owning(
                     m.parent.get_heap_unchecked(), blocks_stack_initial_items);
@@ -144,7 +144,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::try_make_space_for_at_least(
         };
 
         // first: try to allocate the blocks stack inside of our existing memory
-        void *top = m.top;
+        void* top = m.top;
         size_t space = m.memory.end().ptr() - m.top;
         if (std::align(alignof(segmented_stack_t<bytes_t>),
                        sizeof(segmented_stack_t<bytes_t>), top, space)) {
@@ -153,11 +153,11 @@ ALLO_FUNC allocation_status_t stack_allocator_t::try_make_space_for_at_least(
             if (!status.okay()) [[unlikely]]
                 return status.err();
 
-            m.blocks = static_cast<segmented_stack_t<bytes_t> *>(top);
+            m.blocks = static_cast<segmented_stack_t<bytes_t>*>(top);
 
             const auto res = m.blocks->try_push(m.memory);
             assert(res.okay());
-            m.top = reinterpret_cast<uint8_t *>(m.blocks + 1);
+            m.top = reinterpret_cast<uint8_t*>(m.blocks + 1);
         } else {
             // allocate a new block with space for both the blocks stack and
             // the new space as well
@@ -188,14 +188,14 @@ ALLO_FUNC allocation_status_t stack_allocator_t::try_make_space_for_at_least(
             }
 
             m.blocks =
-                reinterpret_cast<segmented_stack_t<bytes_t> *>(newblock.data());
+                reinterpret_cast<segmented_stack_t<bytes_t>*>(newblock.data());
 
             auto res = m.blocks->try_push(m.memory);
             assert(res.okay());
             res = m.blocks->try_push(newblock);
             assert(res.okay());
             m.memory = newblock;
-            m.top = reinterpret_cast<uint8_t *>(m.blocks + 1);
+            m.top = reinterpret_cast<uint8_t*>(m.blocks + 1);
             return AllocationStatusCode::Okay;
         }
     }
@@ -231,13 +231,13 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
     const size_t actual_alignment =
         max(1 << alignment_exponent, alignof(previous_state_t));
 
-    uint8_t *const oldtop = m.top;
+    uint8_t* const oldtop = m.top;
 #ifndef NDEBUG
     bool allocated_new_buffer_for_prevstate = false;
     size_t times_retry = 0;
 #endif
-    previous_state_t *prevstate;
-    void *item;
+    previous_state_t* prevstate;
+    void* item;
 
     const auto alloc_new_buffer = [actual_alignment, bytes, &max, this]() {
         size_t extra_space =
@@ -248,7 +248,7 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
     };
 
     while (1) {
-        prevstate = static_cast<previous_state_t *>(
+        prevstate = static_cast<previous_state_t*>(
             raw_alloc(alignof(previous_state_t), sizeof(previous_state_t)));
 
         if (!prevstate) {
@@ -296,7 +296,7 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
         // up to be as close to the item as possible.
         if (actual_alignment > alignof(previous_state_t)) {
             assert(zl::memcontains_one(m.memory, prevstate));
-            assert(zl::memcontains_one(m.memory, (uint8_t *)item));
+            assert(zl::memcontains_one(m.memory, (uint8_t*)item));
             while (prevstate + 2 <= item) {
                 ++prevstate;
             }
@@ -311,7 +311,7 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
         // the previous state is guaranteed to be right before the item
         break;
     }
-    assert(zl::memcontains_one(m.memory, (uint8_t *)item));
+    assert(zl::memcontains_one(m.memory, (uint8_t*)item));
     assert(zl::memcontains_one(m.memory, prevstate));
     // in debug mode, make sure the prevstate's stack top is in the previous
     // block, if we had to make a new block
@@ -331,18 +331,18 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
     m.last_type_hashcode = typehash;
 #endif
 
-    return zl::raw_slice<uint8_t>(*reinterpret_cast<uint8_t *>(item), bytes);
+    return zl::raw_slice<uint8_t>(*reinterpret_cast<uint8_t*>(item), bytes);
 }
 
-ALLO_FUNC void *stack_allocator_t::raw_alloc(size_t align,
+ALLO_FUNC void* stack_allocator_t::raw_alloc(size_t align,
                                              size_t typesize) noexcept
 {
     // these will get modified in place by std::align
-    void *new_available_start = m.top;
+    void* new_available_start = m.top;
     size_t new_size = bytes_remaining();
     if (std::align(align, typesize, new_available_start, new_size)) {
         assert(new_available_start < (m.memory.end().ptr() - typesize));
-        m.top = reinterpret_cast<uint8_t *>(new_available_start) + typesize;
+        m.top = reinterpret_cast<uint8_t*>(new_available_start) + typesize;
         assert(zl::memcontains_one(m.memory, m.top) ||
                m.memory.end().ptr() == m.top);
         return new_available_start;
@@ -356,7 +356,7 @@ stack_allocator_t::free_status(bytes_t mem, size_t typehash) const noexcept
     return free_common(mem, typehash).err();
 }
 
-ALLO_FUNC zl::res<stack_allocator_t::previous_state_t &, AllocationStatusCode>
+ALLO_FUNC zl::res<stack_allocator_t::previous_state_t&, AllocationStatusCode>
 stack_allocator_t::free_common(bytes_t mem, size_t typehash) const noexcept
 {
 #ifndef ALLO_DISABLE_TYPEINFO
@@ -369,13 +369,13 @@ stack_allocator_t::free_common(bytes_t mem, size_t typehash) const noexcept
         return AllocationStatusCode::MemoryInvalid;
     }
 
-    void *bufbegin = mem.data();
+    void* bufbegin = mem.data();
     size_t dummysize = sizeof(previous_state_t) * 10;
-    auto *prevstate = static_cast<previous_state_t *>(
+    auto* prevstate = static_cast<previous_state_t*>(
         std::align(alignof(previous_state_t), sizeof(previous_state_t),
                    bufbegin, dummysize));
     assert(prevstate);
-    while (reinterpret_cast<uint8_t *>(prevstate + 1) > mem.data()) {
+    while (reinterpret_cast<uint8_t*>(prevstate + 1) > mem.data()) {
         --prevstate;
     }
 #ifndef NDEBUG
@@ -401,7 +401,7 @@ stack_allocator_t::free_bytes(bytes_t mem, size_t typehash) noexcept
     if (!maybe_prevstate.okay()) [[unlikely]]
         return maybe_prevstate.err();
 
-    previous_state_t &prevstate = maybe_prevstate.release();
+    previous_state_t& prevstate = maybe_prevstate.release();
     if (m.blocks && !zl::memcontains_one(m.memory, prevstate.stack_top)) {
         // stack top is not in our current block...
         if (m.parent.is_heap()) {
@@ -469,7 +469,7 @@ stack_allocator_t::make_inner(bytes_t memory, any_allocator_t parent) noexcept
 
 // NOTE: this function is identical to scratch allocator
 ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(
-    destruction_callback_t callback, void *user_data) noexcept
+    destruction_callback_t callback, void* user_data) noexcept
 {
     if (!callback) {
         assert(callback);
@@ -478,7 +478,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(
     auto res = allo::alloc_one<destruction_callback_entry_t>(*this);
     if (!res.okay())
         return res.err();
-    destruction_callback_entry_t &newentry = res.release();
+    destruction_callback_entry_t& newentry = res.release();
     newentry = destruction_callback_entry_t{
         .callback = callback,
         .user_data = user_data,

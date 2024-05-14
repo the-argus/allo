@@ -15,20 +15,20 @@ class cstring
     {
     }
 
-    constexpr cstring(const char *begin, size_t length)
+    constexpr cstring(const char* begin, size_t length)
         : _str{begin}, _length{length}
     {
     }
 
-    constexpr cstring(const char *begin, const char *end)
+    constexpr cstring(const char* begin, const char* end)
         : cstring{begin, static_cast<size_t>(end - begin)}
     {
     }
 
-    constexpr cstring(const char *begin) : cstring{begin, length(begin)} {}
+    constexpr cstring(const char* begin) : cstring{begin, length(begin)} {}
 
     /// Get the length of a string at compile-time
-    [[nodiscard]] static constexpr size_t length(const char *str)
+    [[nodiscard]] static constexpr size_t length(const char* str)
     {
         return *str ? 1 + length(str + 1) : 0;
     }
@@ -42,13 +42,13 @@ class cstring
 
     [[nodiscard]] constexpr size_t size() const { return length(); }
 
-    [[nodiscard]] constexpr const char *begin() const { return _str; }
+    [[nodiscard]] constexpr const char* begin() const { return _str; }
 
-    [[nodiscard]] constexpr const char *end() const { return _str + _length; }
+    [[nodiscard]] constexpr const char* end() const { return _str + _length; }
 
     [[nodiscard]] constexpr char operator[](size_t i) const { return _str[i]; }
 
-    [[nodiscard]] constexpr const char *operator()(size_t i) const
+    [[nodiscard]] constexpr const char* operator()(size_t i) const
     {
         return _str + i;
     }
@@ -65,17 +65,17 @@ class cstring
     }
 
   private:
-    const char *_str;
+    const char* _str;
     size_t _length;
 };
 
-constexpr bool operator==(const cstring &lhs, const cstring &rhs)
+constexpr bool operator==(const cstring& lhs, const cstring& rhs)
 {
     return ctti::detail::equal_range(lhs.begin(), lhs.end(), rhs.begin(),
                                      rhs.end());
 }
 
-constexpr bool operator!=(const cstring &lhs, const cstring &rhs)
+constexpr bool operator!=(const cstring& lhs, const cstring& rhs)
 {
     return !(lhs == rhs);
 }

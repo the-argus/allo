@@ -4,11 +4,11 @@
 #include <cassert>
 
 namespace allo::tests {
-void allocate_object_with_linked_list(abstract_allocator_t &ally);
-bytes_t large_allocation(abstract_allocator_t &ally, size_t maxpages);
+void allocate_object_with_linked_list(abstract_allocator_t& ally);
+bytes_t large_allocation(abstract_allocator_t& ally, size_t maxpages);
 
 template <typename Allocator, typename... Args>
-void make_large_allocation_with(Args &&...args)
+void make_large_allocation_with(Args&&... args)
 {
     constexpr size_t maxpages = 1024;
     constexpr size_t pages_to_allocate = 1000;
@@ -22,8 +22,8 @@ void make_large_allocation_with(Args &&...args)
                                            std::forward<Args>(args)...)
                         .release();
         ally.register_destruction_callback(
-            [](void *data) {
-                auto *d = ((int *)data);
+            [](void* data) {
+                auto* d = ((int*)data);
                 ++(*d);
             },
             &count);
@@ -35,7 +35,7 @@ void make_large_allocation_with(Args &&...args)
 // version of make_large_allocation_with where the allocator provides a make and
 // make_owning which return the allocator, not a result
 template <typename Allocator, typename... Args>
-void make_large_allocation_with_nonfailing_make(Args &&...args)
+void make_large_allocation_with_nonfailing_make(Args&&... args)
 {
     constexpr size_t maxpages = 1024;
     constexpr size_t pages_to_allocate = 1000;
@@ -48,8 +48,8 @@ void make_large_allocation_with_nonfailing_make(Args &&...args)
         auto ally = Allocator::make_owning(reserve.current_memory(), reserve,
                                            std::forward<Args>(args)...);
         ally.register_destruction_callback(
-            [](void *data) {
-                auto *d = ((int *)data);
+            [](void* data) {
+                auto* d = ((int*)data);
                 ++(*d);
             },
             &count);

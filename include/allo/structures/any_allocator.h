@@ -25,7 +25,7 @@ class any_allocator_t
     }
 
     inline constexpr any_allocator_t(
-        detail::abstract_allocator_t &ally) noexcept
+        detail::abstract_allocator_t& ally) noexcept
         : m(M{
               .ref = std::addressof(ally),
               .type = AllocatorReferenceType::Basic,
@@ -34,7 +34,7 @@ class any_allocator_t
     }
 
     inline constexpr any_allocator_t(
-        detail::abstract_heap_allocator_t &ally) noexcept
+        detail::abstract_heap_allocator_t& ally) noexcept
         : m(M{
               .ref = std::addressof(ally),
               .type = AllocatorReferenceType::Heap,
@@ -43,7 +43,7 @@ class any_allocator_t
     }
 
     inline constexpr any_allocator_t(
-        detail::abstract_stack_allocator_t &ally) noexcept
+        detail::abstract_stack_allocator_t& ally) noexcept
         : m(M{
               .ref = std::addressof(ally),
               .type = AllocatorReferenceType::Stack,
@@ -76,52 +76,52 @@ class any_allocator_t
         return m.type == AllocatorReferenceType::Null;
     }
 
-    [[nodiscard]] inline zl::opt<detail::abstract_heap_allocator_t &>
+    [[nodiscard]] inline zl::opt<detail::abstract_heap_allocator_t&>
     get_heap() const noexcept
     {
         if (!is_heap())
             return {};
-        return *static_cast<detail::abstract_heap_allocator_t *>(m.ref);
+        return *static_cast<detail::abstract_heap_allocator_t*>(m.ref);
     }
 
-    [[nodiscard]] inline constexpr detail::abstract_heap_allocator_t &
+    [[nodiscard]] inline constexpr detail::abstract_heap_allocator_t&
     get_heap_unchecked() const noexcept
     {
         assert(is_heap());
-        return *static_cast<detail::abstract_heap_allocator_t *>(m.ref);
+        return *static_cast<detail::abstract_heap_allocator_t*>(m.ref);
     }
 
-    [[nodiscard]] inline zl::opt<detail::abstract_stack_allocator_t &>
+    [[nodiscard]] inline zl::opt<detail::abstract_stack_allocator_t&>
     get_stack() const noexcept
     {
         if (!is_stack())
             return {};
-        return *static_cast<detail::abstract_stack_allocator_t *>(m.ref);
+        return *static_cast<detail::abstract_stack_allocator_t*>(m.ref);
     }
 
-    [[nodiscard]] inline constexpr detail::abstract_stack_allocator_t &
+    [[nodiscard]] inline constexpr detail::abstract_stack_allocator_t&
     get_stack_unchecked() const noexcept
     {
         assert(is_stack());
-        return *static_cast<detail::abstract_stack_allocator_t *>(m.ref);
+        return *static_cast<detail::abstract_stack_allocator_t*>(m.ref);
     }
 
-    [[nodiscard]] inline zl::opt<detail::abstract_allocator_t &>
+    [[nodiscard]] inline zl::opt<detail::abstract_allocator_t&>
     get_basic() const noexcept
     {
         if (!is_basic())
             return {};
-        return *static_cast<detail::abstract_allocator_t *>(m.ref);
+        return *static_cast<detail::abstract_allocator_t*>(m.ref);
     }
 
-    [[nodiscard]] inline constexpr detail::abstract_allocator_t &
+    [[nodiscard]] inline constexpr detail::abstract_allocator_t&
     get_basic_unchecked() const noexcept
     {
         assert(is_basic());
-        return *static_cast<detail::abstract_allocator_t *>(m.ref);
+        return *static_cast<detail::abstract_allocator_t*>(m.ref);
     }
 
-    [[nodiscard]] inline constexpr detail::abstract_allocator_t &
+    [[nodiscard]] inline constexpr detail::abstract_allocator_t&
     cast_to_basic() const noexcept
     {
         switch (m.type) {
@@ -143,7 +143,7 @@ class any_allocator_t
   private:
     struct M
     {
-        void *ref;
+        void* ref;
         AllocatorReferenceType type;
     } m;
 };

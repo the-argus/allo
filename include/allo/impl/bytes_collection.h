@@ -6,7 +6,7 @@
 namespace allo::detail {
 
 allo::allocation_status_t
-bytes_collection_t::new_buffer_for(detail::abstract_heap_allocator_t &allocator,
+bytes_collection_t::new_buffer_for(detail::abstract_heap_allocator_t& allocator,
                                    size_t bytes) noexcept
 {
     const size_t bytes_rounded_up = ((bytes / bufferalign) + 1) * bufferalign;
@@ -19,7 +19,7 @@ bytes_collection_t::new_buffer_for(detail::abstract_heap_allocator_t &allocator,
                                                                     newbufsize);
     if (!maybe_newbuf.okay()) [[unlikely]]
         return maybe_newbuf.err();
-    bytes_t &newbuf = maybe_newbuf.release_ref();
+    bytes_t& newbuf = maybe_newbuf.release_ref();
     zl::defer delbuf(
         [&newbuf, &allocator]() { allo::free(allocator, newbuf); });
 

@@ -18,9 +18,9 @@ template <typename T, size_t n> class uninitialized_array_t
         return num_items;
     }
 
-    [[nodiscard]] inline constexpr T *data() noexcept
+    [[nodiscard]] inline constexpr T* data() noexcept
     {
-        return reinterpret_cast<T *>(contents);
+        return reinterpret_cast<T*>(contents);
     }
 
   private:

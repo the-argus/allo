@@ -10,13 +10,13 @@ class heap_allocator_t : public detail::abstract_heap_allocator_t
     struct destruction_callback_entry_t
     {
         destruction_callback_t callback;
-        void *user_data;
+        void* user_data;
     };
     // destruction callbacks are grouped in three since thats how many we
     // can fit in a cache line
     struct destruction_callback_node_t
     {
-        destruction_callback_node_t *prev;
+        destruction_callback_node_t* prev;
         std::array<destruction_callback_entry_t, 3> entries;
     };
     struct free_node_t;
@@ -43,17 +43,17 @@ class heap_allocator_t : public detail::abstract_heap_allocator_t
 
     struct M
     {
-        zl::opt<detail::abstract_heap_allocator_t &> parent;
+        zl::opt<detail::abstract_heap_allocator_t&> parent;
         bytes_t mem;
         size_t num_nodes; // also == number of entries in free list data
         size_t num_callbacks = 0;
-        destruction_callback_node_t *last_callback_node = nullptr;
-        free_node_t *free_list_head;
+        destruction_callback_node_t* last_callback_node = nullptr;
+        free_node_t* free_list_head;
     } m;
 
     static zl::res<heap_allocator_t, AllocationStatusCode>
-    make_inner(const bytes_t &memory,
-               zl::opt<detail::abstract_heap_allocator_t &> parent) noexcept;
+    make_inner(const bytes_t& memory,
+               zl::opt<detail::abstract_heap_allocator_t&> parent) noexcept;
 
   public:
     static constexpr detail::AllocatorType enum_value =
@@ -61,7 +61,7 @@ class heap_allocator_t : public detail::abstract_heap_allocator_t
 
     inline static zl::res<heap_allocator_t, AllocationStatusCode>
     make_owning(bytes_t memory,
-                detail::abstract_heap_allocator_t &parent) noexcept
+                detail::abstract_heap_allocator_t& parent) noexcept
     {
         return make_inner(memory, parent);
     }
@@ -88,21 +88,21 @@ class heap_allocator_t : public detail::abstract_heap_allocator_t
 
     allocation_status_t
     register_destruction_callback(destruction_callback_t callback,
-                                  void *user_data) noexcept;
+                                  void* user_data) noexcept;
 
     ~heap_allocator_t() noexcept;
     // cannot be copied
-    heap_allocator_t(const heap_allocator_t &other) = delete;
-    heap_allocator_t &operator=(const heap_allocator_t &other) = delete;
+    heap_allocator_t(const heap_allocator_t& other) = delete;
+    heap_allocator_t& operator=(const heap_allocator_t& other) = delete;
     // can be move constructed
-    heap_allocator_t(heap_allocator_t &&other) noexcept;
+    heap_allocator_t(heap_allocator_t&& other) noexcept;
     // but not move assigned
-    heap_allocator_t &operator=(heap_allocator_t &&other) = delete;
+    heap_allocator_t& operator=(heap_allocator_t&& other) = delete;
 
-    heap_allocator_t(M &&members) noexcept;
+    heap_allocator_t(M&& members) noexcept;
 
   private:
-    [[nodiscard]] zl::res<allocation_bookkeeping_t *, AllocationStatusCode>
+    [[nodiscard]] zl::res<allocation_bookkeeping_t*, AllocationStatusCode>
     free_common(bytes_t mem, size_t typehash) const noexcept;
 };
 } // namespace allo

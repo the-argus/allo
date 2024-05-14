@@ -36,7 +36,7 @@ TEST_SUITE("block_allocator_t")
 
             auto mint = allo::alloc_one<int>(ally);
             REQUIRE(mint.okay());
-            int &my_int = mint.release();
+            int& my_int = mint.release();
             auto status = allo::free_one(ally, my_int);
             REQUIRE(status.okay());
         }
@@ -49,7 +49,7 @@ TEST_SUITE("block_allocator_t")
                 allo::alloc<uint8_t>(global_allocator, 2000).release();
 
             {
-                block_allocator_t &block = allo::make_into<block_allocator_t>(
+                block_allocator_t& block = allo::make_into<block_allocator_t>(
                                                global_allocator, mem, 200)
                                                .release();
 
@@ -58,7 +58,7 @@ TEST_SUITE("block_allocator_t")
             }
 
             {
-                block_allocator_t &block =
+                block_allocator_t& block =
                     allo::make_into<block_allocator_t, MakeType::Owned>(
                         global_allocator, mem, global_allocator, 200)
                         .release();
@@ -188,8 +188,8 @@ TEST_SUITE("block_allocator_t")
                                 mem, global_allocator, blocksize)
                                 .release();
 
-                auto callback = [](void *data) {
-                    ++(*reinterpret_cast<uint8_t *>(data));
+                auto callback = [](void* data) {
+                    ++(*reinterpret_cast<uint8_t*>(data));
                 };
                 REQUIRE(ally.register_destruction_callback(callback, &called)
                             .okay());

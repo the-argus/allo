@@ -14,16 +14,16 @@ class scratch_allocator_t : public detail::abstract_allocator_t
     struct destruction_callback_entry_t
     {
         destruction_callback_t callback;
-        void *user_data;
-        destruction_callback_entry_t *prev = nullptr;
+        void* user_data;
+        destruction_callback_entry_t* prev = nullptr;
     };
 
     struct M
     {
         bytes_t memory;
-        uint8_t *top;
-        segmented_stack_t<bytes_t> *blocks = nullptr;
-        destruction_callback_entry_t *last_callback = nullptr;
+        uint8_t* top;
+        segmented_stack_t<bytes_t>* blocks = nullptr;
+        destruction_callback_entry_t* last_callback = nullptr;
         const size_t original_size;
         any_allocator_t parent;
     } m;
@@ -35,10 +35,10 @@ class scratch_allocator_t : public detail::abstract_allocator_t
         detail::AllocatorType::ScratchAllocator;
 
     scratch_allocator_t() = delete;
-    scratch_allocator_t(const scratch_allocator_t &) = delete;
-    scratch_allocator_t &operator=(const scratch_allocator_t &) = delete;
-    scratch_allocator_t(scratch_allocator_t &&) noexcept;
-    scratch_allocator_t &operator=(scratch_allocator_t &&) = delete;
+    scratch_allocator_t(const scratch_allocator_t&) = delete;
+    scratch_allocator_t& operator=(const scratch_allocator_t&) = delete;
+    scratch_allocator_t(scratch_allocator_t&&) noexcept;
+    scratch_allocator_t& operator=(scratch_allocator_t&&) = delete;
 
     inline static scratch_allocator_t make(bytes_t memory) noexcept
     {
@@ -46,14 +46,14 @@ class scratch_allocator_t : public detail::abstract_allocator_t
     }
 
     inline static scratch_allocator_t
-    make(bytes_t memory, detail::abstract_allocator_t &parent) noexcept
+    make(bytes_t memory, detail::abstract_allocator_t& parent) noexcept
     {
         return make_inner(memory, parent);
     }
 
     inline static scratch_allocator_t
     make_owning(bytes_t memory,
-                detail::abstract_heap_allocator_t &parent) noexcept
+                detail::abstract_heap_allocator_t& parent) noexcept
     {
         return make_inner(memory, parent);
     }
@@ -66,9 +66,9 @@ class scratch_allocator_t : public detail::abstract_allocator_t
 
     allocation_status_t
     register_destruction_callback(destruction_callback_t callback,
-                                  void *user_data) noexcept;
+                                  void* user_data) noexcept;
 
-    scratch_allocator_t(M &&members) noexcept : m(members)
+    scratch_allocator_t(M&& members) noexcept : m(members)
     {
         m_type = enum_value;
     }

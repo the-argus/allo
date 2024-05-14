@@ -22,7 +22,7 @@ extern "C"
 
     struct mm_memory_map_result_t
     {
-        void *data;
+        void* data;
         size_t bytes;
         /// Error-code. This will be 0 on success: check that before reading
         /// bytes and data. There is no compatibility of error codes between
@@ -67,7 +67,7 @@ extern "C"
     /// Note that it's possible to map memory directly after the stack and
     /// cause horrible memory bugs when the stack overruns your allocation.
     /// Num pages: the number of pages to reserve.
-    inline mm_memory_map_result_t mm_reserve_pages(void *address_hint,
+    inline mm_memory_map_result_t mm_reserve_pages(void* address_hint,
                                                    size_t num_pages)
     {
         const mm_optional_uint64_t result = mm_get_page_size();
@@ -106,7 +106,7 @@ extern "C"
     /// readable and writable by your process, specifically ones allocated by
     /// mm_reserve_pages().
     /// Returns 0 on success, otherwise an errcode.
-    inline int64_t mm_commit_pages(void *address, size_t num_pages)
+    inline int64_t mm_commit_pages(void* address, size_t num_pages)
     {
         if (!address) {
             return -1;
@@ -137,7 +137,7 @@ extern "C"
     }
 
     /// Unmap pages starting at address and continuing for "size" bytes.
-    inline int64_t mm_memory_unmap(void *address, size_t size)
+    inline int64_t mm_memory_unmap(void* address, size_t size)
     {
 #if defined(_WIN32)
         int64_t err = 0;

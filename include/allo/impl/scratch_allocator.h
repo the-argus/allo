@@ -85,7 +85,7 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
     // if we're not a heap, or if heap failed the remap, then do this.
     if (!m.blocks) {
         auto make_segmented_stack_at =
-            [this](void *location) -> allocation_status_t {
+            [this](void* location) -> allocation_status_t {
             if (m.parent.is_heap()) {
                 auto new_blocks_stack = segmented_stack_t<bytes_t>::make_owning(
                     m.parent.get_heap_unchecked(), blocks_stack_initial_items);
@@ -110,7 +110,7 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
         };
 
         // first: try to allocate the blocks stack inside of our existing memory
-        void *top = m.top;
+        void* top = m.top;
         size_t space = m.memory.end().ptr() - m.top;
         if (std::align(alignof(segmented_stack_t<bytes_t>),
                        sizeof(segmented_stack_t<bytes_t>), top, space)) {
@@ -119,11 +119,11 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
             if (!status.okay()) [[unlikely]]
                 return status.err();
 
-            m.blocks = static_cast<segmented_stack_t<bytes_t> *>(top);
+            m.blocks = static_cast<segmented_stack_t<bytes_t>*>(top);
 
             const auto res = m.blocks->try_push(m.memory);
             assert(res.okay());
-            m.top = reinterpret_cast<uint8_t *>(m.blocks + 1);
+            m.top = reinterpret_cast<uint8_t*>(m.blocks + 1);
         } else {
             // allocate a new block with space for both the blocks stack and
             // the new space as well
@@ -154,14 +154,14 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
             }
 
             m.blocks =
-                reinterpret_cast<segmented_stack_t<bytes_t> *>(newblock.data());
+                reinterpret_cast<segmented_stack_t<bytes_t>*>(newblock.data());
 
             auto res = m.blocks->try_push(m.memory);
             assert(res.okay());
             res = m.blocks->try_push(newblock);
             assert(res.okay());
             m.memory = newblock;
-            m.top = reinterpret_cast<uint8_t *>(m.blocks + 1);
+            m.top = reinterpret_cast<uint8_t*>(m.blocks + 1);
             return AllocationStatusCode::Okay;
         }
     }
@@ -192,13 +192,12 @@ ALLO_FUNC allocation_result_t scratch_allocator_t::alloc_bytes(
 {
     auto tryalloc = [this](size_t bytes,
                            uint8_t alignment_exponent) -> allocation_result_t {
-        void *new_top = m.top;
+        void* new_top = m.top;
         size_t remaining = m.memory.end().ptr() - m.top;
         if (std::align(1 << alignment_exponent, bytes, new_top, remaining)) {
             assert(remaining >= bytes);
-            auto result =
-                zl::raw_slice(*static_cast<uint8_t *>(new_top), bytes);
-            m.top = static_cast<uint8_t *>(new_top) + bytes;
+            auto result = zl::raw_slice(*static_cast<uint8_t*>(new_top), bytes);
+            m.top = static_cast<uint8_t*>(new_top) + bytes;
             return result;
         }
         return AllocationStatusCode::OOM;
@@ -217,7 +216,7 @@ ALLO_FUNC allocation_result_t scratch_allocator_t::alloc_bytes(
 
 ALLO_FUNC allocation_status_t
 scratch_allocator_t::register_destruction_callback(
-    destruction_callback_t callback, void *user_data) noexcept
+    destruction_callback_t callback, void* user_data) noexcept
 {
     if (!callback) {
         assert(callback);
@@ -226,7 +225,7 @@ scratch_allocator_t::register_destruction_callback(
     auto res = allo::alloc_one<destruction_callback_entry_t>(*this);
     if (!res.okay())
         return res.err();
-    destruction_callback_entry_t &newentry = res.release();
+    destruction_callback_entry_t& newentry = res.release();
     newentry = destruction_callback_entry_t{
         .callback = callback,
         .user_data = user_data,
@@ -251,7 +250,7 @@ ALLO_FUNC scratch_allocator_t::~scratch_allocator_t() noexcept
 {
     // call all destruction callbacks
     {
-        destruction_callback_entry_t *iter = m.last_callback;
+        destruction_callback_entry_t* iter = m.last_callback;
         while (iter) {
             iter->callback(iter->user_data);
             iter = iter->prev;
@@ -273,7 +272,7 @@ ALLO_FUNC scratch_allocator_t::~scratch_allocator_t() noexcept
 }
 
 ALLO_FUNC
-scratch_allocator_t::scratch_allocator_t(scratch_allocator_t &&other) noexcept
+scratch_allocator_t::scratch_allocator_t(scratch_allocator_t&& other) noexcept
     : m(other.m)
 {
     m_type = other.m_type;

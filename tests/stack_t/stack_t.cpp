@@ -60,7 +60,7 @@ TEST_SUITE("stack_t")
 
             REQUIRE(zl::memcompare(st.items(), zl::slice<int>(toadd)));
 
-            auto consumer = [&toadd](stack<int> &&s) {
+            auto consumer = [&toadd](stack<int>&& s) {
                 stack<int> ourstack(std::move(s));
                 REQUIRE(
                     zl::memcompare(ourstack.items(), zl::slice<int>(toadd)));

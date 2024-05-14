@@ -29,29 +29,29 @@ template <typename T> class stack_t
     /// initial_items is the number of items to reserve space for initially.
     /// If zero, will be rounded up to one.
     [[nodiscard]] static zl::res<stack_t, AllocationStatusCode>
-    make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+    make_owning(detail::abstract_heap_allocator_t& parent_allocator,
                 size_t initial_items) noexcept;
 
     [[nodiscard]] static constexpr stack_t make(zl::slice<T> memory) noexcept;
 
     stack_t() = delete;
-    stack_t(const stack_t &) = delete;
-    stack_t &operator=(const stack_t &) = delete;
-    stack_t(stack_t &&) noexcept = default;
-    stack_t &operator=(stack_t &&) noexcept = default;
+    stack_t(const stack_t&) = delete;
+    stack_t& operator=(const stack_t&) = delete;
+    stack_t(stack_t&&) noexcept = default;
+    stack_t& operator=(stack_t&&) noexcept = default;
 
     [[nodiscard]] constexpr zl::slice<const T> items() const noexcept;
 
     [[nodiscard]] constexpr zl::slice<T> items() noexcept;
 
-    [[nodiscard]] constexpr zl::opt<T &> end() noexcept;
+    [[nodiscard]] constexpr zl::opt<T&> end() noexcept;
 
     constexpr void pop() noexcept;
 
     [[nodiscard]] constexpr size_t capacity() const noexcept;
 
     template <typename... Args>
-    [[nodiscard]] inline allocation_status_t try_push(Args &&...args) noexcept
+    [[nodiscard]] inline allocation_status_t try_push(Args&&... args) noexcept
     {
         if (m.capacity <= m.items.size()) [[unlikely]] {
             auto status = try_realloc();
@@ -64,7 +64,7 @@ template <typename T> class stack_t
         return AllocationStatusCode::Okay;
     }
 
-    [[nodiscard]] constexpr T &end_unchecked() noexcept;
+    [[nodiscard]] constexpr T& end_unchecked() noexcept;
 
     inline ~stack_t() noexcept
     {
@@ -79,7 +79,7 @@ template <typename T> class stack_t
     {
         zl::slice<T> items;
         size_t capacity;
-        zl::opt<detail::abstract_heap_allocator_t &> parent;
+        zl::opt<detail::abstract_heap_allocator_t&> parent;
     } m;
 
     constexpr size_t calculate_new_size() noexcept;
@@ -87,7 +87,7 @@ template <typename T> class stack_t
     allocation_status_t try_realloc() noexcept;
 
     template <typename... Args>
-    inline constexpr void push_unchecked(Args &&...args) noexcept
+    inline constexpr void push_unchecked(Args&&... args) noexcept
     {
         // grow items by one
         m.items = zl::raw_slice<T>(*m.items.begin().ptr(), m.items.size() + 1);
@@ -118,7 +118,7 @@ template <typename T> inline constexpr zl::slice<T> stack_t<T>::items() noexcept
 
 template <typename T>
 inline zl::res<stack_t<T>, AllocationStatusCode>
-stack_t<T>::make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+stack_t<T>::make_owning(detail::abstract_heap_allocator_t& parent_allocator,
                         size_t initial_items) noexcept
 {
     const size_t actual_initial = initial_items == 0 ? 1 : initial_items;
@@ -127,7 +127,7 @@ stack_t<T>::make_owning(detail::abstract_heap_allocator_t &parent_allocator,
     if (!maybe_initial.okay())
         return maybe_initial.err();
 
-    auto &initial = maybe_initial.release_ref();
+    auto& initial = maybe_initial.release_ref();
 
     return zl::res<stack_t, AllocationStatusCode>{
         std::in_place,
@@ -169,20 +169,20 @@ inline allocation_status_t stack_t<T>::try_realloc() noexcept
         allo::realloc(m.parent.value(), m.items, calculate_new_size());
     if (!result.okay())
         return result.err();
-    auto &new_mem = result.release_ref();
+    auto& new_mem = result.release_ref();
     m.capacity = new_mem.size();
     m.items = zl::slice<T>(new_mem, 0, m.items.size());
     return AllocationStatusCode::Okay;
 }
 
-template <typename T> inline constexpr zl::opt<T &> stack_t<T>::end() noexcept
+template <typename T> inline constexpr zl::opt<T&> stack_t<T>::end() noexcept
 {
     if (m.items.size() == 0)
         return {};
     return end_unchecked();
 }
 
-template <typename T> inline constexpr T &stack_t<T>::end_unchecked() noexcept
+template <typename T> inline constexpr T& stack_t<T>::end_unchecked() noexcept
 {
     assert(m.items.size() > 0);
     return *(m.items.end().ptr() - 1);

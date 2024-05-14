@@ -39,7 +39,7 @@ TEST_SUITE("segmented_stack_t")
                             .release();
             auto maybe_st = stack<int>::make_owning(heap, 100);
             REQUIRE(maybe_st.okay());
-            stack<int> &st = maybe_st.release_ref();
+            stack<int>& st = maybe_st.release_ref();
             std::array toadd = {1,  2,     3,    4,       345, 64556,
                                 23, 23423, 8989, 9089234, 1234};
             for (int item : toadd) {
@@ -61,7 +61,7 @@ TEST_SUITE("segmented_stack_t")
             }
 
             // make sure that the same thing works after move constructor
-            auto consumer = [&toadd](stack<int> &&s) {
+            auto consumer = [&toadd](stack<int>&& s) {
                 stack<int> ourstack(std::move(s));
                 for (size_t i = 0; i < toadd.size(); ++i) {
                     int end = ourstack.end_unchecked();
@@ -114,7 +114,7 @@ TEST_SUITE("segmented_stack_t")
                 allo::scratch_allocator_t::make(mem);
             auto maybe_st = stack<int>::make(scratch, 50);
             REQUIRE(maybe_st.okay());
-            stack<int> &st = maybe_st.release_ref();
+            stack<int>& st = maybe_st.release_ref();
 
             std::array toadd = {1,  2,     3,    4,       345, 64556,
                                 23, 23423, 8989, 9089234, 1234};
@@ -133,7 +133,7 @@ TEST_SUITE("segmented_stack_t")
             {
                 REQUIRE(toadd.size() == st.size());
                 size_t index = 0;
-                st.for_each([&toadd, &index](int &item) {
+                st.for_each([&toadd, &index](int& item) {
                     REQUIRE(toadd[index] == item);
                     ++index;
                 });

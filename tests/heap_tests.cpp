@@ -9,23 +9,23 @@ struct Parent;
 struct Child
 {
     int age;
-    Parent *parent;
+    Parent* parent;
 };
 
 struct Parent
 {
     std::array<char, 80> name;
     size_t num_children = 0;
-    std::array<Child, 4> *children;
+    std::array<Child, 4>* children;
     [[nodiscard]] inline zl::slice<Child> getChildren() const
     {
         return zl::slice<Child>(*children, 0, num_children);
     }
 
-    static Parent &make_on_heap(abstract_heap_allocator_t &allocator,
-                                const char *name)
+    static Parent& make_on_heap(abstract_heap_allocator_t& allocator,
+                                const char* name)
     {
-        Parent &parent = allo::construct_one<Parent>(allocator).release();
+        Parent& parent = allo::construct_one<Parent>(allocator).release();
         parent.children =
             &allo::construct_one<std::array<Child, 4>>(allocator).release();
         // NOLINTNEXTLINE
@@ -35,11 +35,11 @@ struct Parent
 };
 
 namespace allo::tests {
-void allocate_480_bytes_related_objects(abstract_heap_allocator_t &heap)
+void allocate_480_bytes_related_objects(abstract_heap_allocator_t& heap)
 {
-    Parent &parent1 = Parent::make_on_heap(heap, "Sharon");
-    Parent &parent1_wife = Parent::make_on_heap(heap, "Leslie");
-    Parent &parent2 = Parent::make_on_heap(heap, "Steve");
+    Parent& parent1 = Parent::make_on_heap(heap, "Sharon");
+    Parent& parent1_wife = Parent::make_on_heap(heap, "Leslie");
+    Parent& parent2 = Parent::make_on_heap(heap, "Steve");
 
     REQUIRE(strcmp("Sharon", parent1.name.data()) == 0);
     REQUIRE(strcmp("Leslie", parent1_wife.name.data()) == 0);
@@ -54,10 +54,10 @@ void allocate_480_bytes_related_objects(abstract_heap_allocator_t &heap)
     // actually use it heh
     REQUIRE(zl::memcompare(
         zl::slice<const char>(parent1.name, 0, strlen(parent1.name.data())),
-        zl::raw_slice<const char>(*((char *)"Sharon"), 6)));
+        zl::raw_slice<const char>(*((char*)"Sharon"), 6)));
 }
 
-void typed_alloc_realloc_free(abstract_heap_allocator_t &heap)
+void typed_alloc_realloc_free(abstract_heap_allocator_t& heap)
 {
     struct Test
     {

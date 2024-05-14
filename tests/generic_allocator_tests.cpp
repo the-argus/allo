@@ -5,18 +5,18 @@
 struct CharNode;
 struct LinkedString
 {
-    CharNode *first = nullptr;
+    CharNode* first = nullptr;
     size_t length = 0;
-    allo::abstract_allocator_t &parent;
+    allo::abstract_allocator_t& parent;
     void append(char b);
     LinkedString() = delete;
-    LinkedString(allo::abstract_allocator_t &_parent) : parent(_parent) {}
+    LinkedString(allo::abstract_allocator_t& _parent) : parent(_parent) {}
 };
 
 struct CharNode
 {
     inline constexpr CharNode(char b) : contents(b), next(nullptr) {}
-    CharNode *next;
+    CharNode* next;
     char contents;
 };
 
@@ -24,8 +24,8 @@ void LinkedString::append(char b)
 {
     auto mnewnode = allo::construct_one<CharNode>(parent, b);
     REQUIRE(mnewnode.okay());
-    CharNode &newnode = mnewnode.release();
-    CharNode *iter = first;
+    CharNode& newnode = mnewnode.release();
+    CharNode* iter = first;
     if (iter) {
         while (iter->next != nullptr) {
             iter = iter->next;
@@ -38,7 +38,7 @@ void LinkedString::append(char b)
 }
 
 namespace allo::tests {
-void allocate_object_with_linked_list(abstract_allocator_t &ally)
+void allocate_object_with_linked_list(abstract_allocator_t& ally)
 {
     constexpr std::array test_str{
         "hello",
@@ -47,7 +47,7 @@ void allocate_object_with_linked_list(abstract_allocator_t &ally)
         "123456789",
     };
 
-    for (const char *str : test_str) {
+    for (const char* str : test_str) {
         auto mlinked = construct_one<LinkedString>(ally, ally);
         REQUIRE(mlinked.okay());
         auto linked = mlinked.release();
@@ -59,7 +59,7 @@ void allocate_object_with_linked_list(abstract_allocator_t &ally)
     }
 }
 
-bytes_t large_allocation(abstract_allocator_t &ally, size_t maxpages)
+bytes_t large_allocation(abstract_allocator_t& ally, size_t maxpages)
 {
     auto psres = mm_get_page_size();
     REQUIRE((psres.has_value != 0));

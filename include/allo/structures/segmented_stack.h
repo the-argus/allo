@@ -22,8 +22,8 @@ template <typename T> class segmented_stack_t
     struct Segment;
     struct SegmentEndcap
     {
-        Segment *prev;
-        Segment *next;
+        Segment* prev;
+        Segment* next;
     };
     using segment_info = detail::segment_size_with_endcap<T, SegmentEndcap>;
     static constexpr size_t segment_size = segment_info::value;
@@ -37,10 +37,10 @@ template <typename T> class segmented_stack_t
 
   public:
     segmented_stack_t() = delete;
-    segmented_stack_t(const segmented_stack_t &) = delete;
-    segmented_stack_t &operator=(const segmented_stack_t &) = delete;
-    segmented_stack_t(segmented_stack_t &&) noexcept = default;
-    segmented_stack_t &operator=(segmented_stack_t &&) noexcept = default;
+    segmented_stack_t(const segmented_stack_t&) = delete;
+    segmented_stack_t& operator=(const segmented_stack_t&) = delete;
+    segmented_stack_t(segmented_stack_t&&) noexcept = default;
+    segmented_stack_t& operator=(segmented_stack_t&&) noexcept = default;
 
     /// Make a segmented stack with a generic allocator. A segmented
     /// stack never needs to reallocate, so this can be done
@@ -49,28 +49,28 @@ template <typename T> class segmented_stack_t
     /// the segmented stack will not shrink its allocation when not
     /// in use)
     [[nodiscard]] static zl::res<segmented_stack_t, AllocationStatusCode>
-    make(detail::abstract_allocator_t &parent_allocator,
+    make(detail::abstract_allocator_t& parent_allocator,
          size_t initial_items) noexcept;
 
     /// Make a segmented stack with a heap allocator, in which case
     /// the stack will free its contents upon destruction.
     [[nodiscard]] static zl::res<segmented_stack_t, AllocationStatusCode>
-    make_owning(detail::abstract_heap_allocator_t &parent_allocator,
+    make_owning(detail::abstract_heap_allocator_t& parent_allocator,
                 size_t initial_items) noexcept;
 
     [[nodiscard]] constexpr size_t size() const noexcept;
 
-    [[nodiscard]] constexpr zl::opt<T &> end() noexcept;
+    [[nodiscard]] constexpr zl::opt<T&> end() noexcept;
 
     constexpr void pop() noexcept;
 
     template <typename Callable>
-    inline constexpr void for_each(Callable &&callable) noexcept
+    inline constexpr void for_each(Callable&& callable) noexcept
     {
-        static_assert(std::is_invocable_r_v<void, Callable, T &>,
+        static_assert(std::is_invocable_r_v<void, Callable, T&>,
                       "The given function either does not return void or "
                       "cannot be called with just a T&.");
-        Segment *iter = &m.head;
+        Segment* iter = &m.head;
         size_t index = 0;
         while (index <= m.index_of_segment_containing_end) {
             zl::slice<T> items_in_this_segment =
@@ -79,7 +79,7 @@ template <typename T> class segmented_stack_t
                                    m.items_in_segment_containing_end)
                     : zl::slice<T>(iter->items);
 
-            for (T &item : items_in_this_segment) {
+            for (T& item : items_in_this_segment) {
                 callable(item);
             }
 
@@ -89,7 +89,7 @@ template <typename T> class segmented_stack_t
     }
 
     template <typename... Args>
-    [[nodiscard]] inline allocation_status_t try_push(Args &&...args) noexcept
+    [[nodiscard]] inline allocation_status_t try_push(Args&&... args) noexcept
     {
         if (m.items_in_segment_containing_end == items_per_segment) {
             // if we already have a segment allocated after this one, just use
@@ -105,7 +105,7 @@ template <typename T> class segmented_stack_t
                         m.parent.cast_to_basic());
                 if (!maybe_segment.okay())
                     return maybe_segment.err();
-                Segment &new_segment = maybe_segment.release();
+                Segment& new_segment = maybe_segment.release();
                 // intialize the previous segment to point to the new one
                 m.segment_containing_end->endcap.next = &new_segment;
                 // initialize the new segment to point to the old
@@ -135,14 +135,14 @@ template <typename T> class segmented_stack_t
         return AllocationStatusCode::Okay;
     }
 
-    [[nodiscard]] constexpr T &end_unchecked() noexcept;
+    [[nodiscard]] constexpr T& end_unchecked() noexcept;
 
     inline ~segmented_stack_t() noexcept
     {
         if (m.parent.is_heap()) {
-            Segment *iter = &m.head;
+            Segment* iter = &m.head;
             while (iter) {
-                Segment *new_iter = iter->endcap.next;
+                Segment* new_iter = iter->endcap.next;
                 allo::free_one(m.parent.get_heap_unchecked(), *iter);
                 iter = new_iter;
             }
@@ -153,9 +153,9 @@ template <typename T> class segmented_stack_t
     struct M
     {
         // the first segment in the linked list of segments
-        Segment &head;
+        Segment& head;
         // the segment which contains the topmost item (never null)
-        Segment *segment_containing_end;
+        Segment* segment_containing_end;
         // the index of "segment_containing_end" in the singly linked list of
         // segments
         size_t index_of_segment_containing_end;
@@ -171,7 +171,7 @@ template <typename T> class segmented_stack_t
 };
 
 template <typename T>
-auto segmented_stack_t<T>::make(detail::abstract_allocator_t &parent_allocator,
+auto segmented_stack_t<T>::make(detail::abstract_allocator_t& parent_allocator,
                                 size_t initial_items) noexcept
     -> zl::res<segmented_stack_t, AllocationStatusCode>
 {
@@ -182,15 +182,15 @@ auto segmented_stack_t<T>::make(detail::abstract_allocator_t &parent_allocator,
     assert(segments_needed != 0);
 
     // allocate a bunch of segments and link them to each other
-    Segment *previous = nullptr;
-    Segment *first = nullptr;
+    Segment* previous = nullptr;
+    Segment* first = nullptr;
     for (size_t i = 0; i < segments_needed; ++i) {
         auto maybe_segment =
             alloc_one<Segment, detail::abstract_allocator_t,
                       detail::cache_line_size>(parent_allocator);
         if (!maybe_segment.okay())
             return maybe_segment.err();
-        Segment &segment = maybe_segment.release();
+        Segment& segment = maybe_segment.release();
         if (!first)
             first = &segment;
         segment.endcap.next = nullptr;
@@ -213,7 +213,7 @@ auto segmented_stack_t<T>::make(detail::abstract_allocator_t &parent_allocator,
 
 template <typename T>
 auto segmented_stack_t<T>::make_owning(
-    detail::abstract_heap_allocator_t &parent_allocator,
+    detail::abstract_heap_allocator_t& parent_allocator,
     size_t initial_items) noexcept
     -> zl::res<segmented_stack_t, AllocationStatusCode>
 {
@@ -224,14 +224,14 @@ auto segmented_stack_t<T>::make_owning(
     assert(segments_needed != 0);
 
     // allocate a bunch of segments and link them to each other
-    Segment *previous = nullptr;
-    Segment *first = nullptr;
+    Segment* previous = nullptr;
+    Segment* first = nullptr;
     for (size_t i = 0; i < segments_needed; ++i) {
         auto maybe_segment =
             alloc_one<Segment, detail::abstract_heap_allocator_t,
                       detail::cache_line_size>(parent_allocator);
         if (!maybe_segment.okay()) {
-            Segment *iter = first;
+            Segment* iter = first;
             // clean up since we can free, this is a heap allocator
             while (iter) {
                 free_one(parent_allocator, *iter);
@@ -239,7 +239,7 @@ auto segmented_stack_t<T>::make_owning(
             }
             return maybe_segment.err();
         }
-        Segment &segment = maybe_segment.release();
+        Segment& segment = maybe_segment.release();
         if (!first)
             first = &segment;
         segment.endcap.next = nullptr;
@@ -267,8 +267,7 @@ constexpr size_t segmented_stack_t<T>::size() const noexcept
            m.items_in_segment_containing_end;
 }
 
-template <typename T>
-constexpr zl::opt<T &> segmented_stack_t<T>::end() noexcept
+template <typename T> constexpr zl::opt<T&> segmented_stack_t<T>::end() noexcept
 {
     if (m.items_in_segment_containing_end == 0) {
         return {};
@@ -301,7 +300,7 @@ template <typename T> constexpr void segmented_stack_t<T>::pop() noexcept
 }
 
 template <typename T>
-constexpr T &segmented_stack_t<T>::end_unchecked() noexcept
+constexpr T& segmented_stack_t<T>::end_unchecked() noexcept
 {
     assert(m.items_in_segment_containing_end != 0);
     return m.segment_containing_end->items

@@ -3,7 +3,7 @@
 #include <type_traits>
 
 namespace allo {
-using destruction_callback_t = void (*)(void *user_data);
+using destruction_callback_t = void (*)(void* user_data);
 }
 
 namespace allo::detail {
@@ -26,17 +26,17 @@ class abstract_allocator_t
     abstract_allocator_t() = default;
 
   public:
-    abstract_allocator_t(const abstract_allocator_t &) = delete;
-    abstract_allocator_t &operator=(const abstract_allocator_t &) = delete;
-    abstract_allocator_t(abstract_allocator_t &&) = delete;
-    abstract_allocator_t &operator=(abstract_allocator_t &&) = delete;
+    abstract_allocator_t(const abstract_allocator_t&) = delete;
+    abstract_allocator_t& operator=(const abstract_allocator_t&) = delete;
+    abstract_allocator_t(abstract_allocator_t&&) = delete;
+    abstract_allocator_t& operator=(abstract_allocator_t&&) = delete;
 
     [[nodiscard]] inline constexpr AllocatorType type() const noexcept
     {
         return m_type;
     }
 
-    [[nodiscard]] inline constexpr const char *name() const noexcept
+    [[nodiscard]] inline constexpr const char* name() const noexcept
     {
         using Type = detail::AllocatorType;
         switch (type()) {
@@ -66,7 +66,7 @@ class abstract_allocator_t
 
     [[nodiscard]] allocation_status_t
     register_destruction_callback(destruction_callback_t callback,
-                                  void *user_data) noexcept;
+                                  void* user_data) noexcept;
 };
 
 class abstract_stack_allocator_t : public abstract_allocator_t

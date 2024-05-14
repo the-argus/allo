@@ -27,7 +27,7 @@ namespace allo::detail {
 
 template <typename T, typename... Args> struct threadsafe_realloc_bytes_generic
 {
-    inline allocation_result_t operator()(T *item, Args &&...args)
+    inline allocation_result_t operator()(T* item, Args&&... args)
     {
         if constexpr (std::is_base_of_v<abstract_threadsafe_heap_allocator_t,
                                         T>) {
@@ -40,7 +40,7 @@ template <typename T, typename... Args> struct threadsafe_realloc_bytes_generic
 
 template <typename T, typename... Args> struct alloc_bytes_generic
 {
-    inline allocation_result_t operator()(T *item, Args &&...args)
+    inline allocation_result_t operator()(T* item, Args&&... args)
     {
         return item->alloc_bytes(std::forward<Args>(args)...);
     }
@@ -48,7 +48,7 @@ template <typename T, typename... Args> struct alloc_bytes_generic
 
 template <typename T, typename... Args> struct remap_bytes_generic
 {
-    inline allocation_result_t operator()(T *item, Args &&...args)
+    inline allocation_result_t operator()(T* item, Args&&... args)
     {
         if constexpr (!std::is_same_v<T, scratch_allocator_t>) {
             return item->remap_bytes(std::forward<Args>(args)...);
@@ -60,7 +60,7 @@ template <typename T, typename... Args> struct remap_bytes_generic
 
 template <typename T, typename... Args> struct free_bytes_generic
 {
-    inline allocation_status_t operator()(T *item, Args &&...args)
+    inline allocation_status_t operator()(T* item, Args&&... args)
     {
         if constexpr (!std::is_same_v<T, scratch_allocator_t>) {
             return item->free_bytes(std::forward<Args>(args)...);
@@ -72,7 +72,7 @@ template <typename T, typename... Args> struct free_bytes_generic
 
 template <typename T, typename... Args> struct free_status_generic
 {
-    inline allocation_status_t operator()(T *item, Args &&...args)
+    inline allocation_status_t operator()(T* item, Args&&... args)
     {
         if constexpr (!std::is_same_v<T, scratch_allocator_t>) {
             return item->free_status(std::forward<Args>(args)...);
@@ -85,45 +85,45 @@ template <typename T, typename... Args> struct free_status_generic
 template <typename T, typename... Args>
 struct register_destruction_callback_generic
 {
-    inline allocation_status_t operator()(T *item, Args &&...args)
+    inline allocation_status_t operator()(T* item, Args&&... args)
     {
         return item->register_destruction_callback(std::forward<Args>(args)...);
     }
 };
 
 template <template <typename, typename...> typename Callable, typename... Args>
-auto return_from(detail::abstract_allocator_t *self, Args &&...args)
+auto return_from(detail::abstract_allocator_t* self, Args&&... args)
     -> decltype(Callable<c_allocator_t, Args...>{}(nullptr,
                                                    std::forward<Args>(args)...))
 {
     switch (self->type()) {
     case AllocatorType::CAllocator: {
-        auto *c_alloc = reinterpret_cast<c_allocator_t *>(self);
+        auto* c_alloc = reinterpret_cast<c_allocator_t*>(self);
         return Callable<c_allocator_t, Args...>{}(c_alloc,
                                                   std::forward<Args>(args)...);
     }
     case AllocatorType::BlockAllocator: {
-        auto *block = reinterpret_cast<block_allocator_t *>(self);
+        auto* block = reinterpret_cast<block_allocator_t*>(self);
         return Callable<block_allocator_t, Args...>{}(
             block, std::forward<Args>(args)...);
     }
     case AllocatorType::StackAllocator: {
-        auto *stack = reinterpret_cast<stack_allocator_t *>(self);
+        auto* stack = reinterpret_cast<stack_allocator_t*>(self);
         return Callable<stack_allocator_t, Args...>{}(
             stack, std::forward<Args>(args)...);
     }
     case AllocatorType::ScratchAllocator: {
-        auto *scratch = reinterpret_cast<scratch_allocator_t *>(self);
+        auto* scratch = reinterpret_cast<scratch_allocator_t*>(self);
         return Callable<scratch_allocator_t, Args...>{}(
             scratch, std::forward<Args>(args)...);
     }
     case AllocatorType::HeapAllocator: {
-        auto *heap = reinterpret_cast<heap_allocator_t *>(self);
+        auto* heap = reinterpret_cast<heap_allocator_t*>(self);
         return Callable<heap_allocator_t, Args...>{}(
             heap, std::forward<Args>(args)...);
     }
     case AllocatorType::ReservationAllocator: {
-        auto *reservation = reinterpret_cast<reservation_allocator_t *>(self);
+        auto* reservation = reinterpret_cast<reservation_allocator_t*>(self);
         return Callable<reservation_allocator_t, Args...>{}(
             reservation, std::forward<Args>(args)...);
     }
@@ -166,13 +166,13 @@ abstract_stack_allocator_t::free_bytes(bytes_t mem, size_t typehash) noexcept
 ALLO_FUNC allocation_status_t
 abstract_stack_allocator_t::free_status(bytes_t mem, size_t typehash) noexcept
 {
-    auto *mutable_self = const_cast<abstract_stack_allocator_t *>(this);
+    auto* mutable_self = const_cast<abstract_stack_allocator_t*>(this);
     return return_from<free_status_generic>(mutable_self, mem, typehash);
 }
 
 ALLO_FUNC allocation_status_t
 abstract_allocator_t::register_destruction_callback(
-    destruction_callback_t callback, void *user_data) noexcept
+    destruction_callback_t callback, void* user_data) noexcept
 {
     return return_from<register_destruction_callback_generic>(this, callback,
                                                               user_data);
