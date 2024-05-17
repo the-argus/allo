@@ -7,6 +7,7 @@
 #endif
 
 #include "allo/detail/abstracts.h"
+#include "allo/detail/forward_decls.h"
 
 #include "allo/block_allocator.h"
 #include "allo/c_allocator.h"

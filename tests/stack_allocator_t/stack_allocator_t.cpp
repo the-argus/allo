@@ -20,19 +20,14 @@ TEST_SUITE("stack_allocator_t")
         SUBCASE("Default construction")
         {
             std::array<uint8_t, 512> mem;
-
-            auto maybe_ally = stack_allocator_t::make(mem);
-            REQUIRE(maybe_ally.okay());
-            stack_allocator_t ally = maybe_ally.release();
+            auto ally = stack_allocator_t::make(mem);
         }
 
         SUBCASE("move semantics")
         {
             std::array<uint8_t, 512> mem;
 
-            auto maybe_ally = stack_allocator_t::make(mem);
-            REQUIRE(maybe_ally.okay());
-            stack_allocator_t ally = maybe_ally.release();
+            auto ally = stack_allocator_t::make(mem);
 
             auto maybe_myint = allo::alloc_one<int>(ally);
             REQUIRE(maybe_myint.okay());
@@ -64,7 +59,7 @@ TEST_SUITE("stack_allocator_t")
             std::fill(mem.begin(), mem.end(), 1);
             REQUIRE(mem[0] == 1);
 
-            auto ally = stack_allocator_t::make(subslice).release();
+            auto ally = stack_allocator_t::make(subslice);
 
             uint8_t& a_byte = allo::alloc_one<uint8_t>(ally).release();
             REQUIRE(a_byte == 1); // alloc one does not zero-initialize memory,
@@ -102,7 +97,7 @@ TEST_SUITE("stack_allocator_t")
         SUBCASE("alloc array")
         {
             std::array<uint8_t, 512> mem;
-            auto ally = stack_allocator_t::make(mem).release();
+            auto ally = stack_allocator_t::make(mem);
 
             auto maybe_my_ints = allo::alloc_one<std::array<int, 88>>(ally);
             REQUIRE(maybe_my_ints.okay());
@@ -120,7 +115,8 @@ TEST_SUITE("stack_allocator_t")
 
         SUBCASE("generic ref, large allocation")
         {
-            tests::make_large_allocation_with<stack_allocator_t>();
+            tests::make_large_allocation_with_nonfailing_make<
+                stack_allocator_t>();
         }
 
         SUBCASE("generic ref, allocate linked list")
@@ -134,14 +130,14 @@ TEST_SUITE("stack_allocator_t")
             // only alloc about 830.
             std::array<uint8_t, 1875> mem; // just barely enough memory for the
                                            // linked list of strings
-            auto ally = stack_allocator_t::make(mem).release();
+            auto ally = stack_allocator_t::make(mem);
             tests::allocate_object_with_linked_list(ally);
         }
 
         SUBCASE("OOM")
         {
             std::array<uint8_t, 512> mem;
-            auto ally = stack_allocator_t::make(mem).release();
+            auto ally = stack_allocator_t::make(mem);
 
             auto arr_res = allo::alloc_one<std::array<uint8_t, 494>>(ally);
             REQUIRE(arr_res.okay());
@@ -153,18 +149,21 @@ TEST_SUITE("stack_allocator_t")
         SUBCASE("Cant free a different type than the last one")
         {
             std::array<uint8_t, 512> mem;
-            auto ally = stack_allocator_t::make(mem).release();
+            auto ally = stack_allocator_t::make(mem);
 
             auto guy_res = allo::alloc_one<int>(ally);
             size_t fake;
+#ifdef NDEBUG
+            // NOTE: only check this in release mode, in debug mode this asserts
             REQUIRE(!allo::free_one(ally, fake).okay());
+#endif
         }
 
         SUBCASE("allocating a bunch of different types and then freeing them "
                 "in reverse order")
         {
             std::array<uint8_t, 512> mem;
-            auto ally = stack_allocator_t::make(mem).release();
+            auto ally = stack_allocator_t::make(mem);
 
             auto set_res = allo::construct_one<std::set<const char*>>(ally);
             REQUIRE(set_res.okay());
@@ -181,13 +180,17 @@ TEST_SUITE("stack_allocator_t")
             auto& opt = opt_res.release();
             opt.emplace(10);
 
+#ifdef NDEBUG
             // can't do it in the wrong order
             REQUIRE(!allo::destroy_one(ally, vec).okay());
             REQUIRE(!allo::destroy_one(ally, set).okay());
+#endif
 
             REQUIRE(allo::destroy_one(ally, opt).okay());
+#ifdef NDEBUG
             // still cant do it in the wrong order...
             REQUIRE(!allo::destroy_one(ally, set).okay());
+#endif
             REQUIRE(allo::destroy_one(ally, vec).okay());
             REQUIRE(allo::destroy_one(ally, set).okay());
         }
@@ -197,7 +200,7 @@ TEST_SUITE("stack_allocator_t")
             std::array<uint8_t, 512> mem;
             int test = 0;
             {
-                auto stack = stack_allocator_t::make(mem).release();
+                auto stack = stack_allocator_t::make(mem);
                 auto status = stack.register_destruction_callback(
                     [](void* test_int) { *((int*)test_int) = 1; }, &test);
                 REQUIRE(status.okay());

@@ -239,6 +239,10 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
     previous_state_t* prevstate;
     void* item;
 
+#ifndef NDEBUG
+    const size_t original_blocksize = m.blocks ? m.blocks->size() : 0;
+#endif
+
     const auto alloc_new_buffer = [actual_alignment, bytes, &max, this]() {
         size_t extra_space =
             max(actual_alignment, sizeof(previous_state_t)) * 2;
@@ -316,7 +320,7 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
     // in debug mode, make sure the prevstate's stack top is in the previous
     // block, if we had to make a new block
 #ifndef NDEBUG
-    if (times_retry != 0) {
+    if (m.blocks && original_blocksize > m.blocks->size()) {
         assert(m.blocks->end_unchecked() == m.memory);
         m.blocks->pop();
         assert(m.blocks->end());

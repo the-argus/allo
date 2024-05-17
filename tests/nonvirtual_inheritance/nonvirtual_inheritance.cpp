@@ -31,7 +31,7 @@ TEST_SUITE("allocator interfaces")
             };
 
             std::array<uint8_t, 512> mem;
-            stack_allocator_t stack = stack_allocator_t::make(mem).release();
+            stack_allocator_t stack = stack_allocator_t::make(mem);
 
             auto maybe_int = makeint(stack);
             REQUIRE(maybe_int.okay());
@@ -44,7 +44,7 @@ TEST_SUITE("allocator interfaces")
         SUBCASE("upcast interface")
         {
             std::array<uint8_t, 512> mem;
-            auto stack = stack_allocator_t::make(mem).release();
+            auto stack = stack_allocator_t::make(mem);
             abstract_allocator_t& stackalloc = stack;
         }
 
@@ -56,7 +56,7 @@ TEST_SUITE("allocator interfaces")
             };
 
             std::array<uint8_t, 512> mem;
-            stack_allocator_t stack = stack_allocator_t::make(mem).release();
+            stack_allocator_t stack = stack_allocator_t::make(mem);
 
             auto maybe_int = makeint(stack);
             REQUIRE(maybe_int.okay());
