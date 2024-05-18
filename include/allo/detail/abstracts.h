@@ -1,10 +1,7 @@
 #pragma once
+#include "allo/detail/destruction_callback.h"
 #include "allo/status.h"
 #include <type_traits>
-
-namespace allo {
-using destruction_callback_t = void (*)(void* user_data);
-}
 
 namespace allo::detail {
 

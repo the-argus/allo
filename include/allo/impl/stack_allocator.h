@@ -26,14 +26,7 @@ namespace allo {
 // NOTE: this function is identical to scratch allocator
 ALLO_FUNC stack_allocator_t::~stack_allocator_t() noexcept
 {
-    // call all destruction callbacks
-    {
-        destruction_callback_entry_t* iter = m.last_callback;
-        while (iter) {
-            iter->callback(iter->user_data);
-            iter = iter->prev;
-        }
-    }
+    detail::call_all_destruction_callbacks(m.last_callback);
 
     // free if we are owning
     if (!m.parent.is_heap())
@@ -475,20 +468,7 @@ stack_allocator_t::make_inner(bytes_t memory, any_allocator_t parent) noexcept
 ALLO_FUNC allocation_status_t stack_allocator_t::register_destruction_callback(
     destruction_callback_t callback, void* user_data) noexcept
 {
-    if (!callback) {
-        assert(callback);
-        return AllocationStatusCode::InvalidArgument;
-    }
-    auto res = allo::alloc_one<destruction_callback_entry_t>(*this);
-    if (!res.okay())
-        return res.err();
-    destruction_callback_entry_t& newentry = res.release();
-    newentry = destruction_callback_entry_t{
-        .callback = callback,
-        .user_data = user_data,
-        .prev = m.last_callback,
-    };
-    m.last_callback = &newentry;
-    return AllocationStatusCode::Okay;
+    return detail::register_destruction_callback_with_only_one_item_per_array<
+        stack_allocator_t>(this, m.last_callback, callback, user_data);
 }
 } // namespace allo

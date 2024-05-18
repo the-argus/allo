@@ -2,6 +2,7 @@
 #include "allo/detail/abstracts.h"
 #include "allo/structures/any_allocator.h"
 #include "allo/structures/segmented_stack.h"
+#include <allo/detail/destruction_callback.h>
 
 namespace allo {
 
@@ -11,12 +12,8 @@ namespace allo {
 class scratch_allocator_t : public detail::abstract_allocator_t
 {
   private:
-    struct destruction_callback_entry_t
-    {
-        destruction_callback_t callback;
-        void* user_data;
-        destruction_callback_entry_t* prev = nullptr;
-    };
+    using destruction_callback_entry_t =
+        detail::destruction_callback_entry_list_node_t;
 
     struct M
     {

@@ -26,6 +26,7 @@ set(headers
     allo/detail/abstracts.h
     allo/detail/alignment.h
     allo/detail/forward_decls.h
+    allo/detail/destruction_callback.h
     allo/impl/abstracts.h
     allo/impl/all.h
     allo/impl/block_allocator.h

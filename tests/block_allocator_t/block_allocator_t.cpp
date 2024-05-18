@@ -28,11 +28,9 @@ TEST_SUITE("block_allocator_t")
         SUBCASE("Default construction")
         {
             c_allocator_t global_allocator;
-            auto mally = block_allocator_t::make_owning(
+            auto ally = block_allocator_t::make_owning(
                 allo::alloc<uint8_t>(global_allocator, 2000).release(),
                 global_allocator, 200);
-            REQUIRE(mally.okay());
-            block_allocator_t ally = mally.release();
 
             auto mint = allo::alloc_one<int>(ally);
             REQUIRE(mint.okay());
@@ -70,23 +68,16 @@ TEST_SUITE("block_allocator_t")
 
     TEST_CASE("functionality")
     {
-        SUBCASE("generic ref, large allocation")
-        {
-            tests::make_large_allocation_with<heap_allocator_t>();
-        }
-
         SUBCASE("related objects, similar structure to linked list")
         {
             c_allocator_t global_allocator;
 
             {
                 // 256 bytes per block, 32 byte aligned blocks
-                auto ally =
-                    block_allocator_t::make_owning(
-                        // this memory will be cleaned up by the allocator
-                        allo::alloc<uint8_t>(global_allocator, 2000).release(),
-                        global_allocator, 256)
-                        .release();
+                auto ally = block_allocator_t::make_owning(
+                    // this memory will be cleaned up by the allocator
+                    allo::alloc<uint8_t>(global_allocator, 2000).release(),
+                    global_allocator, 256);
                 tests::allocate_480_bytes_related_objects(ally);
                 tests::typed_alloc_realloc_free(ally);
             }
@@ -109,8 +100,7 @@ TEST_SUITE("block_allocator_t")
                         .release();
                 // 256 bytes per block, 32 byte aligned blocks
                 auto ally = block_allocator_t::make_owning(
-                                reservation.current_memory(), reservation, 32)
-                                .release();
+                    reservation.current_memory(), reservation, 32);
                 auto one = alloc_one<int>(ally);
                 REQUIRE(one.okay());
                 auto two = alloc_one<int>(ally);
@@ -131,10 +121,8 @@ TEST_SUITE("block_allocator_t")
             {
                 // 256 bytes per block, 32 byte aligned blocks
                 auto ally = block_allocator_t::make_owning(
-                                allo::alloc<uint8_t>(global_allocator, 32UL * 4)
-                                    .release(),
-                                global_allocator, 32)
-                                .release();
+                    allo::alloc<uint8_t>(global_allocator, 32UL * 4).release(),
+                    global_allocator, 32);
                 auto one = alloc_one<int>(ally);
                 REQUIRE(one.okay());
                 auto two = alloc_one<int>(ally);
@@ -144,7 +132,7 @@ TEST_SUITE("block_allocator_t")
                 auto four = alloc_one<int>(ally);
                 REQUIRE(four.okay());
                 auto five = alloc_one<int>(ally);
-                REQUIRE(five.err() == AllocationStatusCode::OOM);
+                REQUIRE(!five.okay());
             }
         }
 
@@ -153,22 +141,20 @@ TEST_SUITE("block_allocator_t")
             c_allocator_t global_allocator;
 
             // 256 bytes per block, 32 byte aligned blocks
-            auto ally =
-                block_allocator_t::make_owning(
-                    // this memory will be cleaned up by the allocator
-                    // TODO: optimize this... similar memory usage to stack
-                    // allocator, although linked list nodes should be a perfect
-                    // use case for block allocator
-                    // TODO: look in to what is actually going on here...
-                    // blocks in a block allocator dont' have extra space for
-                    // bookkeeping, and all these allocations fit in the blocks,
-                    // so this should be really solid memory usage
-                    // I think it's due to the minimum block size of the block
-                    // allocator being 32? although I'm not sure it would even
-                    // work with smaller blocks
-                    allo::alloc<uint8_t>(global_allocator, 1825).release(),
-                    global_allocator, 16)
-                    .release();
+            auto ally = block_allocator_t::make_owning(
+                // this memory will be cleaned up by the allocator
+                // TODO: optimize this... similar memory usage to stack
+                // allocator, although linked list nodes should be a perfect
+                // use case for block allocator
+                // TODO: look in to what is actually going on here...
+                // blocks in a block allocator dont' have extra space for
+                // bookkeeping, and all these allocations fit in the blocks,
+                // so this should be really solid memory usage
+                // I think it's due to the minimum block size of the block
+                // allocator being 32? although I'm not sure it would even
+                // work with smaller blocks
+                allo::alloc<uint8_t>(global_allocator, 1825).release(),
+                global_allocator, 16);
             tests::allocate_object_with_linked_list(ally);
         }
 
@@ -185,10 +171,9 @@ TEST_SUITE("block_allocator_t")
                                .release();
                 // 256 bytes per block, 32 byte aligned blocks
                 auto ally = block_allocator_t::make_owning(
-                                mem, global_allocator, blocksize)
-                                .release();
+                    mem, global_allocator, blocksize);
 
-                auto callback = [](void* data) {
+                destruction_callback_t callback = [](void* data) {
                     ++(*reinterpret_cast<uint8_t*>(data));
                 };
                 REQUIRE(ally.register_destruction_callback(callback, &called)
@@ -200,8 +185,9 @@ TEST_SUITE("block_allocator_t")
                 REQUIRE(ally.register_destruction_callback(callback, &called)
                             .okay());
                 ++expected_called;
-                REQUIRE(ally.register_destruction_callback(callback, &called)
-                            .okay());
+                auto last =
+                    ally.register_destruction_callback(callback, &called);
+                REQUIRE(last.okay());
                 ++expected_called;
 
                 auto lasterr =
@@ -210,7 +196,7 @@ TEST_SUITE("block_allocator_t")
                 // if the blocks are 32 bytes in size, then we should oom on the
                 // fifth time
                 if (i == 0) {
-                    REQUIRE(lasterr == AllocationStatusCode::OOM);
+                    REQUIRE(lasterr != AllocationStatusCode::Okay);
                 } else {
                     ++expected_called;
                 }

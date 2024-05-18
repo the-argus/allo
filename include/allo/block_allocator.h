@@ -1,12 +1,30 @@
 #pragma once
 
 #include "allo/detail/abstracts.h"
-#include <ziglike/opt.h>
+#include "allo/detail/destruction_callback.h"
+#include "allo/structures/any_allocator.h"
+#include "allo/structures/segmented_stack.h"
 
 namespace allo {
 
 class block_allocator_t : public detail::abstract_heap_allocator_t
 {
+  private:
+    struct M
+    {
+        bytes_t memory;
+        size_t blocks_free;
+        size_t total_blocks;
+        const size_t blocksize;
+        detail::destruction_callback_entry_list_node_t* last_callback_array =
+            nullptr;
+        size_t last_callback_array_size;
+        segmented_stack_t<bytes_t>* blocks = nullptr;
+        // head of free list
+        void* last_freed;
+        any_allocator_t parent;
+    } m;
+
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::BlockAllocator;
@@ -14,7 +32,7 @@ class block_allocator_t : public detail::abstract_heap_allocator_t
     /// Create a block allocator which will attempt to free its memory when it
     /// is destroyed, and will try to remap the memory should it run out of
     /// space.
-    inline static zl::res<block_allocator_t, AllocationStatusCode>
+    inline static block_allocator_t
     make_owning(bytes_t memory, detail::abstract_heap_allocator_t& parent,
                 size_t blocksize) noexcept
     {
@@ -22,10 +40,19 @@ class block_allocator_t : public detail::abstract_heap_allocator_t
     }
 
     /// Create a block allocator which allocates into a given block of memory.
-    inline static zl::res<block_allocator_t, AllocationStatusCode>
-    make(bytes_t memory, size_t blocksize) noexcept
+    inline static block_allocator_t make(bytes_t memory,
+                                         size_t blocksize) noexcept
     {
         return make_inner(memory, {}, blocksize);
+    }
+
+    /// Create a block allocator which allocates into a given block of memory,
+    /// and is capable of allocating new blocks when the first one runs out
+    inline static block_allocator_t make(bytes_t memory,
+                                         detail::abstract_allocator_t& parent,
+                                         size_t blocksize) noexcept
+    {
+        return make_inner(memory, parent, blocksize);
     }
 
     [[nodiscard]] allocation_result_t alloc_bytes(size_t bytes,
@@ -56,53 +83,12 @@ class block_allocator_t : public detail::abstract_heap_allocator_t
     block_allocator_t& operator=(block_allocator_t&& other) = delete;
 
   private:
-    struct M
-    {
-        zl::opt<detail::abstract_heap_allocator_t&> parent;
-        bytes_t mem;
-        size_t last_freed_index;
-        size_t blocks_free;
-        const size_t blocksize;
-        const size_t max_destruction_entries_per_block;
-        size_t num_destruction_array_blocks;
-        size_t current_destruction_array_index;
-        size_t current_destruction_array_size;
-    } m;
+    static block_allocator_t make_inner(bytes_t memory, any_allocator_t parent,
+                                        size_t blocksize) noexcept;
 
-    static zl::res<block_allocator_t, AllocationStatusCode>
-    make_inner(bytes_t memory,
-               zl::opt<detail::abstract_heap_allocator_t&> parent,
-               size_t blocksize) noexcept;
-
-    static constexpr double reallocation_ratio = 1.5f;
-    /// Remap our single allocation without moving it.
-    [[nodiscard]] allocation_status_t remap() noexcept;
-
-    struct destruction_callback_entry_t
-    {
-        destruction_callback_t callback;
-        void* user_data;
-    };
-
-    struct destruction_callback_array_t
-    {
-        /// Index in the block allocator of the previously finished array of
-        /// destruction callbacks
-        size_t previous_index;
-        // NOLINTNEXTLINE
-        destruction_callback_entry_t entries[];
-    };
-
-    struct block_analysis_t
-    {
-        size_t byte_index;
-        size_t block_index;
-        uint8_t* first_byte;
-    };
-
-    static constexpr size_t minimum_blocksize =
-        (sizeof(destruction_callback_entry_t) +
-         sizeof(destruction_callback_entry_t));
+    static constexpr size_t minimum_blocksize = 32;
+    static_assert(detail::bytes_needed_for_destruction_callback_v<1> + 8 ==
+                  minimum_blocksize);
 
   public:
     inline block_allocator_t(M&& members) noexcept : m(members)
@@ -111,11 +97,18 @@ class block_allocator_t : public detail::abstract_heap_allocator_t
     }
 
   private:
-    void call_all_destruction_callbacks() const noexcept;
+#ifndef ALLO_DISABLE_TYPEINFO
     size_t* get_location_for_typehash(uint8_t* blockhead,
                                       size_t allocsize) const noexcept;
-    [[nodiscard]] zl::res<block_analysis_t, AllocationStatusCode>
-    try_analyze_block(bytes_t mem, size_t typehash) const noexcept;
+#endif
+    [[nodiscard]] size_t max_destruction_entries_per_block() const noexcept;
+    static constexpr double growth_percentage = 0.5f;
+    /// Multiply total blocks by 1 + growth percentage
+    [[nodiscard]] allocation_status_t grow() noexcept;
+
+#ifndef NDEBUG
+    [[nodiscard]] bool contains(bytes_t) const noexcept;
+#endif
 };
 } // namespace allo
 
