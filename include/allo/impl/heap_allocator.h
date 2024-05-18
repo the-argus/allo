@@ -27,15 +27,13 @@ struct heap_allocator_t::free_node_t
     free_node_t* next = nullptr;
 };
 
-ALLO_FUNC zl::res<heap_allocator_t, AllocationStatusCode>
-heap_allocator_t::make_inner(
-    const bytes_t& memory,
-    zl::opt<detail::abstract_heap_allocator_t&> parent) noexcept
+ALLO_FUNC heap_allocator_t heap_allocator_t::make_inner(
+    const bytes_t& memory, any_allocator_t parent) noexcept
 {
     void* head = memory.data();
     size_t space = memory.size();
     if (!std::align(alignof(free_node_t), sizeof(free_node_t), head, space)) {
-        return AllocationStatusCode::OOM;
+        std::abort();
     }
 
     // NOTE: this effectively discards all bytes before the first 8 byte
@@ -48,64 +46,59 @@ heap_allocator_t::make_inner(
         .next = nullptr,
     };
 
-    return zl::res<heap_allocator_t, AllocationStatusCode>{
-        std::in_place,
-        M{
-            .parent = parent,
-            .mem = memory,
-            .num_nodes = 1,
-            .num_callbacks = 0,
-            .last_callback_node = nullptr,
-            .free_list_head = memory_as_one_big_free_node,
-        },
+    return M{
+        .memory = memory,
+        .current_memory_original_size = memory.size(),
+        .free_list_head = memory_as_one_big_free_node,
+        .parent = parent,
     };
 }
 
-ALLO_FUNC heap_allocator_t::heap_allocator_t(M&& members) noexcept
-    : m(std::move(members))
+ALLO_FUNC heap_allocator_t::heap_allocator_t(M&& members) noexcept : m(members)
 {
     m_type = enum_value;
 }
 
 ALLO_FUNC heap_allocator_t::heap_allocator_t(heap_allocator_t&& other) noexcept
-    : m(std::move(other.m))
+    : m(other.m)
 {
     m_type = enum_value;
+    other.m.parent = {};
+    other.m.last_callback_node = nullptr;
 }
 
 ALLO_FUNC heap_allocator_t::~heap_allocator_t() noexcept
 {
-    if (m.last_callback_node) {
-        size_t num_in_last_node = m.num_callbacks % callbacks_per_node;
-        // there is never 0 in the last node
-        num_in_last_node =
-            num_in_last_node == 0 ? callbacks_per_node : num_in_last_node;
-        assert(num_in_last_node > 0 && num_in_last_node <= callbacks_per_node);
-        for (auto& callback : zl::slice<destruction_callback_entry_t>(
-                 m.last_callback_node->entries, 0, num_in_last_node)) {
-            callback.callback(callback.user_data);
-        }
+    detail::call_all_destruction_callback_arrays<destruction_callback_node_t>(
+        m.last_callback_node, destruction_callback_node_t::num_entries,
+        m.last_callback_array_size);
 
-        destruction_callback_node_t* iterator = m.last_callback_node->prev;
-        while (iterator != nullptr) {
-            for (auto& callback : iterator->entries) {
-                callback.callback(callback.user_data);
-            }
-            iterator = iterator->prev;
-        }
-    }
+    if (!m.parent.is_heap())
+        return;
 
-    if (m.parent.has_value()) {
-        m.parent.value().free_bytes(m.mem, 0);
+    if (m.blocks) {
+        while (auto iter = m.blocks->end()) {
+            m.parent.get_heap_unchecked().free_bytes(iter.value(), 0);
+            m.blocks->pop();
+        }
+        m.blocks->~segmented_stack_t<bytes_t>();
+        free_one(m.parent.get_heap_unchecked(), *m.blocks);
+    } else {
+        m.parent.get_heap_unchecked().free_bytes(m.memory, 0);
     }
 }
 
 ALLO_FUNC allocation_status_t heap_allocator_t::register_destruction_callback(
     destruction_callback_t callback, void* user_data) noexcept
 {
-    const size_t callback_offset = m.num_callbacks % callbacks_per_node;
+    if (!callback) {
+        assert(callback);
+        return AllocationStatusCode::InvalidArgument;
+    }
     // might be necessary to allocate space for some more destruction callbacks
-    if (m.last_callback_node == nullptr || callback_offset == 0) {
+    if (m.last_callback_node == nullptr ||
+        m.last_callback_array_size ==
+            destruction_callback_node_t::num_entries) {
         // allocate new destruction callback node
         auto res = alloc_bytes(sizeof(destruction_callback_node_t),
                                alignof(destruction_callback_node_t), 0);
@@ -116,11 +109,16 @@ ALLO_FUNC allocation_status_t heap_allocator_t::register_destruction_callback(
         m.last_callback_node = newnode;
     }
 
-    m.last_callback_node->entries[callback_offset] = {
+    assert(m.last_callback_array_size <
+           destruction_callback_node_t::num_entries);
+
+    m.last_callback_node->entries[m.last_callback_array_size] = {
         .callback = callback,
         .user_data = user_data,
     };
-    ++m.num_callbacks;
+
+    ++m.last_callback_array_size;
+
     return AllocationStatusCode::Okay;
 }
 
@@ -128,7 +126,19 @@ ALLO_FUNC allocation_result_t
 heap_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash, size_t new_size,
                               size_t new_typehash) noexcept
 {
-    return AllocationStatusCode::InvalidArgument;
+    // not possible to remap
+    // TODO: remapping with this kind of allocator? maybe?
+    if (mem.size() < new_size) {
+        return AllocationStatusCode::OOM;
+    }
+
+    if (old_typehash != new_typehash) {
+        // no changing types with heap allocator
+        assert(old_typehash == new_typehash);
+        return AllocationStatusCode::InvalidArgument;
+    }
+
+    return bytes_t(mem, 0, new_size);
 }
 
 ALLO_FUNC allocation_status_t
@@ -169,25 +179,68 @@ ALLO_FUNC auto heap_allocator_t::free_common(bytes_t mem,
     // actual allocation_bookkeeping_t
     if (bk->magic != allocation_bookkeeping_t::static_magic) {
         bk = reinterpret_cast<allocation_bookkeeping_t*>(bk->magic); // NOLINT
-        assert((uint8_t*)bk >= m.mem.begin().ptr());
-        assert((uint8_t*)bk < m.mem.end().ptr());
+        assert(contains(
+            zl::raw_slice(*(uint8_t*)bk, sizeof(allocation_bookkeeping_t))));
     }
     if (bk->size_requested == mem.size()) {
         return AllocationStatusCode::MemoryInvalid;
     }
 #ifndef ALLO_DISABLE_TYPEINFO
     // NOTE: this really should be a log message
+    // TODO: return error if type doesnt match on a free? idk if this would be a
+    // good idea
     assert(bk->typehash == typehash);
 #endif
     return bk;
 }
+
+/// NOTE: this function is the same as in block_allocator_t
+#ifndef NDEBUG
+ALLO_FUNC bool heap_allocator_t::contains(bytes_t bytes) const noexcept
+{
+    if (m.blocks) {
+        // assert that exactly one of the items in the blocks stack is a
+        // block of memory which contains the next_to_last_freed item
+        bool contains = false;
+        // TODO: implement std iterators so we can do std::find
+        m.blocks->for_each([&contains, &bytes](const bytes_t& block) {
+            if (zl::memcontains(block, bytes)) {
+                assert(contains == false);
+                contains = true;
+            }
+        });
+        return contains;
+    } else {
+        return zl::memcontains(m.memory, bytes);
+    }
+}
+#endif
 
 ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
     size_t bytes, uint8_t alignment_exponent, size_t typehash) noexcept
 {
     if (m.free_list_head == nullptr)
         return AllocationStatusCode::OOM;
+    auto res = alloc_bytes_inner(bytes, alignment_exponent, typehash,
+                                 m.free_list_head);
+    if (!res.success) {
+        allocation_status_t status = try_make_space_for_at_least(
+            res.actual_needed_size, res.last_searched);
+        if (!status.okay())
+            return status.err();
+        auto second_attempt = alloc_bytes_inner(bytes, alignment_exponent,
+                                                typehash, res.last_searched);
+        assert(second_attempt.success);
+        return bytes_t(second_attempt.success.value());
+    }
+    return bytes_t(res.success.value());
+}
 
+ALLO_FUNC auto heap_allocator_t::alloc_bytes_inner(
+    size_t bytes, uint8_t alignment_exponent, size_t typehash,
+    free_node_t* last_searched_node) noexcept -> inner_allocation_attempt_t
+{
+    assert(last_searched_node);
     // refuse to align to less than 8 bytes
     const size_t actual_align_ex =
         alignment_exponent < 3 ? 3 : alignment_exponent;
@@ -200,15 +253,14 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
                   "heap allocator relies on free nodes and allocation nodes "
                   "being able to have the same allocation");
 
-    assert(m.free_list_head);
     free_node_t* prev = nullptr;
-    free_node_t* iter = m.free_list_head;
+    free_node_t* iter = last_searched_node;
     // NOTE: if alignment exponent is smaller than 3, this could be inaccurate
-    size_t actual_size = bytes + sizeof(allocation_bookkeeping_t);
+    size_t actual_size = bytes +
+                         static_cast<size_t>(std::pow(2, actual_align_ex)) +
+                         sizeof(allocation_bookkeeping_t);
     while (iter != nullptr) {
-        assert(iter->size <= m.mem.size());
-        assert(((uint8_t*)iter >= m.mem.data() &&
-                (uint8_t*)iter < m.mem.end().ptr()));
+        assert(contains(zl::raw_slice(*(uint8_t*)iter, sizeof(free_node_t))));
         if (iter->size >= actual_size) {
             // make sure everything is aligned and has space
 #ifndef NDEBUG
@@ -296,13 +348,134 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
 #endif
             };
 
-            return zl::raw_slice(*reinterpret_cast<uint8_t*>(block), bytes);
+            return inner_allocation_attempt_t{
+                .success =
+                    zl::raw_slice(*reinterpret_cast<uint8_t*>(block), bytes)};
         }
         prev = iter;
         iter = iter->next;
     }
-    // TODO: request more space from parent if owning
-    return AllocationStatusCode::OOM;
+    return inner_allocation_attempt_t{
+        .last_searched = prev,
+        .actual_needed_size = actual_size,
+    };
+}
+
+ALLO_FUNC size_t heap_allocator_t::round_up_to_valid_buffersize(
+    size_t needed_bytes, size_t original_size) noexcept
+{
+    // NOTE: the fact that we always grow the buffer by two is SUPER
+    // hardcoded here since we use log2. you'll have to use some fancy
+    // log rules to get log base 1.5 or some other multiplier
+    return static_cast<size_t>(std::round(
+        std::pow(2.0,
+                 std::floor(std::log2(static_cast<double>(needed_bytes) /
+                                      static_cast<double>(original_size))) +
+                     1) *
+        static_cast<double>(original_size)));
+}
+
+ALLO_FUNC allocation_status_t heap_allocator_t::try_make_space_for_at_least(
+    size_t bytes, free_node_t* newmem_insert_location) noexcept
+{
+    if (m.parent.is_null())
+        return AllocationStatusCode::OOM;
+
+    bytes_t oldmem = m.memory;
+    constexpr auto minbytes = sizeof(free_node_t) + alignof(free_node_t);
+    const size_t actual_bytes = bytes < minbytes ? minbytes : bytes;
+
+    // function which inserts a free node into memory and into the free list
+    auto format_new_memory = [newmem_insert_location](void* _head,
+                                                      size_t _space) {
+        // update new memory to be a new free node
+        void* head = _head;
+        size_t space = _space;
+        void* const result =
+            std::align(alignof(free_node_t), sizeof(free_node_t), head, space);
+        assert(result);
+
+        auto* new_free_node = reinterpret_cast<free_node_t*>(result);
+        *new_free_node = free_node_t{
+            .size = space,
+            .next = newmem_insert_location->next,
+        };
+        newmem_insert_location->next = new_free_node;
+    };
+
+    if (m.parent.is_heap()) {
+        const size_t new_size_remapped = round_up_to_valid_buffersize(
+            actual_bytes + m.memory.size(), m.current_memory_original_size);
+        assert(new_size_remapped >= m.memory.size() + actual_bytes);
+        auto res = m.parent.get_heap_unchecked().remap_bytes(
+            m.memory, 0, new_size_remapped, 0);
+        if (res.okay()) {
+            if (m.blocks) {
+                assert(m.blocks->end_unchecked() == m.memory);
+                m.blocks->pop();
+                m.memory = res.release();
+                const auto pushres = m.blocks->try_push(m.memory);
+                assert(pushres.okay());
+            } else {
+                m.memory = res.release();
+            }
+
+            format_new_memory(oldmem.end().ptr(),
+                              m.memory.size() - oldmem.size());
+            return AllocationStatusCode::Okay;
+        }
+    }
+
+    auto& parent = m.parent.cast_to_basic();
+
+    // either we're not a heap allocator or remapping failed
+    // first, create the blocks data structure so we can store the new block
+    if (!m.blocks) {
+        auto blocks_allocation_res =
+            alloc_one<segmented_stack_t<bytes_t>>(parent);
+        if (!blocks_allocation_res.okay()) [[unlikely]]
+            return blocks_allocation_res.err();
+
+        auto blocks_res = m.parent.is_heap()
+                              ? segmented_stack_t<bytes_t>::make_owning(
+                                    m.parent.get_heap_unchecked(), 2)
+                              : segmented_stack_t<bytes_t>::make(parent, 2);
+        if (!blocks_res.okay()) [[unlikely]] {
+            if (m.parent.is_heap()) {
+                free_one(m.parent.get_heap_unchecked(),
+                         blocks_allocation_res.release());
+            }
+            return blocks_res.err();
+        }
+        // explicitly move the created segment from the stack to the
+        // allocated blocks
+        // TODO: use some make_into here to avoid this move
+        m.blocks = &blocks_allocation_res.release();
+        new (m.blocks) segmented_stack_t<bytes_t>(blocks_res.release());
+        auto pushres = m.blocks->try_push(m.memory);
+        assert(pushres.okay());
+    }
+
+    assert(m.blocks->end_unchecked() == m.memory);
+    if (const auto pushres = m.blocks->try_push(m.memory); !pushres.okay())
+        return pushres.err();
+
+    // make actual allocation for the new buffer
+    auto res =
+        parent.alloc_bytes(round_up_to_valid_buffersize(
+                               actual_bytes, m.current_memory_original_size),
+                           alignof(free_node_t), 0);
+    if (!res.okay()) [[unlikely]] {
+        m.blocks->pop();
+        return res.err();
+    }
+
+    m.memory = res.release_ref();
+    m.blocks->end_unchecked() = m.memory;
+    format_new_memory(m.memory.data(), m.memory.size());
+    // new current memory, so new original size
+    m.current_memory_original_size = m.memory.size();
+    return AllocationStatusCode::Okay;
 }
 
 ALLO_FUNC allocation_status_t

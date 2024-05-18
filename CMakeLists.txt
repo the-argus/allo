@@ -25,8 +25,13 @@ set(headers
     allo/structures/collection.h
     allo/detail/abstracts.h
     allo/detail/alignment.h
-    allo/detail/forward_decls.h
+    allo/detail/bytes_collection.h
+    allo/detail/cache_line_size.h
+    allo/detail/calculate_segment_size.h
     allo/detail/destruction_callback.h
+    allo/detail/forward_decls.h
+    allo/detail/is_threadsafe.h
+    allo/detail/is_threadsafe_runtime.h
     allo/impl/abstracts.h
     allo/impl/all.h
     allo/impl/block_allocator.h

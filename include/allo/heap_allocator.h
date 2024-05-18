@@ -1,24 +1,16 @@
 #pragma once
 
 #include "allo/detail/abstracts.h"
+#include "allo/detail/destruction_callback.h"
+#include "allo/structures/any_allocator.h"
 
 namespace allo {
 
 class heap_allocator_t : public detail::abstract_heap_allocator_t
 {
   public:
-    struct destruction_callback_entry_t
-    {
-        destruction_callback_t callback;
-        void* user_data;
-    };
-    // destruction callbacks are grouped in three since thats how many we
-    // can fit in a cache line
-    struct destruction_callback_node_t
-    {
-        destruction_callback_node_t* prev;
-        std::array<destruction_callback_entry_t, 3> entries;
-    };
+    using destruction_callback_node_t =
+        detail::destruction_callback_entry_list_node_cacheline_t;
     struct free_node_t;
     /// Stored before every allocation
     struct allocation_bookkeeping_t
@@ -37,37 +29,43 @@ class heap_allocator_t : public detail::abstract_heap_allocator_t
     };
 
   private:
-    static constexpr size_t callbacks_per_node =
-        (sizeof(destruction_callback_node_t::entries) /
-         sizeof(destruction_callback_entry_t));
-
     struct M
     {
-        zl::opt<detail::abstract_heap_allocator_t&> parent;
-        bytes_t mem;
-        size_t num_nodes; // also == number of entries in free list data
-        size_t num_callbacks = 0;
-        destruction_callback_node_t* last_callback_node = nullptr;
+        bytes_t memory;
+        size_t current_memory_original_size;
+        destruction_callback_node_t* last_callback_node;
+        size_t last_callback_array_size;
         free_node_t* free_list_head;
+        segmented_stack_t<bytes_t>* blocks;
+        any_allocator_t parent;
     } m;
 
-    static zl::res<heap_allocator_t, AllocationStatusCode>
-    make_inner(const bytes_t& memory,
-               zl::opt<detail::abstract_heap_allocator_t&> parent) noexcept;
+    [[nodiscard]] static heap_allocator_t
+    make_inner(const bytes_t& memory, any_allocator_t parent) noexcept;
 
   public:
     static constexpr detail::AllocatorType enum_value =
         detail::AllocatorType::HeapAllocator;
 
-    inline static zl::res<heap_allocator_t, AllocationStatusCode>
+    // NOTE: unlike other allocators, it is possible to pass invalid arguments
+    // to the make function. If the given memory is too small, std::abort() will
+    // be called. It must be at least be able to fit one 16 byte, 8-byte-aligned
+    // struct. 32 bytes is guaranteed to be enough space.
+
+    [[nodiscard]] inline static heap_allocator_t
     make_owning(bytes_t memory,
                 detail::abstract_heap_allocator_t& parent) noexcept
     {
         return make_inner(memory, parent);
     }
 
-    inline static zl::res<heap_allocator_t, AllocationStatusCode>
-    make(bytes_t memory) noexcept
+    [[nodiscard]] inline static heap_allocator_t
+    make(bytes_t memory, detail::abstract_allocator_t& parent) noexcept
+    {
+        return make_inner(memory, parent);
+    }
+
+    [[nodiscard]] inline static heap_allocator_t make(bytes_t memory) noexcept
     {
         return make_inner(memory, {});
     }
@@ -102,8 +100,30 @@ class heap_allocator_t : public detail::abstract_heap_allocator_t
     heap_allocator_t(M&& members) noexcept;
 
   private:
+    struct inner_allocation_attempt_t
+    {
+        free_node_t* last_searched;
+        size_t actual_needed_size;
+        zl::opt<bytes_t> success;
+    };
+
+    [[nodiscard]] static size_t
+    round_up_to_valid_buffersize(size_t needed_bytes,
+                                 size_t original_size) noexcept;
+
+    [[nodiscard]] inner_allocation_attempt_t
+    alloc_bytes_inner(size_t bytes, uint8_t alignment_exponent, size_t typehash,
+                      free_node_t* last_searched_node) noexcept;
+
+    [[nodiscard]] allocation_status_t
+    try_make_space_for_at_least(size_t bytes,
+                                free_node_t* newmem_insert_location) noexcept;
+
     [[nodiscard]] zl::res<allocation_bookkeeping_t*, AllocationStatusCode>
     free_common(bytes_t mem, size_t typehash) const noexcept;
+#ifndef NDEBUG
+    [[nodiscard]] bool contains(bytes_t) const noexcept;
+#endif
 };
 } // namespace allo
 

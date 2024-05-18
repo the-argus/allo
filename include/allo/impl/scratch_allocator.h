@@ -246,6 +246,8 @@ ALLO_FUNC scratch_allocator_t::~scratch_allocator_t() noexcept
             m.parent.get_heap_unchecked().free_bytes(iter.value(), 0);
             m.blocks->pop();
         }
+        m.blocks->~segmented_stack_t<bytes_t>();
+        free_one(m.parent.get_heap_unchecked(), *m.blocks);
     } else {
         m.parent.get_heap_unchecked().free_bytes(m.memory, 0);
     }

@@ -23,8 +23,7 @@ TEST_SUITE("list_t")
         {
             c_allocator_t c;
             auto heap = allo::heap_allocator_t::make(
-                            allo::alloc<uint8_t>(c, 4000).release())
-                            .release();
+                allo::alloc<uint8_t>(c, 4000).release());
 
             auto maybe_collection = list_t<uint8_t>::make_owning(heap, 2000);
             REQUIRE(maybe_collection.okay());

@@ -21,8 +21,7 @@ TEST_SUITE("collection_t")
         {
             c_allocator_t c;
             auto heap =
-                heap_allocator_t::make(alloc<uint8_t>(c, 4000).release())
-                    .release();
+                heap_allocator_t::make(alloc<uint8_t>(c, 4000).release());
 
             auto maybe_collection =
                 collection_t<uint8_t>::make_owning(heap, 2000);

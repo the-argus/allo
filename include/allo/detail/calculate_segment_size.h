@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstddef>
+#include "allo/detail/cache_line_size.h"
 namespace allo::detail {
-constexpr size_t cache_line_size = 64;
 /// Get how many items of type T need to be put next to each other to make a
 /// block divisible by cache_line_size
 template <typename T> inline constexpr size_t calculate_segment_size() noexcept

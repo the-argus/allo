@@ -1,6 +1,8 @@
 #pragma once
 #include "allo/detail/alignment.h"
+#include "allo/detail/cache_line_size.h"
 #include "allo/status.h"
+#include <array>
 #include <cassert>
 #include <cstddef>
 
@@ -19,6 +21,26 @@ struct destruction_callback_entry_list_node_t
     destruction_callback_entry_t entries[]; // NOLINT
 };
 
+inline constexpr size_t destruction_callback_entries_in_cache_line() noexcept
+{
+    const size_t available_bytes = cache_line_size - sizeof(void*);
+    return available_bytes / sizeof(destruction_callback_entry_t);
+}
+
+struct destruction_callback_entry_list_node_cacheline_t
+{
+    static constexpr size_t num_entries =
+        destruction_callback_entries_in_cache_line();
+    destruction_callback_entry_list_node_cacheline_t* prev;
+    std::array<destruction_callback_entry_t, num_entries> entries;
+};
+
+// cacheline-sized destruction callback struct should be roughly the size of a
+// cacheline
+static_assert(cache_line_size -
+                  sizeof(destruction_callback_entry_list_node_cacheline_t) <=
+              8);
+
 inline constexpr std::size_t calculate_bytes_needed_for_destruction_callback(
     std::size_t num_entries) noexcept
 {
@@ -36,12 +58,13 @@ template <std::size_t num_entries>
 inline constexpr std::size_t bytes_needed_for_destruction_callback_v =
     bytes_needed_for_destruction_callback<num_entries>::value;
 
-inline constexpr void call_all_destruction_callback_arrays(
-    destruction_callback_entry_list_node_t* end_node, size_t items_per_entry,
-    size_t items_in_end) noexcept
+template <typename T>
+inline constexpr void
+call_all_destruction_callback_arrays(T* end_node, size_t items_per_entry,
+                                     size_t items_in_end) noexcept
 {
     assert(items_in_end <= items_per_entry);
-    auto* iter = end_node;
+    T* iter = end_node;
     // handle first iteration
     {
         if (!iter)
@@ -63,6 +86,7 @@ inline constexpr void call_all_destruction_callback_arrays(
     }
 }
 
+/// Call all callbacks for when each node only contains one callback
 inline constexpr void call_all_destruction_callbacks(
     destruction_callback_entry_list_node_t* end_node) noexcept
 {

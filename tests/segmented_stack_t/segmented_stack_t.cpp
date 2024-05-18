@@ -16,8 +16,7 @@ TEST_SUITE("segmented_stack_t")
         {
             allo::c_allocator_t c;
             auto heap = allo::heap_allocator_t::make(
-                            allo::alloc<uint8_t>(c, 4000).release())
-                            .release();
+                allo::alloc<uint8_t>(c, 4000).release());
 
             auto maybe_stack = stack<uint8_t>::make_owning(heap, 1000);
             REQUIRE(maybe_stack.okay());
@@ -35,8 +34,7 @@ TEST_SUITE("segmented_stack_t")
         {
             allo::c_allocator_t c;
             auto heap = allo::heap_allocator_t::make(
-                            allo::alloc<uint8_t>(c, 4000).release())
-                            .release();
+                allo::alloc<uint8_t>(c, 4000).release());
             auto maybe_st = stack<int>::make_owning(heap, 100);
             REQUIRE(maybe_st.okay());
             stack<int>& st = maybe_st.release_ref();
@@ -80,8 +78,7 @@ TEST_SUITE("segmented_stack_t")
         {
             allo::c_allocator_t c;
             auto heap = allo::heap_allocator_t::make(
-                            allo::alloc<uint8_t>(c, 4000).release())
-                            .release();
+                allo::alloc<uint8_t>(c, 4000).release());
             auto maybe_stack = stack<int>::make_owning(heap, 2);
             REQUIRE(maybe_stack.okay());
             stack<int> stack = maybe_stack.release();
@@ -150,8 +147,7 @@ TEST_SUITE("segmented_stack_t")
         {
             allo::c_allocator_t c;
             auto heap = allo::heap_allocator_t::make(
-                            allo::alloc<uint8_t>(c, 4000).release())
-                            .release();
+                allo::alloc<uint8_t>(c, 4000).release());
             auto st = stack<int>::make_owning(heap, 1).release();
 
             auto res = st.try_push(0);

@@ -29,8 +29,17 @@ ALLO_FUNC block_allocator_t::~block_allocator_t() noexcept
         m.last_callback_array, max_destruction_entries_per_block(),
         m.last_callback_array_size);
 
-    if (m.parent.is_heap()) {
-        // TODO: make this traverse m.blocks
+    if (!m.parent.is_heap())
+        return;
+
+    if (m.blocks) {
+        while (auto iter = m.blocks->end()) {
+            m.parent.get_heap_unchecked().free_bytes(iter.value(), 0);
+            m.blocks->pop();
+        }
+        m.blocks->~segmented_stack_t<bytes_t>();
+        free_one(m.parent.get_heap_unchecked(), *m.blocks);
+    } else {
         m.parent.get_heap_unchecked().free_bytes(m.memory, 0);
     }
 }
@@ -40,9 +49,10 @@ block_allocator_t::block_allocator_t(block_allocator_t&& other) noexcept
     : m(other.m)
 {
     m_type = other.m_type;
+    other.m.parent = {};
+    other.m.last_callback_array = nullptr;
 #ifndef NDEBUG
     // make other now return OOM whenever you try to allocate from it
-    other.m.parent = {};
     other.m.blocks_free = 0;
 #endif
 }
@@ -150,17 +160,21 @@ ALLO_FUNC allocation_status_t block_allocator_t::grow() noexcept
     if (!m.blocks) {
         auto res = alloc_one<segmented_stack_t<bytes_t>>(parent);
         if (!res.okay()) [[unlikely]]
-            return AllocationStatusCode::OOM;
-        m.blocks = &res.release();
+            return res.err();
         auto blocks = m.parent.is_heap()
                           ? segmented_stack_t<bytes_t>::make_owning(
                                 m.parent.get_heap_unchecked(), 2)
                           : segmented_stack_t<bytes_t>::make(parent, 2);
-        if (!blocks.okay()) [[unlikely]]
+        if (!blocks.okay()) [[unlikely]] {
+            if (m.parent.is_heap()) {
+                free_one(m.parent.get_heap_unchecked(), res.release());
+            }
             return blocks.err();
+        }
         // explicitly move the created segment from the stack to the
         // allocated blocks
         // TODO: use some make_into here to avoid this move
+        m.blocks = &res.release();
         new (m.blocks) segmented_stack_t<bytes_t>(blocks.release());
         auto pushres = m.blocks->try_push(m.memory);
         assert(pushres.okay());
@@ -264,6 +278,7 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
     m.last_freed = next_to_last_freed;
     --m.blocks_free;
 
+#ifndef ALLO_DISABLE_TYPEINFO
     // try to insert the typehash after the allocation
     if (typehash != 0) {
         if (auto* const typehash_location =
@@ -273,6 +288,7 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
         // otherwise, there is no room for the typehash, and we just make the
         // allocation untyped.
     }
+#endif
 
     assert(chosen_block.size() >= bytes);
     return allocation_result_t(std::in_place, chosen_block, 0, bytes);
@@ -303,6 +319,7 @@ block_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash,
     if (new_size > m.blocksize) {
         return AllocationStatusCode::OOM;
     }
+#ifndef ALLO_DISABLE_TYPEINFO
     if (old_typehash != 0) {
         if (auto* typehash_location =
                 get_location_for_typehash(mem.data(), mem.size())) {
@@ -317,10 +334,10 @@ block_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash,
             *typehash_location = new_typehash;
         }
     }
+#endif
     return zl::raw_slice(*mem.data(), new_size);
 }
 
-// TODO: redo free bytes to work with blocks
 ALLO_FUNC allocation_status_t
 block_allocator_t::free_bytes(bytes_t mem, size_t typehash) noexcept
 {

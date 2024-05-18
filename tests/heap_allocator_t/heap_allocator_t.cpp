@@ -18,7 +18,7 @@ TEST_SUITE("heap_allocator_t")
         {
             c_allocator_t global_allocator;
             auto mem = alloc<uint8_t>(global_allocator, 2000).release();
-            heap_allocator_t heap = heap_allocator_t::make(mem).release();
+            heap_allocator_t heap = heap_allocator_t::make(mem);
             allo::free(global_allocator, mem);
         }
         SUBCASE("make owned")
@@ -26,7 +26,7 @@ TEST_SUITE("heap_allocator_t")
             c_allocator_t global_allocator;
             auto mem = alloc<uint8_t>(global_allocator, 2000).release();
             heap_allocator_t heap =
-                heap_allocator_t::make_owning(mem, global_allocator).release();
+                heap_allocator_t::make_owning(mem, global_allocator);
         }
         SUBCASE("make_into")
         {
@@ -62,18 +62,19 @@ TEST_SUITE("heap_allocator_t")
             c_allocator_t global_allocator;
             // NOTE: bytes required at time of writing by allocator type:
             // block allocator: 1825
-            // heap allocator: 2315
+            // heap allocator: 2776
             // stack allocator: 1875
             // heap allocator has a significant amount of bookkeeping space
-            auto mem = alloc<uint8_t>(global_allocator, 2315).release();
-            heap_allocator_t heap =
-                heap_allocator_t::make_owning(mem, global_allocator).release();
+            auto mem = alloc<uint8_t>(global_allocator, 2776).release();
+            heap_allocator_t heap = heap_allocator_t::make(mem);
             tests::allocate_object_with_linked_list(heap);
+            allo::free(global_allocator, mem);
         }
 
         SUBCASE("generic ref, large allocation")
         {
-            tests::make_large_allocation_with<heap_allocator_t>();
+            tests::make_large_allocation_with_nonfailing_make<
+                heap_allocator_t>();
         }
 
         SUBCASE("heap allocator_test - allocate and free one thing")
@@ -81,7 +82,7 @@ TEST_SUITE("heap_allocator_t")
             c_allocator_t global_allocator;
             auto mem = alloc<uint8_t>(global_allocator, 2000).release();
             heap_allocator_t heap =
-                heap_allocator_t::make_owning(mem, global_allocator).release();
+                heap_allocator_t::make_owning(mem, global_allocator);
             tests::allocate_480_bytes_related_objects(heap);
             tests::typed_alloc_realloc_free(heap);
         }
