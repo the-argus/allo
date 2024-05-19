@@ -296,8 +296,9 @@ ALLO_FUNC auto heap_allocator_t::alloc_bytes_inner(
             if (block != original_block) {
                 // make sure we moved by at least 8 bytes. doesnt make sense to
                 // move any less since we were already 8-byte aligned
-                ALLO_INTERNAL_ASSERT(
-                    (uint8_t*)block - (uint8_t*)original_block > sizeof(void*));
+                ALLO_INTERNAL_ASSERT((uint8_t*)block -
+                                         (uint8_t*)original_block >=
+                                     sizeof(void*));
                 // go back before the block, place down a pointer to the actual
                 // allocation_bookkeeping_t.
                 *(((allocation_bookkeeping_t**)block) - 1) = bookkeeping;

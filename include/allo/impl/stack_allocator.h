@@ -418,7 +418,9 @@ stack_allocator_t::free_bytes(bytes_t mem, size_t typehash) noexcept
         m.memory = m.blocks->end_unchecked();
     }
     m.top = prevstate.stack_top;
+#ifndef ALLO_DISABLE_TYPEINFO
     m.last_type_hashcode = prevstate.type_hashcode;
+#endif
     ALLO_INTERNAL_ASSERT(zl::memcontains_one(m.memory, m.top) ||
                          m.memory.end().ptr() == m.top);
     return AllocationStatusCode::Okay;
