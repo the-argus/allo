@@ -119,6 +119,19 @@ TEST_SUITE("stack_allocator_t")
                 stack_allocator_t>();
         }
 
+        SUBCASE("allocate many things then free then reallocate")
+        {
+            c_allocator_t c;
+            auto buffer = alloc<uint8_t>(c, 50000).release();
+
+            stack_allocator_t stack = stack_allocator_t::make(buffer);
+
+            // nest another stack within the current one, inside this test
+            tests::allocate_free_then_allocate_again<stack_allocator_t>(stack);
+
+            allo::free(c, buffer);
+        }
+
         SUBCASE("generic ref, allocate linked list")
         {
             // TODO: this test is only supposed to need something like 830

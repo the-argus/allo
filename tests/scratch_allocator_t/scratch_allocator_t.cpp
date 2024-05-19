@@ -5,7 +5,6 @@
 #include "generic_allocator_tests.h"
 #include "test_header.h"
 #include <array>
-#include <optional>
 
 using namespace allo;
 

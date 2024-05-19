@@ -208,7 +208,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::try_make_space_for_at_least(
     const auto newblock = maybe_newblock.release();
 
     const auto res = m.blocks->try_push(newblock);
-    if (res.okay()) [[unlikely]]
+    if (!res.okay()) [[unlikely]]
         return res.err();
     m.memory = newblock;
     m.top = newblock.data();
@@ -363,7 +363,8 @@ stack_allocator_t::free_common(bytes_t mem, size_t typehash) const noexcept
     if (typehash != m.last_type_hashcode)
         return AllocationStatusCode::InvalidType;
 #endif
-    assert(m.top == mem.end().ptr());
+    assert(m.top == mem.end().ptr() &&
+           "Items in stack allocator freed in the wrong order.");
     if (m.top != mem.end().ptr()) [[unlikely]] {
         return AllocationStatusCode::MemoryInvalid;
     }
