@@ -5,6 +5,7 @@
 #define ALLO_HEADER_ONLY_AVOID
 #undef ALLO_HEADER_ONLY
 #endif
+#include "allo/detail/asserts.h"
 #include "allo/status.h"
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
@@ -61,14 +62,14 @@ template <typename T> class list_t
     template <typename... Args>
     [[nodiscard]] status_t try_insert_at(size_t index, Args&&... args) noexcept
     {
+        ALLO_VALID_ARG_ASSERT(index <= m.size);
         if (index > m.size) {
-            assert(false);
             return StatusCode::IndexOutOfRange;
         }
         auto status = try_realloc_if_needed();
         if (!status.okay())
             return status.err();
-        assert(m.memory.size() > m.size);
+        ALLO_INTERNAL_ASSERT(m.memory.size() > m.size);
         // move all items between the end of the buffer and index down one to
         // make room for the new item
         for (int64_t i = m.size; i >= index + 1; --i) {
@@ -179,8 +180,8 @@ template <typename T>
 template <typename T>
 auto list_t<T>::try_remove_at(size_t index) noexcept -> status_t
 {
-    assert(index <= m.size);
-    if (index > m.size) {
+    ALLO_VALID_ARG_ASSERT(index < m.size);
+    if (index >= m.size) {
         return StatusCode::IndexOutOfRange;
     }
     remove_at_unchecked(index);
@@ -189,7 +190,7 @@ auto list_t<T>::try_remove_at(size_t index) noexcept -> status_t
 
 template <typename T> void list_t<T>::remove_at_unchecked(size_t index) noexcept
 {
-    assert(index < m.size);
+    ALLO_UNCHECKED_ASSERT(index < m.size);
     (m.memory.data()[index]).~T();
     for (size_t i = index; i < m.size - 1; ++i) {
         new (m.memory.data() + i) T(std::move(m.memory.data()[i + 1]));
@@ -222,6 +223,7 @@ auto list_t<T>::try_realloc_if_needed() noexcept -> status_t
 
 template <typename T> zl::opt<T&> list_t<T>::try_get_at(size_t index) noexcept
 {
+    ALLO_VALID_ARG_ASSERT(index < m.size);
     if (index >= m.size)
         return {};
     return get_at_unchecked(index);
@@ -230,6 +232,7 @@ template <typename T> zl::opt<T&> list_t<T>::try_get_at(size_t index) noexcept
 template <typename T>
 zl::opt<const T&> list_t<T>::try_get_at(size_t index) const noexcept
 {
+    ALLO_VALID_ARG_ASSERT(index < m.size);
     if (index >= m.size)
         return {};
     return get_at_unchecked(index);
@@ -237,14 +240,14 @@ zl::opt<const T&> list_t<T>::try_get_at(size_t index) const noexcept
 
 template <typename T> T& list_t<T>::get_at_unchecked(size_t index) noexcept
 {
-    assert(index < m.size);
+    ALLO_UNCHECKED_ASSERT(index < m.size);
     return m.memory.data()[index];
 }
 
 template <typename T>
 const T& list_t<T>::get_at_unchecked(size_t index) const noexcept
 {
-    assert(index < m.size);
+    ALLO_UNCHECKED_ASSERT(index < m.size);
     return m.memory.data()[index];
 }
 

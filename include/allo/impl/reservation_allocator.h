@@ -7,6 +7,7 @@
 #endif
 #endif
 
+#include "allo/detail/asserts.h"
 #include "allo/memory_map.h"
 #include "allo/reservation_allocator.h"
 #include <ziglike/defer.h>
@@ -45,7 +46,7 @@ ALLO_FUNC allocation_result_t reservation_allocator_t::remap_bytes(
             std::ceil(static_cast<double>(new_size - m.mem.size()) /
                       static_cast<double>(m.pagesize)));
         const size_t current_pages = m.mem.size() / m.pagesize;
-        assert(m.mem.size() % m.pagesize == 0);
+        ALLO_INTERNAL_ASSERT(m.mem.size() % m.pagesize == 0);
         const size_t total_pages = pages_needed + current_pages;
         // catch error before it happens
         if (total_pages > m.num_pages_reserved)

@@ -6,6 +6,7 @@
 #define ALLO_HEADER_ONLY_AVOID
 #undef ALLO_HEADER_ONLY
 #endif
+#include "allo/detail/asserts.h"
 #include "allo/typed_allocation.h"
 #include "allo/typed_freeing.h"
 #include "allo/typed_reallocation.h"
@@ -64,7 +65,7 @@ template <typename T> class collection_t
                 return status.err();
             }
         }
-        assert(m.capacity > m.items.size());
+        ALLO_INTERNAL_ASSERT(m.capacity > m.items.size());
         put_unchecked(std::forward<Args>(args)...);
         return AllocationStatusCode::Okay;
     }
@@ -189,7 +190,7 @@ inline constexpr size_t collection_t<T>::calculate_new_size() noexcept
 {
     const auto res = static_cast<size_t>(
         std::ceil(static_cast<float>(m.items.size()) * realloc_ratio));
-    assert(res - m.items.size() >= 1);
+    ALLO_INTERNAL_ASSERT(res - m.items.size() >= 1);
     return res;
 }
 

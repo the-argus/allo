@@ -59,7 +59,7 @@ template <typename T> class stack_t
                 return status.err();
             }
         }
-        assert(m.capacity > m.items.size());
+        ALLO_INTERNAL_ASSERT(m.capacity > m.items.size());
         push_unchecked(std::forward<Args>(args)...);
         return AllocationStatusCode::Okay;
     }
@@ -154,7 +154,7 @@ inline constexpr size_t stack_t<T>::calculate_new_size() noexcept
 {
     const auto res = static_cast<size_t>(
         std::ceil(static_cast<float>(m.items.size()) * realloc_ratio));
-    assert(res - m.items.size() >= 1);
+    ALLO_INTERNAL_ASSERT(res - m.items.size() >= 1);
     return res;
 }
 
@@ -184,7 +184,7 @@ template <typename T> inline constexpr zl::opt<T&> stack_t<T>::end() noexcept
 
 template <typename T> inline constexpr T& stack_t<T>::end_unchecked() noexcept
 {
-    assert(m.items.size() > 0);
+    ALLO_UNCHECKED_ASSERT(m.items.size() > 0);
     return *(m.items.end().ptr() - 1);
 }
 

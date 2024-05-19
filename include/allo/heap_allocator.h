@@ -3,6 +3,7 @@
 #include "allo/detail/abstracts.h"
 #include "allo/detail/destruction_callback.h"
 #include "allo/structures/any_allocator.h"
+#include "allo/structures/segmented_stack.h"
 
 namespace allo {
 

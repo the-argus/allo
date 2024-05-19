@@ -8,6 +8,7 @@
 #endif
 #endif
 
+#include "allo/detail/asserts.h"
 #include "allo/scratch_allocator.h"
 
 #ifdef ALLO_HEADER_ONLY
@@ -58,16 +59,16 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
         size_t new_size = round_up_to_valid_buffersize(
             m.memory.size() + bytes +
             (aligned_data - reinterpret_cast<size_t>(m.top)));
-        assert(new_size > m.memory.size());
-        assert(new_size % m.original_size == 0);
-        assert(is_power_of_two(new_size / m.original_size));
+        ALLO_INTERNAL_ASSERT(new_size > m.memory.size());
+        ALLO_INTERNAL_ASSERT(new_size % m.original_size == 0);
+        ALLO_INTERNAL_ASSERT(is_power_of_two(new_size / m.original_size));
         auto res =
             m.parent.get_heap_unchecked().remap_bytes(m.memory, 0, new_size, 0);
         if (res.okay()) {
 #ifndef NDEBUG
             if (m.blocks) {
-                assert(m.blocks->end().has_value());
-                assert(m.blocks->end().value() == m.memory);
+                ALLO_INTERNAL_ASSERT(m.blocks->end().has_value());
+                ALLO_INTERNAL_ASSERT(m.blocks->end().value() == m.memory);
             }
 #endif
             auto newmem = res.release();
@@ -96,7 +97,7 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
                 new (location)
                     segmented_stack_t<bytes_t>(new_blocks_stack.release());
             } else {
-                assert(m.parent.is_basic());
+                ALLO_INTERNAL_ASSERT(m.parent.is_basic());
                 auto new_blocks_stack = segmented_stack_t<bytes_t>::make(
                     m.parent.get_basic_unchecked(), blocks_stack_initial_items);
 
@@ -122,7 +123,7 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
             m.blocks = static_cast<segmented_stack_t<bytes_t>*>(top);
 
             const auto res = m.blocks->try_push(m.memory);
-            assert(res.okay());
+            ALLO_INTERNAL_ASSERT(res.okay());
             m.top = reinterpret_cast<uint8_t*>(m.blocks + 1);
         } else {
             // allocate a new block with space for both the blocks stack and
@@ -157,9 +158,10 @@ ALLO_FUNC allocation_status_t scratch_allocator_t::try_make_space_for_at_least(
                 reinterpret_cast<segmented_stack_t<bytes_t>*>(newblock.data());
 
             auto res = m.blocks->try_push(m.memory);
-            assert(res.okay());
+            // these should work because we reserved 2 spots in the constructor
+            ALLO_INTERNAL_ASSERT(res.okay());
             res = m.blocks->try_push(newblock);
-            assert(res.okay());
+            ALLO_INTERNAL_ASSERT(res.okay());
             m.memory = newblock;
             m.top = reinterpret_cast<uint8_t*>(m.blocks + 1);
             return AllocationStatusCode::Okay;
@@ -194,8 +196,8 @@ ALLO_FUNC allocation_result_t scratch_allocator_t::alloc_bytes(
                            uint8_t alignment_exponent) -> allocation_result_t {
         void* new_top = m.top;
         size_t remaining = m.memory.end().ptr() - m.top;
-        if (std::align(1 << alignment_exponent, bytes, new_top, remaining)) {
-            assert(remaining >= bytes);
+        if (std::align(1UL << alignment_exponent, bytes, new_top, remaining)) {
+            ALLO_INTERNAL_ASSERT(remaining >= bytes);
             auto result = zl::raw_slice(*static_cast<uint8_t*>(new_top), bytes);
             m.top = static_cast<uint8_t*>(new_top) + bytes;
             return result;

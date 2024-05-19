@@ -221,7 +221,7 @@ auto segmented_stack_t<T>::make_owning(
     const size_t segments_needed =
         std::ceil(static_cast<float>(actual_initial_items) /
                   static_cast<float>(items_per_segment));
-    assert(segments_needed != 0);
+    ALLO_INTERNAL_ASSERT(segments_needed != 0);
 
     // allocate a bunch of segments and link them to each other
     Segment* previous = nullptr;
@@ -249,7 +249,7 @@ auto segmented_stack_t<T>::make_owning(
         }
         previous = &segment;
     }
-    assert(first);
+    ALLO_INTERNAL_ASSERT(first);
 
     return segmented_stack_t(M{
         .head = *first,
@@ -272,7 +272,8 @@ template <typename T> constexpr zl::opt<T&> segmented_stack_t<T>::end() noexcept
     if (m.items_in_segment_containing_end == 0) {
         return {};
     }
-    assert(m.items_in_segment_containing_end <= items_per_segment);
+    ALLO_INTERNAL_ASSERT(m.items_in_segment_containing_end <=
+                         items_per_segment);
     return end_unchecked();
 }
 
@@ -292,7 +293,7 @@ template <typename T> constexpr void segmented_stack_t<T>::pop() noexcept
     if (m.items_in_segment_containing_end == 0 &&
         m.index_of_segment_containing_end != 0) {
         --m.index_of_segment_containing_end;
-        assert(m.segment_containing_end->endcap.prev);
+        ALLO_INTERNAL_ASSERT(m.segment_containing_end->endcap.prev);
         m.segment_containing_end = m.segment_containing_end->endcap.prev;
         // if previous one exists, its definitely full
         m.items_in_segment_containing_end = items_per_segment;
@@ -302,7 +303,7 @@ template <typename T> constexpr void segmented_stack_t<T>::pop() noexcept
 template <typename T>
 constexpr T& segmented_stack_t<T>::end_unchecked() noexcept
 {
-    assert(m.items_in_segment_containing_end != 0);
+    ALLO_UNCHECKED_ASSERT(m.items_in_segment_containing_end != 0);
     return m.segment_containing_end->items
         .data()[m.items_in_segment_containing_end - 1];
 }

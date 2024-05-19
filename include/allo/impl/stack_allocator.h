@@ -6,6 +6,7 @@
 #endif
 #endif
 
+#include "allo/detail/asserts.h"
 #include "allo/stack_allocator.h"
 #include <cmath>
 #include <cstring>
@@ -87,16 +88,16 @@ ALLO_FUNC allocation_status_t stack_allocator_t::try_make_space_for_at_least(
         size_t new_size = round_up_to_valid_buffersize(
             m.memory.size() + bytes +
             (aligned_data - reinterpret_cast<size_t>(m.top)));
-        assert(new_size > m.memory.size());
-        assert(new_size % m.original_size == 0);
-        assert(is_power_of_two(new_size / m.original_size));
+        ALLO_INTERNAL_ASSERT(new_size > m.memory.size());
+        ALLO_INTERNAL_ASSERT(new_size % m.original_size == 0);
+        ALLO_INTERNAL_ASSERT(is_power_of_two(new_size / m.original_size));
         auto res =
             m.parent.get_heap_unchecked().remap_bytes(m.memory, 0, new_size, 0);
         if (res.okay()) {
 #ifndef NDEBUG
             if (m.blocks) {
-                assert(m.blocks->end().has_value());
-                assert(m.blocks->end().value() == m.memory);
+                ALLO_INTERNAL_ASSERT(m.blocks->end().has_value());
+                ALLO_INTERNAL_ASSERT(m.blocks->end().value() == m.memory);
             }
 #endif
             auto newmem = res.release();
@@ -125,7 +126,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::try_make_space_for_at_least(
                 new (location)
                     segmented_stack_t<bytes_t>(new_blocks_stack.release());
             } else {
-                assert(m.parent.is_basic());
+                ALLO_INTERNAL_ASSERT(m.parent.is_basic());
                 auto new_blocks_stack = segmented_stack_t<bytes_t>::make(
                     m.parent.get_basic_unchecked(), blocks_stack_initial_items);
 
@@ -151,7 +152,7 @@ ALLO_FUNC allocation_status_t stack_allocator_t::try_make_space_for_at_least(
             m.blocks = static_cast<segmented_stack_t<bytes_t>*>(top);
 
             const auto res = m.blocks->try_push(m.memory);
-            assert(res.okay());
+            ALLO_INTERNAL_ASSERT(res.okay());
             m.top = reinterpret_cast<uint8_t*>(m.blocks + 1);
         } else {
             // allocate a new block with space for both the blocks stack and
@@ -186,9 +187,10 @@ ALLO_FUNC allocation_status_t stack_allocator_t::try_make_space_for_at_least(
                 reinterpret_cast<segmented_stack_t<bytes_t>*>(newblock.data());
 
             auto res = m.blocks->try_push(m.memory);
-            assert(res.okay());
+            // these should work because we reserved 2 spots in the constructor
+            ALLO_INTERNAL_ASSERT(res.okay());
             res = m.blocks->try_push(newblock);
-            assert(res.okay());
+            ALLO_INTERNAL_ASSERT(res.okay());
             m.memory = newblock;
             m.top = reinterpret_cast<uint8_t*>(m.blocks + 1);
             return AllocationStatusCode::Okay;
@@ -251,8 +253,8 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
             raw_alloc(alignof(previous_state_t), sizeof(previous_state_t)));
 
         if (!prevstate) {
-            assert(times_retry == 0);
-            assert(!allocated_new_buffer_for_prevstate);
+            ALLO_INTERNAL_ASSERT(times_retry == 0);
+            ALLO_INTERNAL_ASSERT(!allocated_new_buffer_for_prevstate);
             const allocation_status_t buffer_status = alloc_new_buffer();
             if (!buffer_status.okay()) [[unlikely]] {
                 m.top = oldtop;
@@ -271,12 +273,12 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
         if (allocated_new_buffer_for_prevstate) {
             // NOTE: we cannot recover from this: only one allocation can occur
             // and it *must* fit both items
-            assert(item);
+            ALLO_INTERNAL_ASSERT(item);
         }
 #endif
         if (!item) {
-            assert(times_retry == 0);
-            assert(!allocated_new_buffer_for_prevstate);
+            ALLO_INTERNAL_ASSERT(times_retry == 0);
+            ALLO_INTERNAL_ASSERT(!allocated_new_buffer_for_prevstate);
             const allocation_status_t buffer_status = alloc_new_buffer();
             if (!buffer_status.okay()) [[unlikely]] {
                 m.top = oldtop;
@@ -294,8 +296,8 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
         // if there is space between the two for alignment, move the prevstate
         // up to be as close to the item as possible.
         if (actual_alignment > alignof(previous_state_t)) {
-            assert(zl::memcontains_one(m.memory, prevstate));
-            assert(zl::memcontains_one(m.memory, (uint8_t*)item));
+            ALLO_INTERNAL_ASSERT(zl::memcontains_one(m.memory, prevstate));
+            ALLO_INTERNAL_ASSERT(zl::memcontains_one(m.memory, (uint8_t*)item));
             while (prevstate + 2 <= item) {
                 ++prevstate;
             }
@@ -310,19 +312,20 @@ ALLO_FUNC allocation_result_t stack_allocator_t::alloc_bytes(
         // the previous state is guaranteed to be right before the item
         break;
     }
-    assert(zl::memcontains_one(m.memory, (uint8_t*)item));
-    assert(zl::memcontains_one(m.memory, prevstate));
+    ALLO_INTERNAL_ASSERT(zl::memcontains_one(m.memory, (uint8_t*)item));
+    ALLO_INTERNAL_ASSERT(zl::memcontains_one(m.memory, prevstate));
     // in debug mode, make sure the prevstate's stack top is in the previous
     // block, if we had to make a new block
 #ifndef NDEBUG
     if (m.blocks && original_blocksize > m.blocks->size()) {
-        assert(m.blocks->end_unchecked() == m.memory);
+        ALLO_INTERNAL_ASSERT(m.blocks->end_unchecked() == m.memory);
         m.blocks->pop();
-        assert(m.blocks->end());
-        assert(zl::memcontains_one(m.blocks->end_unchecked(),
-                                   prevstate->stack_top) ||
-               m.blocks->end_unchecked().end().ptr() == prevstate->stack_top);
-        assert(m.blocks->try_push(m.memory).okay());
+        ALLO_INTERNAL_ASSERT(m.blocks->end());
+        ALLO_INTERNAL_ASSERT(zl::memcontains_one(m.blocks->end_unchecked(),
+                                                 prevstate->stack_top) ||
+                             m.blocks->end_unchecked().end().ptr() ==
+                                 prevstate->stack_top);
+        ALLO_INTERNAL_ASSERT(m.blocks->try_push(m.memory).okay());
     }
 #endif
 
@@ -340,10 +343,11 @@ ALLO_FUNC void* stack_allocator_t::raw_alloc(size_t align,
     void* new_available_start = m.top;
     size_t new_size = bytes_remaining();
     if (std::align(align, typesize, new_available_start, new_size)) {
-        assert(new_available_start < (m.memory.end().ptr() - typesize));
+        ALLO_INTERNAL_ASSERT(new_available_start <
+                             (m.memory.end().ptr() - typesize));
         m.top = reinterpret_cast<uint8_t*>(new_available_start) + typesize;
-        assert(zl::memcontains_one(m.memory, m.top) ||
-               m.memory.end().ptr() == m.top);
+        ALLO_INTERNAL_ASSERT(zl::memcontains_one(m.memory, m.top) ||
+                             m.memory.end().ptr() == m.top);
         return new_available_start;
     }
     return nullptr;
@@ -359,12 +363,13 @@ ALLO_FUNC zl::res<stack_allocator_t::previous_state_t&, AllocationStatusCode>
 stack_allocator_t::free_common(bytes_t mem, size_t typehash) const noexcept
 {
 #ifndef ALLO_DISABLE_TYPEINFO
-    assert(typehash == m.last_type_hashcode);
+    ALLO_STACK_USAGE_ASSERT(typehash == m.last_type_hashcode);
     if (typehash != m.last_type_hashcode)
         return AllocationStatusCode::InvalidType;
 #endif
-    assert(m.top == mem.end().ptr() &&
-           "Items in stack allocator freed in the wrong order.");
+    ALLO_STACK_USAGE_ASSERT(
+        m.top == mem.end().ptr() &&
+        "Items in stack allocator freed in the wrong order.");
     if (m.top != mem.end().ptr()) [[unlikely]] {
         return AllocationStatusCode::MemoryInvalid;
     }
@@ -374,7 +379,7 @@ stack_allocator_t::free_common(bytes_t mem, size_t typehash) const noexcept
     auto* prevstate = static_cast<previous_state_t*>(
         std::align(alignof(previous_state_t), sizeof(previous_state_t),
                    bufbegin, dummysize));
-    assert(prevstate);
+    ALLO_INTERNAL_ASSERT(prevstate);
     while (reinterpret_cast<uint8_t*>(prevstate + 1) > mem.data()) {
         --prevstate;
     }
@@ -414,8 +419,8 @@ stack_allocator_t::free_bytes(bytes_t mem, size_t typehash) noexcept
     }
     m.top = prevstate.stack_top;
     m.last_type_hashcode = prevstate.type_hashcode;
-    assert(zl::memcontains_one(m.memory, m.top) ||
-           m.memory.end().ptr() == m.top);
+    ALLO_INTERNAL_ASSERT(zl::memcontains_one(m.memory, m.top) ||
+                         m.memory.end().ptr() == m.top);
     return AllocationStatusCode::Okay;
 }
 
@@ -424,10 +429,11 @@ stack_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash,
                                size_t new_size, size_t new_typehash) noexcept
 {
 #ifndef ALLO_DISABLE_TYPEINFO
+    ALLO_VALID_ARG_ASSERT(old_typehash == m.last_type_hashcode);
     if (old_typehash != m.last_type_hashcode)
         return AllocationStatusCode::InvalidType;
 #endif
-    assert(m.top == mem.end().ptr());
+    ALLO_VALID_ARG_ASSERT(m.top == mem.end().ptr());
     if (m.top != mem.end().ptr()) [[unlikely]] {
         return AllocationStatusCode::MemoryInvalid;
     }
@@ -445,8 +451,8 @@ stack_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash,
 #ifndef ALLO_DISABLE_TYPEINFO
     m.last_type_hashcode = new_typehash;
 #endif
-    assert(zl::memcontains_one(m.memory, m.top) ||
-           m.memory.end().ptr() == m.top);
+    ALLO_INTERNAL_ASSERT(zl::memcontains_one(m.memory, m.top) ||
+                         m.memory.end().ptr() == m.top);
     return bytes_t(m.memory, byte_index_of_original_mem,
                    byte_index_of_new_begin);
 }

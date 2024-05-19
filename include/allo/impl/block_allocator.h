@@ -9,6 +9,7 @@
 
 #include "allo/block_allocator.h"
 #include "allo/detail/alignment.h"
+#include "allo/detail/round_up_to_multiple_of.h"
 #include <cmath>
 #include <memory>
 #include <ziglike/stdmem.h>
@@ -61,11 +62,15 @@ ALLO_FUNC block_allocator_t block_allocator_t::make_inner(
     bytes_t memory, any_allocator_t parent, size_t blocksize) noexcept
 {
     // blocksize must be at least 24 bytes, to fit
+    // must also be a multiple of 8 at least so every block is 8 byte aligned
     size_t actual_blocksize =
-        (blocksize < minimum_blocksize) ? minimum_blocksize : blocksize;
+        (detail::round_up_to_multiple_of<8>(blocksize) < minimum_blocksize)
+            ? minimum_blocksize
+            : detail::round_up_to_multiple_of<8>(blocksize);
 
 #ifndef NDEBUG
     if (parent.is_heap()) {
+        // NOTE: standard assert here, we only check this in debug mode
         assert(parent.get_heap_unchecked().free_status(memory, 0).okay());
     }
 #endif
@@ -73,15 +78,15 @@ ALLO_FUNC block_allocator_t block_allocator_t::make_inner(
     auto num_blocks =
         static_cast<size_t>(std::floor(static_cast<double>(memory.size()) /
                                        static_cast<double>(actual_blocksize)));
-    assert(num_blocks < memory.size() + 1);
 
     // its not really valid to create a block allocator with no intial blocks,
     // although it wont return an error until you go to allocate with it
-    assert(num_blocks > 0);
+    ALLO_VALID_ARG_ASSERT(num_blocks > 0);
 
     for (size_t i = 0; i < num_blocks; ++i) {
         uint8_t* head = memory.data() + (i * actual_blocksize);
-        assert(detail::nearest_alignment_exponent((size_t)head) >= 3);
+        ALLO_INTERNAL_ASSERT(detail::nearest_alignment_exponent((size_t)head) >=
+                             3);
         *reinterpret_cast<void**>(head) = head + actual_blocksize;
     }
 
@@ -103,7 +108,7 @@ block_allocator_t::max_destruction_entries_per_block() const noexcept
     size_t max_destruction_entries_per_block =
         (m.blocksize - sizeof(detail::destruction_callback_entry_list_node_t)) /
         sizeof(detail::destruction_callback_entry_t);
-    assert(max_destruction_entries_per_block >= 1);
+    ALLO_INTERNAL_ASSERT(max_destruction_entries_per_block >= 1);
     return max_destruction_entries_per_block;
 }
 
@@ -125,11 +130,11 @@ ALLO_FUNC allocation_status_t block_allocator_t::grow() noexcept
             m.memory, 0, m.memory.size() + additional_bytes_needed, 0);
         if (res.okay()) {
             if (m.blocks) {
-                assert(m.blocks->end_unchecked() == m.memory);
+                ALLO_INTERNAL_ASSERT(m.blocks->end_unchecked() == m.memory);
                 m.blocks->pop();
                 m.memory = res.release();
                 const auto pushres = m.blocks->try_push(m.memory);
-                assert(pushres.okay());
+                ALLO_INTERNAL_ASSERT(pushres.okay());
             } else {
                 m.memory = res.release();
             }
@@ -138,13 +143,13 @@ ALLO_FUNC allocation_status_t block_allocator_t::grow() noexcept
             // initialize each block to point to the next one
             for (size_t i = 0; i < additional_blocks_needed; ++i) {
                 uint8_t* head = oldmem.end().ptr() + (i * m.blocksize);
-                assert(zl::memcontains_one(m.memory, head));
+                ALLO_INTERNAL_ASSERT(zl::memcontains_one(m.memory, head));
                 *reinterpret_cast<void**>(head) = head + m.blocksize;
             }
 
             // we would need to update free list end to point to the new area
             // otherwise
-            assert(m.blocks_free == 0);
+            ALLO_INTERNAL_ASSERT(m.blocks_free == 0);
 
             m.blocks_free += additional_blocks_needed;
 
@@ -177,11 +182,11 @@ ALLO_FUNC allocation_status_t block_allocator_t::grow() noexcept
         m.blocks = &res.release();
         new (m.blocks) segmented_stack_t<bytes_t>(blocks.release());
         auto pushres = m.blocks->try_push(m.memory);
-        assert(pushres.okay());
+        ALLO_INTERNAL_ASSERT(pushres.okay());
     }
-    assert(m.blocks);
-    assert(m.blocks->end());
-    assert(m.blocks->end_unchecked() == m.memory);
+    ALLO_INTERNAL_ASSERT(m.blocks);
+    ALLO_INTERNAL_ASSERT(m.blocks->end());
+    ALLO_INTERNAL_ASSERT(m.blocks->end_unchecked() == m.memory);
 
     // okay now we are guaranteed to have blocks structure and we need another
     // item in it, remapping has failed
@@ -204,7 +209,7 @@ ALLO_FUNC allocation_status_t block_allocator_t::grow() noexcept
     m.blocks->end_unchecked() = m.memory;
     // otherwise we would need to point the thing at the end of the free list to
     // us
-    assert(m.blocks_free == 0);
+    ALLO_INTERNAL_ASSERT(m.blocks_free == 0);
 
     for (size_t i = 0; i < additional_blocks_needed; ++i) {
         uint8_t* head = m.memory.data() + (i * m.blocksize);
@@ -243,7 +248,9 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
     size_t bytes, uint8_t alignment_exponent, size_t typehash) noexcept
 {
     // make sure it can even fit in a block
-    assert(bytes <= m.blocksize);
+    ALLO_VALID_ARG_ASSERT(
+        bytes <= m.blocksize &&
+        "Attempted allocation too big for block allocator...");
     if (bytes > m.blocksize) [[unlikely]]
         return AllocationStatusCode::OOM;
 
@@ -251,7 +258,7 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
     // requested exponent
     const uint8_t our_alignment =
         detail::nearest_alignment_exponent(m.blocksize);
-    assert(our_alignment != 64);
+    ALLO_INTERNAL_ASSERT(our_alignment != 64);
     if (alignment_exponent > our_alignment) {
         return AllocationStatusCode::AllocationTooAligned;
     }
@@ -262,7 +269,7 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
         if (!res.okay()) [[unlikely]]
             return res.err();
     }
-    assert(m.blocks_free >= 1);
+    ALLO_INTERNAL_ASSERT(m.blocks_free >= 1);
 
     void* const next_to_last_freed = *static_cast<void**>(m.last_freed);
 #ifndef NDEBUG
@@ -290,7 +297,7 @@ ALLO_FUNC allocation_result_t block_allocator_t::alloc_bytes(
     }
 #endif
 
-    assert(chosen_block.size() >= bytes);
+    ALLO_INTERNAL_ASSERT(chosen_block.size() >= bytes);
     return allocation_result_t(std::in_place, chosen_block, 0, bytes);
 }
 
@@ -299,7 +306,7 @@ ALLO_FUNC size_t*
 block_allocator_t::get_location_for_typehash(uint8_t* blockhead,
                                              size_t allocsize) const noexcept
 {
-    assert(allocsize <= m.blocksize);
+    ALLO_INTERNAL_ASSERT(allocsize <= m.blocksize);
     uint8_t* head = blockhead;
     head += allocsize;
     void* headvoid = head;
@@ -375,8 +382,8 @@ block_allocator_t::free_status(bytes_t mem, size_t typehash) const noexcept
 ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
     destruction_callback_t callback, void* user_data) noexcept
 {
+    ALLO_VALID_ARG_ASSERT(callback != nullptr);
     if (!callback) {
-        assert(callback != nullptr);
         return AllocationStatusCode::InvalidArgument;
     }
 
@@ -401,8 +408,9 @@ ALLO_FUNC allocation_status_t block_allocator_t::register_destruction_callback(
         m.last_callback_array_size = 0;
     }
 
-    assert(m.last_callback_array &&
-           m.last_callback_array_size < max_destruction_entries_per_block());
+    ALLO_INTERNAL_ASSERT(m.last_callback_array &&
+                         m.last_callback_array_size <
+                             max_destruction_entries_per_block());
 
     // actually insert the callback into the array
     m.last_callback_array->entries[m.last_callback_array_size] =

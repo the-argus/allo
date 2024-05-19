@@ -40,7 +40,7 @@ inline allocation_status_t free(Freer& allocator,
         detail::is_freer<Freer>,
         "The type given as the freer cannot be used to free the item.");
     static_assert(!std::is_reference_v<T>, "Can't free a reference type");
-    const size_t typehash =
+    size_t typehash =
 #ifndef ALLO_DISABLE_TYPEINFO
 #ifdef ALLO_USE_RTTI
         typeid(T).hash_code();
@@ -50,6 +50,9 @@ inline allocation_status_t free(Freer& allocator,
 #else
         0;
 #endif
+    if constexpr (std::is_same_v<uint8_t, T>) {
+        typehash = 0;
+    }
     return allocator.free_bytes(
         zl::raw_slice(*reinterpret_cast<uint8_t*>(items.data()),
                       sizeof(T) * items.size()),

@@ -1,4 +1,10 @@
-#include "allo.h"
+// NOTE: necessary for zl::opt which is inside node_t of generic_allocator_tests
+// TODO: zl::opt CAN be trivially copyable and destructable when its contents
+// is a reference, make it so!!!
+#define ALLO_ALLOW_DESTRUCTORS
+/// NOTE: this is needed so we can recover from generic_allocator_tests which
+/// may fail
+#define ALLO_DISABLE_VALID_ARGUMENT_ASSERTS
 #include "allo/block_allocator.h"
 #include "allo/c_allocator.h"
 #include "allo/make_into.h"
@@ -156,6 +162,17 @@ TEST_SUITE("block_allocator_t")
                 allo::alloc<uint8_t>(global_allocator, 1825).release(),
                 global_allocator, 16);
             tests::allocate_object_with_linked_list(ally);
+        }
+
+        SUBCASE("allocate many things then free then reallocate")
+        {
+            c_allocator_t c;
+            auto buffer = alloc<uint8_t, c_allocator_t, 32>(c, 50000).release();
+            stack_allocator_t stack = stack_allocator_t::make(buffer);
+            // NOTE: passing in blocksize as additional make argument here
+            tests::allocate_free_then_allocate_again<block_allocator_t>(stack,
+                                                                        100);
+            allo::free(c, buffer);
         }
 
         SUBCASE("destruction callback and sometimes OOM on register, doesnt "

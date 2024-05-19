@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cmath>
 #ifndef ALLO_HEADER_ONLY
 #ifndef ALLO_OVERRIDE_IMPL_INCLUSION_GUARD
 #error \
@@ -8,8 +7,11 @@
 #endif
 #endif
 
+#include "allo/detail/asserts.h"
 #include "allo/heap_allocator.h"
+#include <cmath>
 #include <memory>
+#include <ziglike/stdmem.h>
 
 #ifdef ALLO_HEADER_ONLY
 #ifndef ALLO_FUNC
@@ -91,8 +93,8 @@ ALLO_FUNC heap_allocator_t::~heap_allocator_t() noexcept
 ALLO_FUNC allocation_status_t heap_allocator_t::register_destruction_callback(
     destruction_callback_t callback, void* user_data) noexcept
 {
+    ALLO_VALID_ARG_ASSERT(callback != nullptr);
     if (!callback) {
-        assert(callback);
         return AllocationStatusCode::InvalidArgument;
     }
     // might be necessary to allocate space for some more destruction callbacks
@@ -131,12 +133,13 @@ heap_allocator_t::remap_bytes(bytes_t mem, size_t old_typehash, size_t new_size,
     if (mem.size() < new_size) {
         return AllocationStatusCode::OOM;
     }
-
+#ifndef ALLO_DISABLE_TYPEINFO
+    ALLO_VALID_ARG_ASSERT(old_typehash == new_typehash &&
+                          "heap allocator cannot change types on reallocation");
     if (old_typehash != new_typehash) {
-        // no changing types with heap allocator
-        assert(old_typehash == new_typehash);
         return AllocationStatusCode::InvalidArgument;
     }
+#endif
 
     return bytes_t(mem, 0, new_size);
 }
@@ -166,9 +169,9 @@ ALLO_FUNC auto heap_allocator_t::free_common(bytes_t mem,
     {
         size_t debug_space = sizeof(allocation_bookkeeping_t) * 2;
         void* debug_head = head;
-        assert(std::align(alignof(allocation_bookkeeping_t),
-                          sizeof(allocation_bookkeeping_t), debug_head,
-                          debug_space) == mem.data());
+        ALLO_INTERNAL_ASSERT(std::align(alignof(allocation_bookkeeping_t),
+                                        sizeof(allocation_bookkeeping_t),
+                                        debug_head, debug_space) == mem.data());
     }
 #endif
     auto* bk = static_cast<allocation_bookkeeping_t*>(head);
@@ -230,7 +233,7 @@ ALLO_FUNC allocation_result_t heap_allocator_t::alloc_bytes(
             return status.err();
         auto second_attempt = alloc_bytes_inner(bytes, alignment_exponent,
                                                 typehash, res.last_searched);
-        assert(second_attempt.success);
+        ALLO_INTERNAL_ASSERT(second_attempt.success);
         return bytes_t(second_attempt.success.value());
     }
     return bytes_t(res.success.value());
@@ -240,7 +243,7 @@ ALLO_FUNC auto heap_allocator_t::alloc_bytes_inner(
     size_t bytes, uint8_t alignment_exponent, size_t typehash,
     free_node_t* last_searched_node) noexcept -> inner_allocation_attempt_t
 {
-    assert(last_searched_node);
+    ALLO_INTERNAL_ASSERT(last_searched_node);
     // refuse to align to less than 8 bytes
     const size_t actual_align_ex =
         alignment_exponent < 3 ? 3 : alignment_exponent;
@@ -267,11 +270,11 @@ ALLO_FUNC auto heap_allocator_t::alloc_bytes_inner(
             {
                 size_t space = iter->size;
                 void* block = iter;
-                assert(std::align(alignof(allocation_bookkeeping_t),
-                                  sizeof(allocation_bookkeeping_t), block,
-                                  space));
-                assert(block == iter);
-                assert(space > sizeof(allocation_bookkeeping_t));
+                ALLO_INTERNAL_ASSERT(
+                    std::align(alignof(allocation_bookkeeping_t),
+                               sizeof(allocation_bookkeeping_t), block, space));
+                ALLO_INTERNAL_ASSERT(block == iter);
+                ALLO_INTERNAL_ASSERT(space > sizeof(allocation_bookkeeping_t));
             }
 #endif
             size_t space = iter->size;
@@ -293,20 +296,20 @@ ALLO_FUNC auto heap_allocator_t::alloc_bytes_inner(
             if (block != original_block) {
                 // make sure we moved by at least 8 bytes. doesnt make sense to
                 // move any less since we were already 8-byte aligned
-                assert((uint8_t*)block - (uint8_t*)original_block >
-                       sizeof(void*));
+                ALLO_INTERNAL_ASSERT(
+                    (uint8_t*)block - (uint8_t*)original_block > sizeof(void*));
                 // go back before the block, place down a pointer to the actual
                 // allocation_bookkeeping_t.
                 *(((allocation_bookkeeping_t**)block) - 1) = bookkeeping;
             }
-            assert(space >= bytes);
+            ALLO_INTERNAL_ASSERT(space >= bytes);
             space -= bytes;
             // space is now the number of bytes left in this block...
             void* remaining = ((uint8_t*)block) + bytes;
             bool is_space_remaining = std::align(
                 alignof(free_node_t), sizeof(free_node_t), remaining, space);
             if (is_space_remaining) {
-                assert(remaining != nullptr);
+                ALLO_INTERNAL_ASSERT(remaining != nullptr);
                 // able to fit a free node in here, use that to shrink the size
                 auto* newnode = reinterpret_cast<free_node_t*>(remaining);
                 *newnode = {.size = space, .next = iter->next};
@@ -334,8 +337,8 @@ ALLO_FUNC auto heap_allocator_t::alloc_bytes_inner(
 
             const size_t diff = reinterpret_cast<uint8_t*>(bookkeeping) -
                                 reinterpret_cast<uint8_t*>(iter);
-            assert(diff < alignof(allocation_bookkeeping_t));
-            assert((void*)bookkeeping == iter);
+            ALLO_INTERNAL_ASSERT(diff < alignof(allocation_bookkeeping_t));
+            ALLO_INTERNAL_ASSERT((void*)bookkeeping == iter);
             *bookkeeping = {
                 .size_requested = bytes,
                 // NOTE: reading from next right before we assign over it...
@@ -393,7 +396,7 @@ ALLO_FUNC allocation_status_t heap_allocator_t::try_make_space_for_at_least(
         size_t space = _space;
         void* const result =
             std::align(alignof(free_node_t), sizeof(free_node_t), head, space);
-        assert(result);
+        ALLO_INTERNAL_ASSERT(result);
 
         auto* new_free_node = reinterpret_cast<free_node_t*>(result);
         *new_free_node = free_node_t{
@@ -406,16 +409,17 @@ ALLO_FUNC allocation_status_t heap_allocator_t::try_make_space_for_at_least(
     if (m.parent.is_heap()) {
         const size_t new_size_remapped = round_up_to_valid_buffersize(
             actual_bytes + m.memory.size(), m.current_memory_original_size);
-        assert(new_size_remapped >= m.memory.size() + actual_bytes);
+        ALLO_INTERNAL_ASSERT(new_size_remapped >=
+                             m.memory.size() + actual_bytes);
         auto res = m.parent.get_heap_unchecked().remap_bytes(
             m.memory, 0, new_size_remapped, 0);
         if (res.okay()) {
             if (m.blocks) {
-                assert(m.blocks->end_unchecked() == m.memory);
+                ALLO_INTERNAL_ASSERT(m.blocks->end_unchecked() == m.memory);
                 m.blocks->pop();
                 m.memory = res.release();
                 const auto pushres = m.blocks->try_push(m.memory);
-                assert(pushres.okay());
+                ALLO_INTERNAL_ASSERT(pushres.okay());
             } else {
                 m.memory = res.release();
             }
@@ -453,10 +457,10 @@ ALLO_FUNC allocation_status_t heap_allocator_t::try_make_space_for_at_least(
         m.blocks = &blocks_allocation_res.release();
         new (m.blocks) segmented_stack_t<bytes_t>(blocks_res.release());
         auto pushres = m.blocks->try_push(m.memory);
-        assert(pushres.okay());
+        ALLO_INTERNAL_ASSERT(pushres.okay());
     }
 
-    assert(m.blocks->end_unchecked() == m.memory);
+    ALLO_INTERNAL_ASSERT(m.blocks->end_unchecked() == m.memory);
     if (const auto pushres = m.blocks->try_push(m.memory); !pushres.okay())
         return pushres.err();
 

@@ -33,12 +33,13 @@ void make_large_allocation_with_nonfailing_make(Args&&... args)
     assert(count == 1);
 }
 
-template <typename Allocator>
+template <typename Allocator, typename... Args>
 void allocate_free_then_allocate_again(
-    detail::abstract_stack_allocator_t& stack)
+    detail::abstract_stack_allocator_t& stack, Args&&... args)
 {
     auto initial_mem = alloc<uint8_t>(stack, 500).release();
-    auto ally = Allocator::make(initial_mem, stack);
+    auto ally =
+        Allocator::make(initial_mem, stack, std::forward<Args>(args)...);
 
     struct node_t
     {
@@ -118,7 +119,11 @@ void allocate_free_then_allocate_again(
     free_one(ally, one.left.value().left.value());
 
     // one big contiguous buffer just to mess with stuff and see what happens
-    zl::slice<uint8_t> buffer = alloc<uint8_t>(ally, 10000).release();
+    // (it can fail)
+    auto buffer_res = alloc<uint8_t>(ally, 10000);
+    if (buffer_res.okay()) {
+        allo::free(ally, buffer_res.release());
+    }
 
     node_t* iter = &one.right.value();
     for (size_t i = 0; i < 100; ++i) {

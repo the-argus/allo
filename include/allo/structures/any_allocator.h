@@ -1,6 +1,7 @@
 #pragma once
 
 #include "allo/detail/abstracts.h"
+#include "allo/detail/asserts.h"
 #include <cstdint>
 #include <ziglike/opt.h>
 
@@ -87,7 +88,7 @@ class any_allocator_t
     [[nodiscard]] inline constexpr detail::abstract_heap_allocator_t&
     get_heap_unchecked() const noexcept
     {
-        assert(is_heap());
+        ALLO_UNCHECKED_ASSERT(is_heap());
         return *static_cast<detail::abstract_heap_allocator_t*>(m.ref);
     }
 
@@ -102,7 +103,7 @@ class any_allocator_t
     [[nodiscard]] inline constexpr detail::abstract_stack_allocator_t&
     get_stack_unchecked() const noexcept
     {
-        assert(is_stack());
+        ALLO_UNCHECKED_ASSERT(is_stack());
         return *static_cast<detail::abstract_stack_allocator_t*>(m.ref);
     }
 
@@ -117,7 +118,7 @@ class any_allocator_t
     [[nodiscard]] inline constexpr detail::abstract_allocator_t&
     get_basic_unchecked() const noexcept
     {
-        assert(is_basic());
+        ALLO_UNCHECKED_ASSERT(is_basic());
         return *static_cast<detail::abstract_allocator_t*>(m.ref);
     }
 
