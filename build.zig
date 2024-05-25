@@ -13,6 +13,7 @@ const debug_flags = &[_][]const u8{
 };
 
 const testing_flags = &[_][]const u8{
+    "-DALLO_PROFILE_MEMORY_USAGE_TESTING",
     "-DALLO_HEADER_TESTING",
     "-DALLO_HEADER_ONLY",
 
@@ -48,6 +49,7 @@ const test_source_files = &[_][]const u8{
 const universal_tests_source_files = &[_][]const u8{
     "tests/generic_allocator_tests.cpp",
     "tests/heap_tests.cpp",
+    "tests/profiling.cpp",
 };
 
 var ziglike: ?*std.Build.Dependency = null;

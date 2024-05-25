@@ -8,6 +8,7 @@
 #endif
 
 #include "allo/c_allocator.h"
+#include "allo/detail/usage_profiling_callback.h"
 
 #ifdef ALLO_HEADER_ONLY
 #ifndef ALLO_FUNC
