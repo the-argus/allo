@@ -67,12 +67,12 @@ pub fn build(b: *std.Build) !void {
 
     // actual public installation step
     b.installDirectory(.{
-        .source_dir = .{ .path = "include/allo/" },
+        .source_dir = b.path("include/allo/"),
         .install_dir = .header,
         .install_subdir = "allo/",
     });
 
-    const main_header_install = b.addInstallHeaderFile("include/allo.h", "allo.h");
+    const main_header_install = b.addInstallHeaderFile(b.path("include/allo.h"), "allo.h");
     b.getInstallStep().dependOn(&main_header_install.step);
 
     {
@@ -90,10 +90,13 @@ pub fn build(b: *std.Build) !void {
             .target = target,
         });
         test_exe.addCSourceFile(.{
-            .file = .{ .path = b.pathJoin(&.{ "tests", source_file }) },
+            .file = b.path(b.pathJoin(&.{ "tests", source_file })),
             .flags = flags_owned,
         });
-        test_exe.addCSourceFiles(universal_tests_source_files, flags_owned);
+        test_exe.addCSourceFiles(.{
+            .files = universal_tests_source_files,
+            .flags = flags_owned,
+        });
         test_exe.linkLibCpp();
         test_exe.step.dependOn(ziglike.?.builder.getInstallStep());
         try tests.append(test_exe);
